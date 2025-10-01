@@ -1,0 +1,1 @@
+SELECT COUNT(*) as account_count FROM accounts WHERE isActive = 1;

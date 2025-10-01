@@ -1,0 +1,23 @@
+<svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle -->
+  <circle cx="96" cy="96" r="96" fill="#3b82f6"/>
+  
+  <!-- Dollar Sign -->
+  <g transform="translate(96, 96)">
+    <!-- Vertical line -->
+    <rect x="-3" y="-60" width="6" height="120" fill="white" rx="3"/>
+    
+    <!-- Top S curve -->
+    <path d="M -25 -35 Q -25 -50 -10 -50 L 10 -50 Q 25 -50 25 -35 Q 25 -20 10 -20 L -10 -20 Q -25 -20 -25 -5 Q -25 10 -10 10 L 10 10 Q 25 10 25 25 Q 25 40 10 40 L -10 40 Q -25 40 -25 25" 
+          stroke="white" 
+          stroke-width="8" 
+          fill="none" 
+          stroke-linecap="round"/>
+  </g>
+  
+  <!-- Decorative elements -->
+  <circle cx="40" cy="40" r="4" fill="white" opacity="0.6"/>
+  <circle cx="152" cy="40" r="4" fill="white" opacity="0.6"/>
+  <circle cx="40" cy="152" r="4" fill="white" opacity="0.6"/>
+  <circle cx="152" cy="152" r="4" fill="white" opacity="0.6"/>
+</svg>

@@ -1,0 +1,22 @@
+{
+  "status": "commited",
+  "type": "frontend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:3000",
+  "loginUser": "adm@suagrana.com",
+  "loginPassword": "1234566",
+  "executionArgs": {
+    "projectName": "SuaGrana-Clean",
+    "projectPath": "C:\\Users\\Wesley\\Documents\\FINANCA\\Não apagar\\SuaGrana-Clean",
+    "testIds": [
+      "TC001",
+      "TC002",
+      "TC003"
+    ],
+    "additionalInstruction": "Focar especificamente nos testes do componente DatePicker e funcionalidade do calendário no modal de criação de viagens. Testar a seleção de datas, cálculo de dias entre datas de início e fim, e validação de campos de data.",
+    "envs": {
+      "API_KEY": "sk-user-JyEYKOlNTeokoVhjO0AthciXyUS9t2dyKnh22DYwX2WuYJAsnbhVOFAke5gCNWcdmoACUQ8CV8ZkxdSsqDww536j4fSzsg7Mu_YQyBbNeNECF9XrkIari7rnEYBCIDauqwE"
+    }
+  },
+  "proxy": "http://a1276fa0-80c6-40a3-a542-e8813f4d556a:JdBpqkMAe03UJT3yikaCSx1nfSCBou2K@tun.testsprite.com:8080"
+}

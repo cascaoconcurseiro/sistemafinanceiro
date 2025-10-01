@@ -1,0 +1,391 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Account {
+  id                   String                  @id @default(cuid())
+  name                 String
+  type                 String
+  balance              Decimal                 @default(0)
+  currency             String                  @default("BRL")
+  isActive             Boolean                 @default(true)
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  deletedAt            DateTime?
+  reconciliations      AccountReconciliation[]
+  budgets              Budget[]
+  sharedExpenses       SharedExpense[]
+  transactions         Transaction[]
+  scheduledTransactions ScheduledTransaction[]
+
+  @@map("accounts")
+}
+
+// ✅ TRANSACTIONS - TABELA PRINCIPAL (SSOT)
+model Transaction {
+  id                  String                @id @default(cuid())
+  accountId           String
+  amount              Decimal
+  description         String
+  category            String
+  type                String                // 'income', 'expense', 'transfer', 'shared', 'investment', 'goal_contribution', 'credit_card'
+  date                DateTime
+  status              String                @default("cleared")
+  isRecurring         Boolean               @default(false)
+  transferId          String?
+  transferType        String?
+  parentTransactionId String?
+  installmentNumber   Int?
+  totalInstallments   Int?
+  reversalOf          String?
+  isReversal          Boolean               @default(false)
+  tripId              String?
+  goalId              String?               // 🆕 Conecta com metas
+  investmentId        String?               // 🆕 Conecta com investimentos
+  budgetId            String?               // 🆕 Conecta com orçamentos
+  creditCardId        String?               // 🆕 Conecta com cartão de crédito
+  deletedAt           DateTime?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  
+  // Relacionamentos
+  sharedExpenses      SharedExpense[]
+  auditLogs           TransactionAudit[]
+  scheduledTransactions ScheduledTransaction[] @relation("ScheduledInstallments")
+  account             Account               @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  trip                Trip?                 @relation(fields: [tripId], references: [id])
+  goal                Goal?                 @relation(fields: [goalId], references: [id])        // 🆕
+  investment          Investment?           @relation(fields: [investmentId], references: [id])  // 🆕
+  budget              Budget?               @relation(fields: [budgetId], references: [id])      // 🆕
+  creditCard          CreditCard?           @relation(fields: [creditCardId], references: [id])  // 🆕
+
+  @@map("transactions")
+}
+
+// ✅ CARTÃO DE CRÉDITO - Agora conectado via transactions
+model CreditCard {
+  id             String              @id @default(cuid())
+  name           String
+  limit          Decimal
+  currentBalance Decimal             @default(0)
+  dueDay         Int
+  closingDay     Int
+  isActive       Boolean             @default(true)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  
+  // 🆕 Conectado via transactions
+  transactions   Transaction[]       // Substitui CreditCardExpense
+
+  @@map("credit_cards")
+}
+
+// ❌ REMOVIDO: CreditCardExpense - substituído por Transaction.creditCardId
+
+// ✅ ORÇAMENTOS - Agora conectado via transactions
+model Budget {
+  id           String        @id @default(cuid())
+  accountId    String?
+  name         String
+  category     String
+  amount       Decimal
+  spent        Decimal       @default(0)      // Calculado via transactions
+  period       String
+  startDate    DateTime
+  endDate      DateTime
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  
+  account      Account?      @relation(fields: [accountId], references: [id])
+  transactions Transaction[] // 🆕 Conectado via transactions
+
+  @@map("budgets")
+}
+
+// ✅ METAS - Agora conectado via transactions
+model Goal {
+  id           String        @id @default(cuid())
+  name         String
+  description  String?
+  current      Decimal       @default(0)      // Calculado via transactions
+  target       Decimal
+  targetDate   DateTime?
+  priority     String?
+  isCompleted  Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  
+  transactions Transaction[] // 🆕 Conectado via transactions
+
+  @@map("goals")
+}
+
+// ✅ INVESTIMENTOS - Agora conectado via transactions
+model Investment {
+  id            String        @id @default(cuid())
+  name          String
+  symbol        String?
+  type          String
+  quantity      Decimal
+  purchasePrice Decimal
+  currentPrice  Decimal?
+  purchaseDate  DateTime
+  maturityDate  DateTime?
+  broker        String?
+  fees          Decimal       @default(0)
+  notes         String?
+  status        String        @default("active")
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  
+  transactions  Transaction[] // 🆕 Conectado via transactions (compras, vendas, dividendos)
+
+  @@map("investments")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  type      String
+  level     String
+  source    String
+  action    String
+  details   String?
+  userId    String?
+  ipAddress String?
+  userAgent String?
+  timestamp DateTime @default(now())
+
+  @@map("audit_logs")
+}
+
+model SecurityEvent {
+  id          String   @id @default(cuid())
+  type        String
+  severity    String
+  source      String
+  description String
+  details     String?
+  blocked     Boolean  @default(false)
+  resolved    Boolean  @default(false)
+  ipAddress   String?
+  userAgent   String?
+  stackTrace  String?
+  timestamp   DateTime @default(now())
+
+  @@map("security_events")
+}
+
+model SystemEvent {
+  id          String   @id @default(cuid())
+  type        String
+  level       String
+  source      String
+  message     String
+  details     String?
+  duration    Int?
+  memoryUsage BigInt?
+  timestamp   DateTime @default(now())
+
+  @@map("system_events")
+}
+
+model SystemConfig {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  type        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("system_config")
+}
+
+model DataIntegrity {
+  id            String   @id @default(cuid())
+  tableName     String
+  recordCount   Int
+  checksum      String
+  lastValidated DateTime @default(now())
+  isValid       Boolean  @default(true)
+  errors        String?
+
+  @@map("data_integrity")
+}
+
+// ✅ VIAGENS - Mantido, mas TripExpense será substituído por transactions
+model Trip {
+  id                   String                @id @default(cuid())
+  name                 String
+  destination          String
+  description          String?
+  startDate            DateTime
+  endDate              DateTime
+  budget               Decimal               @default(0)
+  spent                Decimal               @default(0)    // Calculado via transactions
+  currency             String                @default("BRL")
+  status               String                @default("planned")
+  participants         String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  
+  itinerary            Itinerary[]
+  transactions         Transaction[]         // ✅ Já conectado
+  scheduledTransactions ScheduledTransaction[]
+
+  @@map("trips")
+}
+
+// ❌ REMOVIDO: TripExpense - substituído por Transaction.tripId
+
+model Itinerary {
+  id          String   @id @default(cuid())
+  tripId      String
+  date        DateTime
+  time        String?
+  title       String
+  description String
+  location    String
+  type        String
+  duration    Int?
+  cost        Decimal? @default(0)
+  notes       String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  trip        Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@map("itinerary")
+}
+
+model FamilyMember {
+  id           String    @id @default(cuid())
+  name         String
+  relationship String
+  birthDate    DateTime?
+  email        String?
+  phone        String?
+  avatar       String?
+  isActive     Boolean   @default(true)
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("family_members")
+}
+
+model TransactionAudit {
+  id            String      @id @default(cuid())
+  transactionId String
+  action        String
+  oldValue      String?
+  newValue      String?
+  userId        String?
+  ipAddress     String?
+  userAgent     String?
+  reason        String?
+  timestamp     DateTime    @default(now())
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@map("transaction_audit")
+}
+
+model AccountReconciliation {
+  id              String    @id @default(cuid())
+  accountId       String
+  expectedBalance Decimal
+  actualBalance   Decimal
+  difference      Decimal
+  status          String    @default("OK")
+  errors          String?
+  lastCheck       DateTime  @default(now())
+  resolvedAt      DateTime?
+  account         Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@map("account_reconciliation")
+}
+
+model RecurringTransaction {
+  id         String    @id @default(cuid())
+  templateId String
+  frequency  String
+  interval   Int       @default(1)
+  nextDate   DateTime
+  endDate    DateTime?
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@map("recurring_transactions")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  title     String
+  message   String
+  type      String
+  isRead    Boolean  @default(false)
+  duration  Int?
+  metadata  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("notifications")
+}
+
+// ✅ DESPESAS COMPARTILHADAS - Já conectado via transactions
+model SharedExpense {
+  id              String      @id @default(cuid())
+  transactionId   String
+  userId          String
+  accountId       String
+  shareAmount     Decimal
+  sharePercentage Decimal
+  status          String      @default("PENDING")
+  paidAt          DateTime?
+  notes           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  account         Account     @relation(fields: [accountId], references: [id])
+  transaction     Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@map("shared_expenses")
+}
+
+// ✅ TRANSAÇÕES AGENDADAS - Já conectado via transactions
+model ScheduledTransaction {
+  id                   String    @id @default(cuid())
+  description          String
+  amount               Decimal
+  type                 String
+  category             String
+  accountId            String
+  scheduledDate        DateTime
+  status               String    @default("PENDING")
+  parentTransactionId  String?
+  installmentNumber    Int?
+  totalInstallments    Int?
+  isRecurring          Boolean   @default(false)
+  recurringFrequency   String?
+  recurringInterval    Int?
+  recurringEndDate     DateTime?
+  transferId           String?
+  tripId               String?
+  sharedWith           String?
+  notes                String?
+  processedAt          DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  account              Account   @relation(fields: [accountId], references: [id])
+  parentTransaction    Transaction? @relation("ScheduledInstallments", fields: [parentTransactionId], references: [id], onDelete: Cascade)
+  trip                 Trip?     @relation(fields: [tripId], references: [id])
+
+  @@map("scheduled_transactions")
+}

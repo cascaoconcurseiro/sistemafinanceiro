@@ -1,0 +1,29 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle -->
+  <circle cx="256" cy="256" r="256" fill="#3b82f6"/>
+  
+  <!-- Dollar Sign -->
+  <g transform="translate(256, 256)">
+    <!-- Vertical line -->
+    <rect x="-8" y="-160" width="16" height="320" fill="white" rx="8"/>
+    
+    <!-- S curve -->
+    <path d="M -70 -90 Q -70 -130 -30 -130 L 30 -130 Q 70 -130 70 -90 Q 70 -50 30 -50 L -30 -50 Q -70 -50 -70 -10 Q -70 30 -30 30 L 30 30 Q 70 30 70 70 Q 70 110 30 110 L -30 110 Q -70 110 -70 70" 
+          stroke="white" 
+          stroke-width="20" 
+          fill="none" 
+          stroke-linecap="round"/>
+  </g>
+  
+  <!-- Decorative elements -->
+  <circle cx="100" cy="100" r="12" fill="white" opacity="0.6"/>
+  <circle cx="412" cy="100" r="12" fill="white" opacity="0.6"/>
+  <circle cx="100" cy="412" r="12" fill="white" opacity="0.6"/>
+  <circle cx="412" cy="412" r="12" fill="white" opacity="0.6"/>
+  
+  <!-- Additional decorative circles -->
+  <circle cx="180" cy="80" r="6" fill="white" opacity="0.4"/>
+  <circle cx="332" cy="80" r="6" fill="white" opacity="0.4"/>
+  <circle cx="180" cy="432" r="6" fill="white" opacity="0.4"/>
+  <circle cx="332" cy="432" r="6" fill="white" opacity="0.4"/>
+</svg>
