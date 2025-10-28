@@ -1,25 +1,24 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { logComponents } from '../lib/utils/logger';
-import { useInvestments } from '../../../contexts/unified-context-simple';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import { useUnified } from '@/contexts/unified-financial-context';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '../../ui/card';
-import { Progress } from '../../ui/progress';
-import { Badge } from '../../ui/badge';
-import { Button } from '../../ui/button';
+} from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '../../ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
+} from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   TrendingUp,
   TrendingDown,
@@ -32,12 +31,7 @@ import {
   Target,
   Download,
 } from 'lucide-react';
-import {
-  storage,
-  type Investment,
-  type Dividend,
-  type InvestmentPosition,
-} from '../../../lib/storage';
+
 import { toast } from '../../../hooks/use-toast';
 import { InvestmentModal } from './investment-modal';
 import { DividendManager } from './dividend-manager';
@@ -50,12 +44,7 @@ interface InvestmentPortfolioProps {
 }
 
 export function InvestmentPortfolio({ onUpdate }: InvestmentPortfolioProps) {
-  const {
-    investments: investmentsData,
-    create: createInvestment,
-    update: updateInvestment,
-    delete: deleteInvestment,
-  } = useInvestments();
+  const { accounts, transactions, isLoading, error } = useUnified();
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [dividends, setDividends] = useState<Dividend[]>([]);
   const [showInvestmentModal, setShowInvestmentModal] = useState(false);
@@ -1081,7 +1070,7 @@ export function InvestmentPortfolio({ onUpdate }: InvestmentPortfolioProps) {
                       {operation.operation === 'buy' ? 'Compra' : 'Venda'}
                     </Badge>
                     <p className="text-sm text-gray-500 mt-1">
-                      {new Date(operation.date).toLocaleDateString('pt-BR')}
+                      {new Date(operation.date + 'T12:00:00').toLocaleDateString('pt-BR')}
                     </p>
                   </div>
                   <div className="text-right">
@@ -1149,3 +1138,5 @@ export function InvestmentPortfolio({ onUpdate }: InvestmentPortfolioProps) {
     </Tabs>
   );
 }
+
+export default InvestmentPortfolio;

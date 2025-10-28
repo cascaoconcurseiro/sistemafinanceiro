@@ -1,3 +1,5 @@
+// SCHEMA CORRIGIDO - Versão com problemas resolvidos
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,113 +9,686 @@ datasource db {
   url      = "file:./dev.db"
 }
 
+// ✅ TIPOS CONTÁBEIS (SQLite não suporta enums, usar strings com validação)
+// AccountType: 'ATIVO' | 'PASSIVO' | 'RECEITA' | 'DESPESA'
+// TransactionType: 'RECEITA' | 'DESPESA' | 'TRANSFERENCIA'  
+// JournalEntryType: 'DEBITO' | 'CREDITO'
+
+model User {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  name             String
+  password         String
+  avatar           String?
+  role             String    @default("USER") // USER | ADMIN
+  emailVerified    DateTime? @map("email_verified")
+  isActive         Boolean   @default(true) @map("is_active")
+  lastLogin        DateTime? @map("last_login")
+  monthlyIncome    Decimal?  @map("monthly_income")
+  emergencyReserve Decimal?  @map("emergency_reserve")
+  riskProfile      String?   @map("risk_profile")
+  financialGoals   String?   @map("financial_goals")
+  preferences      String? // JSON string
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  // Relacionamentos CORRIGIDOS
+  accounts      Account[]
+  transactions  Transaction[]
+  categories    Category[] // ✅ NOVO: Categorias por usuário
+  goals         Goal[]
+  investments   Investment[]
+  dividends     Dividend[] // ✅ NOVO: Dividendos
+  trips         Trip[]
+  budgets       Budget[]
+  auditEvents   AuditEvent[]
+  creditCards   CreditCard[] // ADICIONADO
+  familyMembers FamilyMember[] // ADICIONADO
+  notifications Notification[] // ADICIONADO
+  reminders     Reminder[] // ADICIONADO
+  invoices      Invoice[] // ADICIONADO
+  invoicePayments InvoicePayment[] // ADICIONADO
+  debtPayments  DebtPayment[] // ADICIONADO
+
+  @@map("users")
+}
+
 model Account {
-  id                   String                  @id @default(cuid())
-  name                 String
-  type                 String
-  balance              Decimal                 @default(0)
-  currency             String                  @default("BRL")
-  isActive             Boolean                 @default(true)
-  createdAt            DateTime                @default(now())
-  updatedAt            DateTime                @updatedAt
-  deletedAt            DateTime?
-  reconciliations      AccountReconciliation[]
-  budgets              Budget[]
-  sharedExpenses       SharedExpense[]
-  transactions         Transaction[]
+  id        String      @id @default(cuid())
+  userId    String      @map("user_id")
+  name      String
+  type      String      // ✅ CORRIGIDO: 'ATIVO' | 'PASSIVO' | 'RECEITA' | 'DESPESA'
+  balance   Decimal     @default(0) // ✅ RESTAURADO: Campo balance obrigatório
+  currency  String      @default("BRL")
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  // NOVOS CAMPOS - Regras de Negócio
+  reconciledBalance Decimal  @default(0) @map("reconciled_balance")
+  isInvestment      Boolean  @default(false) @map("is_investment")
+  investmentType    String?  @map("investment_type")
+  currentValue      Decimal? @map("current_value")
+  investedAmount    Decimal? @map("invested_amount")
+  
+  // ✅ NOVO: Cheque Especial
+  allowNegativeBalance Boolean @default(false) @map("allow_negative_balance")
+  overdraftLimit       Decimal @default(0) @map("overdraft_limit")
+  overdraftInterestRate Decimal? @map("overdraft_interest_rate")
+
+  // Relacionamentos
+  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  budgets               Budget[]
   scheduledTransactions ScheduledTransaction[]
+  sharedExpenses        SharedExpense[]
+  transactions          Transaction[]
+  journalEntries        JournalEntry[] // ADICIONADO
+  invoicePayments       InvoicePayment[] // ADICIONADO
 
   @@map("accounts")
 }
 
 model Transaction {
-  id                  String                @id @default(cuid())
-  accountId           String
+  id                  String    @id @default(cuid())
+  userId              String    @map("user_id")
+  accountId           String?   @map("account_id")
+  categoryId          String?   @map("category_id")
   amount              Decimal
   description         String
-  category            String
-  type                String
+  type                String          // ✅ CORRIGIDO: 'RECEITA' | 'DESPESA' | 'TRANSFERENCIA'
   date                DateTime
-  status              String                @default("cleared")
-  isRecurring         Boolean               @default(false)
-  transferId          String?
-  transferType        String?
-  parentTransactionId String?
-  installmentNumber   Int?
-  totalInstallments   Int?
-  reversalOf          String?
-  isReversal          Boolean               @default(false)
-  tripId              String?
-  goalId              String?
-  investmentId        String?
-  budgetId            String?
-  creditCardId        String?
-  deletedAt           DateTime?
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
-  sharedExpenses      SharedExpense[]
-  auditLogs           TransactionAudit[]
-  scheduledTransactions ScheduledTransaction[] @relation("ScheduledInstallments")
-  account             Account               @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  trip                Trip?                 @relation(fields: [tripId], references: [id])
-  goal                Goal?                 @relation(fields: [goalId], references: [id])
-  investment          Investment?           @relation(fields: [investmentId], references: [id])
-  budget              Budget?               @relation(fields: [budgetId], references: [id])
-  creditCard          CreditCard?           @relation(fields: [creditCardId], references: [id])
+  status              String          @default("cleared")
+  isRecurring         Boolean   @default(false) @map("is_recurring")
+  transferId          String?   @map("transfer_id")
+  parentTransactionId String?   @map("parent_transaction_id")
+  installmentNumber   Int?      @map("installment_number")
+  totalInstallments   Int?      @map("total_installments")
+  tripId              String?   @map("trip_id")
+  goalId              String?   @map("goal_id")
+  investmentId        String?   @map("investment_id")
+  budgetId            String?   @map("budget_id")
+  creditCardId        String?   @map("credit_card_id")
+  deletedAt           DateTime? @map("deleted_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
 
+  // NOVOS CAMPOS - Regras de Negócio
+  installmentGroupId String?   @map("installment_group_id")
+  isShared           Boolean   @default(false) @map("is_shared")
+  sharedWith         String?   @map("shared_with") // JSON
+  totalSharedAmount  Decimal?  @map("total_shared_amount")
+  myShare            Decimal?  @map("my_share") // ✅ NOVO: Minha parte em despesas compartilhadas
+  paidBy             String?   @map("paid_by")
+  owedTo             String?   @map("owed_to")
+  paymentMethod      String?   @map("payment_method")
+  isTransfer         Boolean   @default(false) @map("is_transfer")
+  transferType       String?   @map("transfer_type")
+  recurringId        String?   @map("recurring_id")
+  frequency          String?
+  isReconciled       Boolean   @default(false) @map("is_reconciled")
+  reconciledAt       DateTime? @map("reconciled_at")
+  currency           String    @default("BRL")
+  exchangeRate       Decimal?  @map("exchange_rate")
+  originalAmount     Decimal?  @map("original_amount")
+  isTaxDeductible    Boolean   @default(false) @map("is_tax_deductible")
+  taxCategory        String?   @map("tax_category")
+  isSuspicious       Boolean   @default(false) @map("is_suspicious")
+  isFraudulent       Boolean   @default(false) @map("is_fraudulent")
+  isInstallment      Boolean   @default(false) @map("is_installment")
+  tripExpenseType    String?   @map("trip_expense_type") // ✅ NOVO: 'shared' | 'regular' | 'trip'
+  invoiceId          String?   @map("invoice_id") // ✅ NOVO: Vincular a fatura do cartão
+  metadata           String?   // ✅ NOVO: JSON string para dados adicionais (investimentos, etc)
+  version            Int       @default(1) // ✅ NOVO: Optimistic locking
+
+  // Relacionamentos
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account     Account?    @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  categoryRef Category?   @relation("CategoryTransactions", fields: [categoryId], references: [id])
+  trip        Trip?       @relation(fields: [tripId], references: [id])
+  goal        Goal?       @relation(fields: [goalId], references: [id])
+  investment  Investment? @relation(fields: [investmentId], references: [id])
+  budget      Budget?     @relation(fields: [budgetId], references: [id])
+  creditCard  CreditCard? @relation(fields: [creditCardId], references: [id])
+  invoice     Invoice?    @relation(fields: [invoiceId], references: [id]) // ✅ NOVO
+
+  // Relacionamentos de auditoria e compartilhamento
+  scheduledTransactions ScheduledTransaction[] @relation("ScheduledInstallments")
+  sharedDebts           SharedDebt[]
+  sharedExpenses        SharedExpense[]
+  auditLogs             TransactionAudit[]
+  journalEntries        JournalEntry[] // ADICIONADO
+
+  // Constraint: toda transação DEVE ter conta ou cartão vinculado (validado no código)
+  @@index([userId, date])
+  @@index([accountId, date])
+  @@index([tripId])
+  @@index([status])
+  @@index([isShared])
+  @@index([installmentGroupId])
   @@map("transactions")
 }
 
 model CreditCard {
-  id             String        @id @default(cuid())
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id")
   name           String
   limit          Decimal
-  currentBalance Decimal       @default(0)
+  currentBalance Decimal  @default(0)
   dueDay         Int
   closingDay     Int
-  isActive       Boolean       @default(true)
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  transactions   Transaction[]
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // NOVOS CAMPOS - Regras de Negócio
+  interestRate Decimal? @map("interest_rate")
+  
+  // ✅ NOVO: Limite Excedido
+  allowOverLimit    Boolean @default(false) @map("allow_over_limit")
+  overLimitPercent  Int     @default(0) @map("over_limit_percent") // 0-20%
+  brand             String? // Visa, Mastercard, Elo, etc
+  lastFourDigits    String? @map("last_four_digits")
+
+  // Relacionamentos CORRIGIDOS
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  invoices     Invoice[]
 
   @@map("credit_cards")
 }
 
-model Budget {
-  id           String        @id @default(cuid())
-  accountId    String?
+// Invoice removido - definição completa está mais abaixo
+
+model InvoicePayment {
+  id          String   @id @default(cuid())
+  invoiceId   String   @map("invoice_id")
+  userId      String   @map("user_id")
+  accountId   String   @map("account_id")
+  amount      Decimal
+  paymentDate DateTime @map("payment_date")
+  description String?
+  
+  // ✅ NOVO: Estorno de Pagamento
+  status              String    @default("completed") // completed, reversed
+  reversedAt          DateTime? @map("reversed_at")
+  reversalReason      String?   @map("reversal_reason")
+  originalPaymentId   String?   @map("original_payment_id")
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relacionamentos
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  account Account @relation(fields: [accountId], references: [id])
+
+  @@map("invoice_payments")
+}
+
+
+
+model FamilyMember {
+  id           String    @id @default(cuid())
+  userId       String    @map("user_id") // ADICIONADO
   name         String
-  category     String
-  amount       Decimal
-  spent        Decimal       @default(0)
-  period       String
-  startDate    DateTime
-  endDate      DateTime
-  isActive     Boolean       @default(true)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  relationship String
+  birthDate    DateTime?
+  email        String?
+  phone        String?
+  avatar       String?
+  isActive     Boolean   @default(true)
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relacionamento CORRIGIDO
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("family_members")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id") // ADICIONADO
+  title     String
+  message   String
+  type      String
+  isRead    Boolean  @default(false)
+  duration  Int?
+  metadata  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relacionamento CORRIGIDO
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model Reminder {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  title       String
+  description String?
+  dueDate     DateTime @map("due_date")
+  category    String   @default("general") // bill, goal, investment, subscription, general
+  priority    String   @default("medium") // low, medium, high
+  status      String   @default("pending") // pending, completed, overdue, cancelled
+  recurring   Boolean  @default(false)
+  frequency   String?  // daily, weekly, monthly, yearly
+  amount      Decimal?
+  metadata    String?  // JSON para dados adicionais
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("reminders")
+}
+
+// Resto dos models permanecem iguais...
+model Category {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id") // ✅ NOVO: Categorias por usuário
+  name        String
+  description String?
+  type        String          // ✅ CORRIGIDO: 'RECEITA' | 'DESPESA' | 'TRANSFERENCIA'
+  parentId    String?         @map("parent_id")
+  color       String?
+  icon        String?
+  isActive    Boolean  @default(true) @map("is_active")
+  isDefault   Boolean  @default(false) @map("is_default")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent       Category?     @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children     Category[]    @relation("CategoryHierarchy")
+  budgets      Budget[]
+  transactions Transaction[] @relation("CategoryTransactions")
+
+  @@index([userId])
+  @@map("categories")
+}
+
+model Budget {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  accountId  String?  @map("account_id")
+  categoryId String   @map("category_id")
+  name       String
+  amount     Decimal
+  spent      Decimal  @default(0)
+  period     String
+  startDate  DateTime @map("start_date")
+  endDate    DateTime @map("end_date")
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  // NOVOS CAMPOS - Regras de Negócio
+  alertThreshold Int @default(80) @map("alert_threshold")
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   account      Account?      @relation(fields: [accountId], references: [id])
+  categoryRef  Category      @relation(fields: [categoryId], references: [id])
   transactions Transaction[]
 
   @@map("budgets")
 }
 
 model Goal {
-  id           String        @id @default(cuid())
-  name         String
-  description  String?
-  current      Decimal       @default(0)
-  target       Decimal
-  targetDate   DateTime?
-  priority     String?
-  isCompleted  Boolean       @default(false)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id            String    @id @default(cuid())
+  userId        String    @map("user_id")
+  name          String
+  description   String?
+  currentAmount Decimal   @default(0) @map("current_amount")
+  targetAmount  Decimal   @map("target_amount")
+  deadline      DateTime? @map("deadline")
+  priority      String?
+  status        String    @default("active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions Transaction[]
 
   @@map("goals")
 }
 
+model Investment {
+  id            String    @id @default(cuid())
+  userId        String    @map("user_id")
+  
+  // Dados Básicos
+  ticker        String    // PETR4, HGLG11, Tesouro Selic
+  name          String    // Nome completo
+  symbol        String?   // Símbolo alternativo
+  type          String    // FIXED_INCOME, STOCK, REIT, CRYPTO, INTERNATIONAL, PENSION, OTHER
+  category      String?   // Subcategoria específica
+  
+  // Quantidade e Valores
+  quantity      Decimal   // Ações, cotas, valor aplicado
+  averagePrice  Decimal   @map("average_price") // Preço médio de compra
+  purchasePrice Decimal   @map("purchase_price") // Preço de compra inicial (mantido para compatibilidade)
+  currentPrice  Decimal?  @map("current_price") // Cotação atual
+  totalInvested Decimal   @map("total_invested") // Total investido (com custos)
+  currentValue  Decimal   @default(0) @map("current_value") // Valor atual
+  
+  // Custos
+  brokerageFee  Decimal   @default(0) @map("brokerage_fee") // Corretagem
+  otherFees     Decimal   @default(0) @map("other_fees") // Outras taxas
+  fees          Decimal   @default(0) // Total de taxas (mantido para compatibilidade)
+  
+  // Rentabilidade
+  profitLoss        Decimal @default(0) @map("profit_loss") // Lucro/Prejuízo
+  profitLossPercent Decimal @default(0) @map("profit_loss_percent") // %
+  
+  // Renda Fixa Específico
+  interestRate  Decimal?  @map("interest_rate") // Taxa (% a.a.)
+  indexer       String?   // CDI, IPCA, Prefixado
+  maturityDate  DateTime? @map("maturity_date")
+  liquidity     String?   // Diária, No vencimento
+  
+  // Dividendos
+  lastDividend      Decimal?  @map("last_dividend")
+  lastDividendDate  DateTime? @map("last_dividend_date")
+  dividendYield     Decimal?  @map("dividend_yield") // Yield anual
+  
+  // Metadados
+  broker        String?
+  purchaseDate  DateTime  @map("purchase_date")
+  notes         String?
+  status        String    @default("active")
+  
+  // Auditoria
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  // Relacionamentos
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  dividends    Dividend[]
+  priceHistory InvestmentPriceHistory[]
+
+  @@index([userId, status])
+  @@index([type, status])
+  @@map("investments")
+}
+
+// ✅ NOVA TABELA: Dividendos
+model Dividend {
+  id            String    @id @default(cuid())
+  investmentId  String    @map("investment_id")
+  userId        String    @map("user_id")
+  
+  // Dados do Dividendo
+  type          String    // DIVIDEND, JCP, INCOME, INTEREST
+  grossAmount   Decimal   @map("gross_amount") // Valor bruto
+  taxAmount     Decimal   @default(0) @map("tax_amount") // IR retido
+  netAmount     Decimal   @map("net_amount") // Valor líquido
+  
+  // Datas
+  paymentDate   DateTime  @map("payment_date") // Data de pagamento
+  exDate        DateTime? @map("ex_date") // Data com
+  
+  // Metadados
+  description   String?
+  notes         String?
+  
+  // Relacionamentos
+  investment    Investment @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  user          User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Auditoria
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([userId, paymentDate])
+  @@index([investmentId])
+  @@map("dividends")
+}
+
+// ✅ NOVA TABELA: Histórico de Preços
+model InvestmentPriceHistory {
+  id            String     @id @default(cuid())
+  investmentId  String     @map("investment_id")
+  userId        String     @map("user_id")
+  
+  // Dados
+  date          DateTime
+  price         Decimal
+  source        String?    // manual, api, import
+  
+  // Relacionamentos
+  investment    Investment @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  
+  // Auditoria
+  createdAt     DateTime   @default(now()) @map("created_at")
+
+  @@index([investmentId, date])
+  @@map("investment_price_history")
+}
+
+// ✅ NOVA TABELA: Metas de Investimento
+model InvestmentGoal {
+  id                  String   @id @default(cuid())
+  userId              String   @map("user_id")
+  
+  // Meta
+  name                String   // "Aposentadoria", "Casa própria"
+  targetAmount        Decimal  @map("target_amount") // Valor alvo
+  currentAmount       Decimal  @default(0) @map("current_amount") // Valor atual
+  deadline            DateTime // Prazo
+  
+  // Estratégia
+  monthlyContribution Decimal  @map("monthly_contribution") // Aporte mensal
+  expectedReturn      Decimal  @map("expected_return") // Rentabilidade esperada (% a.a.)
+  riskProfile         String   @map("risk_profile") // CONSERVATIVE, MODERATE, AGGRESSIVE
+  
+  // Alocação Sugerida
+  fixedIncomePercent  Int      @map("fixed_income_percent") // % Renda Fixa
+  stocksPercent       Int      @map("stocks_percent") // % Ações
+  reitsPercent        Int      @map("reits_percent") // % FIIs
+  cryptoPercent       Int      @default(0) @map("crypto_percent") // % Cripto
+  internationalPercent Int     @default(0) @map("international_percent") // % Internacional
+  
+  // Status
+  status              String   @default("active") // active, completed, cancelled
+  priority            Int      @default(0)
+  
+  // Metadados
+  description         String?
+  notes               String?
+  
+  // Auditoria
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@index([userId, status])
+  @@map("investment_goals")
+}
+
+// ✅ NOVA TABELA: Eventos de Investimento (Calendário)
+model InvestmentEvent {
+  id            String    @id @default(cuid())
+  userId        String    @map("user_id")
+  investmentId  String?   @map("investment_id")
+  
+  // Dados do Evento
+  type          String    // DIVIDEND, MATURITY, TAX_DUE, REBALANCE, PRICE_ALERT
+  title         String
+  description   String?
+  amount        Decimal?
+  date          DateTime
+  
+  // Status
+  status        String    @default("pending") // pending, completed, cancelled
+  notified      Boolean   @default(false)
+  notifiedAt    DateTime? @map("notified_at")
+  
+  // Metadados
+  metadata      String?   // JSON para dados adicionais
+  
+  // Auditoria
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([userId, date, status])
+  @@map("investment_events")
+}
+
+model Trip {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  name         String
+  destination  String
+  description  String?
+  startDate    DateTime @map("start_date")
+  endDate      DateTime @map("end_date")
+  budget       Decimal  @default(0)
+  spent        Decimal  @default(0)
+  currency     String   @default("BRL")
+  status       String   @default("planned")
+  participants String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_date")
+
+  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  itinerary             Itinerary[]
+  scheduledTransactions ScheduledTransaction[]
+  transactions          Transaction[]
+  shoppingItems         ShoppingItem[]
+  currencyExchanges     CurrencyExchange[]
+
+  @@map("trips")
+}
+
+model Itinerary {
+  id          String   @id @default(cuid())
+  tripId      String
+  date        DateTime
+  time        String?
+  title       String
+  description String
+  location    String
+  type        String
+  duration    Int?
+  cost        Decimal? @default(0)
+  notes       String?
+  order       Int      @default(0)
+  completed   Boolean  @default(false)
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  trip        Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@map("itinerary")
+}
+
+model SharedExpense {
+  id              String      @id @default(cuid())
+  transactionId   String
+  userId          String
+  accountId       String
+  shareAmount     Decimal
+  sharePercentage Decimal
+  status          String      @default("PENDING")
+  paidAt          DateTime?
+  notes           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  account         Account     @relation(fields: [accountId], references: [id])
+  transaction     Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@map("shared_expenses")
+}
+
+// SharedDebt removido - definição completa está mais abaixo
+
+model ScheduledTransaction {
+  id                  String       @id @default(cuid())
+  description         String
+  amount              Decimal
+  type                String
+  category            String
+  accountId           String
+  scheduledDate       DateTime
+  status              String       @default("PENDING")
+  parentTransactionId String?
+  installmentNumber   Int?
+  totalInstallments   Int?
+  isRecurring         Boolean      @default(false)
+  recurringFrequency  String?
+  recurringInterval   Int?
+  recurringEndDate    DateTime?
+  transferId          String?
+  tripId              String?
+  sharedWith          String?
+  notes               String?
+  processedAt         DateTime?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  account             Account      @relation(fields: [accountId], references: [id])
+  parentTransaction   Transaction? @relation("ScheduledInstallments", fields: [parentTransactionId], references: [id], onDelete: Cascade)
+  trip                Trip?        @relation(fields: [tripId], references: [id])
+
+  @@map("scheduled_transactions")
+}
+
+model TransactionAudit {
+  id            String      @id @default(cuid())
+  transactionId String
+  action        String
+  oldValue      String?
+  newValue      String?
+  userId        String?
+  ipAddress     String?
+  userAgent     String?
+  reason        String?
+  timestamp     DateTime    @default(now())
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@map("transaction_audit")
+}
+
+// NOVA TABELA: Lançamentos Contábeis (Partidas Dobradas)
+model JournalEntry {
+  id            String          @id @default(cuid())
+  transactionId String          @map("transaction_id")
+  accountId     String          @map("account_id")
+  entryType     String           @map("entry_type") // ✅ NOVO: 'DEBITO' | 'CREDITO'
+  amount        Decimal         // ✅ SIMPLIFICADO: Um valor, tipo define se é débito/crédito
+  description   String
+  createdAt     DateTime        @default(now()) @map("created_at")
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  account     Account     @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@map("journal_entries")
+}
+
+model AuditEvent {
+  id        String   @id @default(cuid())
+  userId    String?  @map("user_id")
+  tableName String   @map("table_name")
+  recordId  String   @map("record_id")
+  operation String // CREATE, UPDATE, DELETE, READ
+  oldValues String?  @map("old_values") // JSON string
+  newValues String?  @map("new_values") // JSON string
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  metadata  String? // JSON string
+  timestamp DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("audit_events")
+}
+
+// Models de sistema permanecem iguais
 model AuditLog {
   id        String   @id @default(cuid())
   type      String
@@ -185,92 +760,44 @@ model DataIntegrity {
   @@map("data_integrity")
 }
 
-model Trip {
-  id                   String                @id @default(cuid())
-  name                 String
-  destination          String
-  description          String?
-  startDate            DateTime
-  endDate              DateTime
-  budget               Decimal               @default(0)
-  spent                Decimal               @default(0)
-  currency             String                @default("BRL")
-  status               String                @default("planned")
-  participants         String?
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
-  itinerary            Itinerary[]
-  transactions         Transaction[]
-  scheduledTransactions ScheduledTransaction[]
+// Modelos para Dívidas Compartilhadas - REFATORADO
+model SharedDebt {
+  id             String       @id @default(cuid())
+  userId         String       @map("user_id")  // Dono da dívida
+  creditorId     String       @map("creditor_id")  // ID do membro que emprestou
+  debtorId       String       @map("debtor_id")    // ID do membro que deve
+  originalAmount Decimal      @map("original_amount")
+  currentAmount  Decimal      @map("current_amount")
+  paidAmount     Decimal      @default(0) @map("paid_amount")
+  description    String
+  status         String       @default("active") // active, paid, cancelled
+  transactionId  String?      @map("transaction_id")
+  paidAt         DateTime?    @map("paid_at")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  
+  transaction    Transaction? @relation(fields: [transactionId], references: [id])
 
-  @@map("trips")
+  @@index([userId, status])
+  @@index([creditorId])
+  @@index([debtorId])
+  @@map("shared_debts")
 }
 
-model Itinerary {
-  id          String   @id @default(cuid())
-  tripId      String
-  date        DateTime
-  time        String?
-  title       String
-  description String
-  location    String
-  type        String
-  duration    Int?
-  cost        Decimal? @default(0)
-  notes       String?
-  order       Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  trip        Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+model DebtPayment {
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id")
+  contactId      String   @map("contact_id")
+  contactName    String   @map("contact_name")
+  amount         Decimal
+  paidDate       DateTime @map("paid_date")
+  description    String?
+  debtsAffected  String   @map("debts_affected") // JSON string com IDs das dívidas afetadas
+  createdAt      DateTime @default(now()) @map("created_at")
 
-  @@map("itinerary")
-}
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-model FamilyMember {
-  id           String    @id @default(cuid())
-  name         String
-  relationship String
-  birthDate    DateTime?
-  email        String?
-  phone        String?
-  avatar       String?
-  isActive     Boolean   @default(true)
-  notes        String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-
-  @@map("family_members")
-}
-
-model TransactionAudit {
-  id            String      @id @default(cuid())
-  transactionId String
-  action        String
-  oldValue      String?
-  newValue      String?
-  userId        String?
-  ipAddress     String?
-  userAgent     String?
-  reason        String?
-  timestamp     DateTime    @default(now())
-  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
-
-  @@map("transaction_audit")
-}
-
-model AccountReconciliation {
-  id              String    @id @default(cuid())
-  accountId       String
-  expectedBalance Decimal
-  actualBalance   Decimal
-  difference      Decimal
-  status          String    @default("OK")
-  errors          String?
-  lastCheck       DateTime  @default(now())
-  resolvedAt      DateTime?
-  account         Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
-
-  @@map("account_reconciliation")
+  @@map("debt_payments")
 }
 
 model RecurringTransaction {
@@ -287,85 +814,203 @@ model RecurringTransaction {
   @@map("recurring_transactions")
 }
 
-model Investment {
-  id            String        @id @default(cuid())
-  name          String
-  symbol        String?
-  type          String
-  quantity      Decimal
-  purchasePrice Decimal
-  currentPrice  Decimal?
-  purchaseDate  DateTime
-  maturityDate  DateTime?
-  broker        String?
-  fees          Decimal       @default(0)
-  notes         String?
-  status        String        @default("active")
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  transactions  Transaction[]
-
-  @@map("investments")
-}
-
-model Notification {
+// Tabela de Contatos
+model Contact {
   id        String   @id @default(cuid())
-  title     String
-  message   String
-  type      String
-  isRead    Boolean  @default(false)
-  duration  Int?
-  metadata  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  name      String
+  email     String?
+  phone     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@map("notifications")
+  @@map("contacts")
 }
 
-model SharedExpense {
-  id              String      @id @default(cuid())
-  transactionId   String
-  userId          String
-  accountId       String
-  shareAmount     Decimal
-  sharePercentage Decimal
-  status          String      @default("PENDING")
-  paidAt          DateTime?
-  notes           String?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  account         Account     @relation(fields: [accountId], references: [id])
-  transaction     Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+// ============================================
+// NOVOS MODELOS - Regras de Negócio Financeiras
+// ============================================
 
-  @@map("shared_expenses")
+// Template de transação recorrente
+model RecurringTransactionTemplate {
+  id             String    @id @default(cuid())
+  userId         String    @map("user_id")
+  templateData   String // JSON com dados da transação
+  frequency      String // DAILY, WEEKLY, MONTHLY, YEARLY
+  startDate      DateTime  @map("start_date")
+  endDate        DateTime? @map("end_date")
+  occurrences    Int?
+  isActive       Boolean   @default(true) @map("is_active")
+  lastGenerated  DateTime? @map("last_generated")
+  nextGeneration DateTime  @map("next_generation")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@index([userId, nextGeneration])
+  @@map("recurring_transaction_templates")
 }
 
-model ScheduledTransaction {
-  id                   String    @id @default(cuid())
-  description          String
-  amount               Decimal
-  type                 String
-  category             String
-  accountId            String
-  scheduledDate        DateTime
-  status               String    @default("PENDING")
-  parentTransactionId  String?
-  installmentNumber    Int?
-  totalInstallments    Int?
-  isRecurring          Boolean   @default(false)
-  recurringFrequency   String?
-  recurringInterval    Int?
-  recurringEndDate     DateTime?
-  transferId           String?
-  tripId               String?
-  sharedWith           String?
-  notes                String?
-  processedAt          DateTime?
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
-  account              Account   @relation(fields: [accountId], references: [id])
-  parentTransaction    Transaction? @relation("ScheduledInstallments", fields: [parentTransactionId], references: [id], onDelete: Cascade)
-  trip                 Trip?     @relation(fields: [tripId], references: [id])
+// Anexos de transações
+model Attachment {
+  id            String   @id @default(cuid())
+  transactionId String   @map("transaction_id")
+  userId        String   @map("user_id")
+  fileName      String   @map("file_name")
+  fileSize      Int      @map("file_size")
+  fileType      String   @map("file_type")
+  fileUrl       String   @map("file_url")
+  uploadedAt    DateTime @default(now()) @map("uploaded_at")
 
-  @@map("scheduled_transactions")
+  @@index([transactionId])
+  @@map("attachments")
 }
+
+// Tags personalizadas
+model Tag {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  name      String
+  color     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  transactions TransactionTag[]
+
+  @@unique([userId, name])
+  @@map("tags")
+}
+
+model TransactionTag {
+  transactionId String   @map("transaction_id")
+  tagId         String   @map("tag_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  Tag           Tag      @relation(fields: [tagId], references: [id])
+
+  @@id([transactionId, tagId])
+  @@map("transaction_tags")
+}
+
+// Orçamentos estendidos (já existe Budget, mas vou adicionar campos)
+// Nota: Budget já existe, apenas documentando que precisa dos campos alertThreshold
+
+// Faturas de cartão de crédito
+model Invoice {
+  id           String    @id @default(cuid())
+  creditCardId String    @map("credit_card_id")
+  userId       String    @map("user_id")
+  month        Int
+  year         Int
+  totalAmount  Decimal   @map("total_amount")
+  paidAmount   Decimal   @default(0) @map("paid_amount")
+  dueDate      DateTime  @map("due_date")
+  isPaid       Boolean   @default(false) @map("is_paid")
+  status       String    @default("open") // open, partial, paid, overdue
+  paidAt       DateTime? @map("paid_at")
+  
+  // ✅ NOVO: Rotativo do Cartão
+  minimumPayment        Decimal  @default(0) @map("minimum_payment") // 15% do total
+  isRotativo            Boolean  @default(false) @map("is_rotativo")
+  rotativoInterestRate  Decimal  @default(15.0) @map("rotativo_interest_rate") // % a.m.
+  remainingBalance      Decimal  @default(0) @map("remaining_balance")
+  previousBalance       Decimal  @default(0) @map("previous_balance")
+  
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  creditCard   CreditCard       @relation(fields: [creditCardId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  payments     InvoicePayment[]
+
+  @@unique([creditCardId, month, year])
+  @@index([userId, dueDate])
+  @@map("invoices")
+}
+
+// ✅ NOVO: Tabela de Parcelas (Installments)
+model Installment {
+  id                String    @id @default(cuid())
+  transactionId     String    @map("transaction_id")
+  userId            String    @map("user_id")
+  installmentNumber Int       @map("installment_number")
+  totalInstallments Int       @map("total_installments")
+  amount            Decimal
+  dueDate           DateTime  @map("due_date")
+  status            String    @default("pending") // pending, paid, cancelled, overdue, paid_early
+  paidAt            DateTime? @map("paid_at")
+  description       String?
+  
+  // ✅ NOVO: Antecipação de Parcelas
+  canAnticipate     Boolean   @default(true) @map("can_anticipate")
+  anticipatedAt     DateTime? @map("anticipated_at")
+  discountApplied   Decimal   @default(0) @map("discount_applied")
+  originalAmount    Decimal?  @map("original_amount")
+  
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@index([userId, status, dueDate])
+  @@index([transactionId])
+  @@map("installments")
+}
+
+// Lista de Compras de Viagem
+model ShoppingItem {
+  id                String    @id @default(cuid())
+  tripId            String    @map("trip_id")
+  name              String
+  category          String
+  quantity          Int       @default(1)
+  estimatedPrice    Decimal   @map("estimated_price")
+  actualPrice       Decimal?  @map("actual_price")
+  isPurchased       Boolean   @default(false) @map("is_purchased")
+  notes             String?
+  purchaseDate      DateTime? @map("purchase_date")
+  purchaseLocation  String?   @map("purchase_location")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@map("shopping_items")
+}
+
+// Câmbio de Moeda para Viagem
+model CurrencyExchange {
+  id             String   @id @default(cuid())
+  tripId         String   @map("trip_id")
+  date           DateTime
+  amountBRL      Decimal  @map("amount_brl")
+  amountForeign  Decimal  @map("amount_foreign")
+  exchangeRate   Decimal  @map("exchange_rate")
+  cet            Decimal? // Custo Efetivo Total
+  location       String?
+  notes          String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@map("currency_exchanges")
+}
+
+// Configurações de usuário
+model UserSettings {
+  id                   String   @id @default(cuid())
+  userId               String   @unique @map("user_id")
+  defaultCurrency      String   @default("BRL") @map("default_currency")
+  emailNotifications   Boolean  @default(true) @map("email_notifications")
+  pushNotifications    Boolean  @default(true) @map("push_notifications")
+  invoiceReminder      Int      @default(3) @map("invoice_reminder")
+  budgetAlertThreshold Int      @default(80) @map("budget_alert_threshold")
+  autoBackup           Boolean  @default(false) @map("auto_backup")
+  backupFrequency      String?  @map("backup_frequency")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  @@map("user_settings")
+}
+
+
+
+

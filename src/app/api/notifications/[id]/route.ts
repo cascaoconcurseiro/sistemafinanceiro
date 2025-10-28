@@ -1,52 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-// PATCH - Marcar notificação como lida
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const { id } = params;
-    const body = await request.json();
-    const { isRead } = body;
-
-    const updatedNotification = await prisma.notification.update({
-      where: { id },
-      data: { isRead }
-    });
-
-    return NextResponse.json({ 
-      message: 'Notificação atualizada com sucesso',
-      notification: updatedNotification
-    });
-  } catch (error) {
-    console.error('Erro ao atualizar notificação:', error);
-    return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
-    );
-  }
-}
-
-// DELETE - Remover notificação específica
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = params;
+    const { authenticateRequest } = await import('@/lib/utils/auth-helpers');
+    const auth = await authenticateRequest(request);
+    
+    if (!auth.success || !auth.userId) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    }
 
-    await prisma.notification.delete({
-      where: { id }
-    });
+    // Extrair o ID real da notificação
+    const notificationId = params.id.replace(/^(saved-|reminder-|bill-|overdue-|card-due-|goal-|achieved-|budget-)/, '');
 
-    return NextResponse.json({ 
-      message: 'Notificação removida com sucesso',
-      id 
-    });
+    // Tentar deletar do banco
+    try {
+      await prisma.notification.deleteMany({
+        where: {
+          id: notificationId,
+          userId: auth.userId,
+        },
+      });
+    } catch (error) {
+      // Se não existir no banco, apenas retornar sucesso
+      console.log('Notificação temporária deletada:', params.id);
+    }
+
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Erro ao remover notificação:', error);
+    console.error('Erro ao deletar notificação:', error);
     return NextResponse.json(
       { error: 'Erro interno do servidor' },
       { status: 500 }

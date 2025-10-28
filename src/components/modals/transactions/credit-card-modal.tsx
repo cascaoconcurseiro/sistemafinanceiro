@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -22,7 +22,7 @@ import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DatePicker } from '@/components/ui/date-picker';
 import { CreditCard, Calendar, DollarSign, Hash } from 'lucide-react';
-import { useUnified } from '@/contexts/unified-context-simple';
+import { useUnifiedFinancial } from '@/contexts/unified-financial-context';
 import { toast } from 'sonner';
 import {
   convertBRDateToISO,
@@ -59,7 +59,9 @@ const CATEGORIES = [
 ];
 
 export function CreditCardModal({ isOpen, onClose }: CreditCardModalProps) {
-  const { accounts, actions } = useUnified();
+  const { data } = useUnifiedFinancial();
+  const accounts = data?.accounts || [];
+  const actions = data;
   const [formData, setFormData] = useState<CreditCardFormData>({
     description: '',
     amount: '',
@@ -72,9 +74,26 @@ export function CreditCardModal({ isOpen, onClose }: CreditCardModalProps) {
     installments: 1,
   });
 
-  const creditCardAccounts = (accounts || []).filter(
-    (account) => account.type === 'credit' && account.status === 'active'
-  );
+  // Reset form when modal is closed
+  useEffect(() => {
+    if (!isOpen) {
+      setFormData({
+        description: '',
+        amount: '',
+        account: '',
+        categoryId: '',
+        date: getCurrentDateBR(),
+        dueDate: '',
+        notes: '',
+        isInstallment: false,
+        installments: 1,
+      });
+    }
+  }, [isOpen]);
+
+  const creditCardAccounts = Array.isArray(accounts) 
+    ? accounts.filter((account) => account.type === 'credit' && account.isActive)
+    : [];
 
   const handleInputChange = (field: keyof CreditCardFormData, value: string | number | boolean) => {
     setFormData((prev) => ({
@@ -148,27 +167,9 @@ export function CreditCardModal({ isOpen, onClose }: CreditCardModalProps) {
         creditCardId: formData.account,
       };
 
-      if (formData.isInstallment && formData.installments > 1) {
-        // Create installment transactions
-        const installmentAmount = parseFloat(formData.amount) / formData.installments;
-        
-        for (let i = 0; i < formData.installments; i++) {
-          const installmentDate = new Date(convertBRDateToISO(formData.date));
-          installmentDate.setMonth(installmentDate.getMonth() + i);
-          
-          await actions.createTransaction({
-            id: `${transactionData.id}-installment-${i + 1}`,
-            description: `${formData.description} (${i + 1}/${formData.installments})`,
-            amount: installmentAmount,
-            date: installmentDate.toISOString().split('T')[0],
-            type: 'expense',
-            category: formData.categoryId,
-            account: formData.account,
-          });
-        }
-        
-        toast.success(`Transação parcelada em ${formData.installments}x criada com sucesso!`);
-      } else {
+      // Parcelamento agora é tratado apenas pela API
+      // Removida lógica duplicada que causava parcelas em duplicata
+      {
         // Single transaction
         await actions.createTransaction({
           ...transactionData,
@@ -179,19 +180,6 @@ export function CreditCardModal({ isOpen, onClose }: CreditCardModalProps) {
         });
         toast.success('Transação de cartão de crédito criada com sucesso!');
       }
-
-      // Reset form
-      setFormData({
-        description: '',
-        amount: '',
-        account: '',
-        categoryId: '',
-        date: getCurrentDateBR(),
-        dueDate: '',
-        notes: '',
-        isInstallment: false,
-        installments: 1,
-      });
 
       onClose();
     } catch (error) {

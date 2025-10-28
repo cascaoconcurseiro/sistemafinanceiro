@@ -7,20 +7,20 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '../ui/dialog';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../ui/select';
-import { Textarea } from '../ui/textarea';
-import { Calendar } from '../ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   CalendarIcon,
   DollarSign,
@@ -31,7 +31,8 @@ import {
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
-import { cn } from '../../lib/utils';
+import { cn } from '@/lib/utils';
+import { useUnifiedFinancial } from '@/contexts/unified-financial-context';
 
 interface Investment {
   id: string;
@@ -56,8 +57,13 @@ export function InvestmentSaleModal({
   open,
   onOpenChange,
 }: InvestmentSaleModalProps) {
+  const { investments: investmentsData, accounts: accountsData, actions } = useUnifiedFinancial();
+  const investments = investmentsData || [];
+  const accounts = accountsData || [];
+  
   const [formData, setFormData] = useState({
     investmentId: '',
+    account: '',
     quantity: '',
     salePrice: '',
     saleDate: new Date(),
@@ -65,19 +71,6 @@ export function InvestmentSaleModal({
     notes: '',
   });
   const [loading, setLoading] = useState(false);
-
-  /**
-   * @deprecated localStorage não é mais usado - dados ficam no banco
-   * Dados agora vêm do banco via DataService
-   */
-  const investments = useMemo(() => {
-    console.log(
-      'Carregamento de investimentos - localStorage removido, dados agora vêm do banco via DataService'
-    );
-    // TODO: Implementar carregamento via DataService
-    // return DataService.getActiveInvestments();
-    return [];
-  }, []);
 
   const selectedInvestment = investments.find(
     (inv) => inv.id === formData.investmentId
@@ -185,6 +178,11 @@ export function InvestmentSaleModal({
       return;
     }
 
+    if (!formData.account) {
+      toast.error('Selecione uma conta de destino');
+      return;
+    }
+
     if (saleData.quantity > selectedInvestment.quantity) {
       toast.error(
         'Quantidade de venda não pode ser maior que a quantidade possuída'
@@ -219,18 +217,36 @@ export function InvestmentSaleModal({
         updatedAt: new Date().toISOString(),
       };
 
-      /**
-       * @deprecated localStorage não é mais usado - dados ficam no banco
-       * Dados agora são salvos via DataService no backend
-       */
-      console.log(
-        'Salvamento de venda - localStorage removido, dados agora vêm do banco via DataService'
-      );
+      // Criar transação de venda
+      const transactionData = {
+        id: `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        account: formData.account,
+        amount: saleData.netAmount, // Positive for income
+        description: `Venda ${selectedInvestment.symbol || selectedInvestment.name}`,
+        category: 'investment',
+        type: 'income' as const,
+        date: formData.saleDate.toISOString(),
+        metadata: {
+          investmentId: formData.investmentId,
+          investmentSymbol: selectedInvestment.symbol || selectedInvestment.name,
+          investmentType: selectedInvestment.type,
+          quantity: saleData.quantity,
+          salePrice: saleData.salePrice,
+          fees: saleData.fees,
+          averagePrice: saleData.averagePrice,
+          costBasis: saleData.costBasis,
+          grossProfit: saleData.grossProfit,
+          netProfit: saleData.netProfit,
+          profitPercentage: saleData.profitPercentage,
+          taxRate: saleData.taxRate,
+          taxDue: saleData.taxDue,
+          exemptionApplies: saleData.exemptionApplies,
+          operationType: 'sell'
+        },
+        notes: formData.notes || undefined,
+      };
 
-      // TODO: Implementar salvamento via DataService
-      // await DataService.createSale(saleRecord);
-      // await DataService.updateInvestment(formData.investmentId, { quantity: remainingQuantity, status });
-      // await DataService.createTransaction(transactionData);
+      await actions.createTransaction(transactionData);
 
       toast.success(
         `Venda registrada com sucesso! ${saleData.isProfit ? 'Lucro' : 'Prejuízo'}: ${formatCurrency(saleData.netProfit)}`
@@ -239,6 +255,7 @@ export function InvestmentSaleModal({
       // Reset form
       setFormData({
         investmentId: '',
+        account: '',
         quantity: '',
         salePrice: '',
         saleDate: new Date(),
@@ -294,62 +311,86 @@ export function InvestmentSaleModal({
           </div>
 
           {selectedInvestment && (
-            <div className="grid grid-cols-2 gap-4">
-              {/* Informações do Investimento */}
-              <div className="p-4 bg-blue-50 rounded-lg border">
-                <h4 className="font-medium text-blue-800 mb-2">
-                  Posição Atual
-                </h4>
-                <div className="space-y-1 text-sm">
-                  <p>
-                    <span className="font-medium">Quantidade:</span>{' '}
-                    {selectedInvestment.quantity} cotas
-                  </p>
-                  <p>
-                    <span className="font-medium">Preço Médio:</span>{' '}
-                    {formatCurrency(selectedInvestment.purchasePrice)}
-                  </p>
-                  <p>
-                    <span className="font-medium">Valor Total:</span>{' '}
-                    {formatCurrency(
-                      selectedInvestment.quantity *
-                        selectedInvestment.purchasePrice
-                    )}
-                  </p>
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                {/* Informações do Investimento */}
+                <div className="p-4 bg-blue-50 rounded-lg border">
+                  <h4 className="font-medium text-blue-800 mb-2">
+                    Posição Atual
+                  </h4>
+                  <div className="space-y-1 text-sm">
+                    <p>
+                      <span className="font-medium">Quantidade:</span>{' '}
+                      {selectedInvestment.quantity} cotas
+                    </p>
+                    <p>
+                      <span className="font-medium">Preço Médio:</span>{' '}
+                      {formatCurrency(selectedInvestment.purchasePrice)}
+                    </p>
+                    <p>
+                      <span className="font-medium">Valor Total:</span>{' '}
+                      {formatCurrency(
+                        selectedInvestment.quantity *
+                          selectedInvestment.purchasePrice
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Data da Venda */}
+                <div className="space-y-2">
+                  <Label>Data da Venda *</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          'w-full justify-start text-left font-normal',
+                          !formData.saleDate && 'text-muted-foreground'
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {formData.saleDate
+                          ? format(formData.saleDate, 'dd/MM/yyyy')
+                          : 'Selecionar data'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={formData.saleDate}
+                        onSelect={(date) =>
+                          date && setFormData({ ...formData, saleDate: date })
+                        }
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
 
-              {/* Data da Venda */}
+              {/* Conta de Destino */}
               <div className="space-y-2">
-                <Label>Data da Venda *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        'w-full justify-start text-left font-normal',
-                        !formData.saleDate && 'text-muted-foreground'
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.saleDate
-                        ? format(formData.saleDate, 'dd/MM/yyyy')
-                        : 'Selecionar data'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={formData.saleDate}
-                      onSelect={(date) =>
-                        date && setFormData({ ...formData, saleDate: date })
-                      }
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <Label htmlFor="account">Conta de Destino *</Label>
+                <Select
+                  value={formData.account}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, account: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a conta..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accounts.map((account) => (
+                      <SelectItem key={account.id} value={account.id}>
+                        {account.name} - {formatCurrency(account.balance || 0)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            </div>
+            </>
           )}
 
           <div className="grid grid-cols-3 gap-4">
@@ -519,3 +560,4 @@ export function InvestmentSaleModal({
     </Dialog>
   );
 }
+

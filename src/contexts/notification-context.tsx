@@ -45,55 +45,63 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
 
   const loadNotificationsFromDatabase = async () => {
     try {
+      // Verificar se já mostrou a notificação de boas-vindas
+      const hasShownWelcome = localStorage.getItem('hasShownWelcomeNotification');
+      
       // TODO: Implementar chamada para API de notificações
-      const response = await fetch('/api/notifications');
+      const response = await fetch('/api/notifications', { credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
-        setNotifications(data.notifications || []);
+        const apiNotifications = data.notifications || [];
+        
+        // Adicionar notificação de boas-vindas apenas na primeira vez
+        if (!hasShownWelcome) {
+          const welcomeNotification: Notification = {
+            id: 'welcome-notification',
+            title: '👋 Bem-vindo!',
+            message: 'Sistema de notificações ativo. Você receberá alertas sobre contas, metas e orçamentos.',
+            type: 'info',
+            isRead: false,
+            createdAt: new Date(),
+          };
+          setNotifications([welcomeNotification, ...apiNotifications]);
+          localStorage.setItem('hasShownWelcomeNotification', 'true');
+        } else {
+          setNotifications(apiNotifications);
+        }
       } else {
-        // Fallback: criar algumas notificações de exemplo
-        const exampleNotifications: Notification[] = [
-          {
-            id: '1',
-            title: 'Orçamento Mensal',
-            message: 'Você gastou 80% do seu orçamento mensal',
-            type: 'warning',
+        // Fallback: criar notificação de boas-vindas apenas na primeira vez
+        if (!hasShownWelcome) {
+          const welcomeNotification: Notification = {
+            id: 'welcome-notification',
+            title: '👋 Bem-vindo!',
+            message: 'Sistema de notificações ativo. Você receberá alertas sobre contas, metas e orçamentos.',
+            type: 'info',
             isRead: false,
             createdAt: new Date(),
-          },
-          {
-            id: '2',
-            title: 'Meta Atingida',
-            message: 'Parabéns! Você atingiu sua meta de economia',
-            type: 'success',
-            isRead: false,
-            createdAt: new Date(),
-          },
-        ];
-        setNotifications(exampleNotifications);
+          };
+          setNotifications([welcomeNotification]);
+          localStorage.setItem('hasShownWelcomeNotification', 'true');
+        }
       }
     } catch (error) {
       console.error('Erro ao carregar notificações:', error);
-      // Fallback: criar algumas notificações de exemplo
-      const exampleNotifications: Notification[] = [
-        {
-          id: '1',
-          title: 'Orçamento Mensal',
-          message: 'Você gastou 80% do seu orçamento mensal',
-          type: 'warning',
+      // Verificar se já mostrou a notificação de boas-vindas
+      const hasShownWelcome = localStorage.getItem('hasShownWelcomeNotification');
+      
+      // Fallback: criar notificação de boas-vindas apenas na primeira vez
+      if (!hasShownWelcome) {
+        const welcomeNotification: Notification = {
+          id: 'welcome-notification',
+          title: '👋 Bem-vindo!',
+          message: 'Sistema de notificações ativo. Você receberá alertas sobre contas, metas e orçamentos.',
+          type: 'info',
           isRead: false,
           createdAt: new Date(),
-        },
-        {
-          id: '2',
-          title: 'Meta Atingida',
-          message: 'Parabéns! Você atingiu sua meta de economia',
-          type: 'success',
-          isRead: false,
-          createdAt: new Date(),
-        },
-      ];
-      setNotifications(exampleNotifications);
+        };
+        setNotifications([welcomeNotification]);
+        localStorage.setItem('hasShownWelcomeNotification', 'true');
+      }
     }
   };
 
@@ -115,6 +123,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
     try {
       await fetch('/api/notifications', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -139,6 +148,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
     try {
       await fetch(`/api/notifications/${id}`, {
         method: 'DELETE',
+        credentials: 'include',
       });
     } catch (error) {
       console.error('Erro ao remover notificação:', error);
@@ -158,6 +168,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
     try {
       await fetch(`/api/notifications/${id}`, {
         method: 'PATCH',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -177,6 +188,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
     try {
       await fetch('/api/notifications/mark-all-read', {
         method: 'PATCH',
+        credentials: 'include',
       });
     } catch (error) {
       console.error('Erro ao marcar todas as notificações como lidas:', error);
@@ -190,6 +202,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
     try {
       await fetch('/api/notifications', {
         method: 'DELETE',
+        credentials: 'include',
       });
     } catch (error) {
       console.error('Erro ao limpar notificações:', error);

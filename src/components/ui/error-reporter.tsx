@@ -8,7 +8,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AlertTriangle, Bug, Copy, Download, RefreshCw, X } from 'lucide-react';
-import logger, { loggerUtils, LogEntry } from '@/lib/logger';
 import { useToast } from '@/hooks/use-toast';
 
 interface ErrorReporterProps {
@@ -22,21 +21,12 @@ export function ErrorReporter({ error, errorInfo, onClose, onRetry }: ErrorRepor
   const [isExpanded, setIsExpanded] = useState(false);
   const [userDescription, setUserDescription] = useState('');
   const [userEmail, setUserEmail] = useState('');
-  const [recentErrors, setRecentErrors] = useState<LogEntry[]>([]);
+  const [recentErrors, setRecentErrors] = useState<any[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Get recent errors for context
-    const getErrors = async () => {
-      try {
-        const errors = await loggerUtils.getRecentErrors();
-        setRecentErrors(errors);
-      } catch (error) {
-        console.warn('Erro ao obter erros recentes:', error);
-      }
-    };
-    
-    getErrors();
+    // Stubbed out - no logger access
+    setRecentErrors([]);
   }, []);
 
   const errorDetails = {
@@ -46,7 +36,7 @@ export function ErrorReporter({ error, errorInfo, onClose, onRetry }: ErrorRepor
     timestamp: new Date().toISOString(),
     url: typeof window !== 'undefined' ? window.location.href : 'Unknown',
     userAgent: typeof window !== 'undefined' ? navigator.userAgent : 'Unknown',
-    sessionId: loggerUtils.getSessionId(),
+    sessionId: 'stub-session',
     recentErrors: recentErrors.slice(0, 5), // Last 5 errors for context
     errorInfo,
   };
@@ -84,13 +74,17 @@ export function ErrorReporter({ error, errorInfo, onClose, onRetry }: ErrorRepor
       userEmail,
     };
 
+    // TODO: Re-enable logger after fixing webpack issues
     // Log the error report
-    logger.errorWithContext(
-      'User submitted error report',
-      error || new Error('Manual error report'),
-      'ErrorReporter',
-      report
-    );
+    // logger.errorWithContext(
+    //   'User submitted error report',
+    //   error || new Error('Manual error report'),
+    //   'ErrorReporter',
+    //   report
+    // );
+
+    // Temporary console logging instead of logger
+    console.log('User submitted error report:', report);
 
     // In a real application, you would send this to your error tracking service
     // Example: Sentry, LogRocket, Bugsnag, etc.
@@ -240,13 +234,17 @@ export function useErrorReporter() {
     setErrorInfo(errorInfo);
     setIsOpen(true);
     
+    // TODO: Re-enable logger after fixing webpack issues
     // Also log to our logging system
-    logger.errorWithContext(
-      'Error reported via useErrorReporter',
-      error,
-      'ErrorReporter',
-      errorInfo
-    );
+    // logger.errorWithContext(
+    //   'Error reported via useErrorReporter',
+    //   error,
+    //   'ErrorReporter',
+    //   errorInfo
+    // );
+
+    // Temporary console logging instead of logger
+    console.error('Error reported via useErrorReporter:', error, errorInfo);
   };
 
   const closeReporter = () => {

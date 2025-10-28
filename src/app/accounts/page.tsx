@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import dynamic from 'next/dynamic';
+// import dynamic from 'next/dynamic'; // Não usado
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -33,62 +33,62 @@ import {
 } from 'lucide-react';
 
 // Importações do contexto
-import { useUnified } from '@/contexts/unified-context-simple';
-import { useAccountMetrics } from '@/contexts/unified-context-simple';
-import { Account, AccountType, Transaction } from '@/types';
+import { useUnifiedFinancial } from '@/contexts/unified-financial-context';
+import { Account, AccountType } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 
-// Modal de criação de conta
-import { AddAccountModal } from '@/components/modals/accounts/add-account-modal';
+// Modal de criação removido - usar formulário de nova transação
 import { EditAccountModal } from '@/components/edit-account-modal';
 import { DeleteAccountModal } from '@/components/modals/delete-account-modal';
 import { AccountHistoryModal } from '@/components/account-history-modal';
 
-// Componentes dinâmicos com SSR desabilitado
-const ModernAppLayout = dynamic(
-  () =>
-    import('@/components/modern-app-layout').then((mod) => ({
-      default: mod.ModernAppLayout,
-    })),
-  { ssr: false }
-);
-
-const OptimizedPageTransition = dynamic(
-  () =>
-    import('@/components/optimized-page-transition').then((mod) => ({
-      default: mod.OptimizedPageTransition,
-    })),
-  { ssr: false }
-);
+// Regular imports to fix webpack factory function errors
+import { ModernAppLayout } from '@/components/modern-app-layout';
+import { OptimizedPageTransition } from '@/components/optimized-page-transition';
 
 // Hook de performance
 import { useRenderPerformance } from '@/components/optimized-page-transition';
 
-// Componente principal com SSR desabilitado
-const AccountsPageContent = dynamic(() => Promise.resolve(AccountsPageContentComponent), {
-  ssr: false
-});
+// Regular component to fix webpack factory function errors
+const AccountsPageContent = AccountsPageContentComponent;
 
 function AccountsPageContentComponent() {
   // Performance monitoring
   useRenderPerformance('AccountsPage');
 
-  // Contexto unificado - single source of truth
-  const {
-    accounts = [],
-    transactions = [],
-    balances = {},
-    isLoading = false, 
-    createTransaction,
-    updateTransaction,
-    deleteTransaction,
-    getTransactionsByAccount,
-    refreshState,
-    dashboardData
-  } = useUnified();
+  // Estado de montagem para evitar erros de hidratação
+  const [isMounted, setIsMounted] = useState(false);
 
-  // Obter métricas das contas
-  const accountMetrics = useAccountMetrics();
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Contexto unificado - usar useUnifiedFinancial com filtros de data
+  const {
+    accounts,
+    transactions,
+    balances,
+    loading,
+    // createTransaction, // Não existe no contexto
+    // updateTransaction, // Não existe no contexto
+    // deleteTransaction, // Não existe no contexto
+    // getTransactionsByAccount, // Não existe no contexto
+    actions,
+    // dashboardData // Não existe no contexto
+  } = useUnifiedFinancial();
+
+  // Estados de loading
+  const isLoading = !isMounted || loading;
+  
+  // Debug loading state
+  useEffect(() => {
+    console.log('🔍 [Accounts] Debug loading:', {
+      isMounted,
+      loading,
+      isLoading,
+      accountsLength: accounts?.length || 0
+    });
+  }, [isMounted, loading, isLoading, accounts]);
 
   const { toast } = useToast();
 
@@ -96,74 +96,67 @@ function AccountsPageContentComponent() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<AccountType | 'all'>('all');
   const [sortBy, setSortBy] = useState<'name' | 'balance' | 'type' | 'transactions'>('name');
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  // Estado removido - não usar mais modal de criar conta
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showDetails, setShowDetails] = useState<string | null>(null);
 
-  // Debug: Log do estado atual - movido para useEffect para evitar side effects durante render
-  useEffect(() => {
-    console.log('🔍 AccountsPageContent - Estado atual:', { 
-      accounts: accounts?.length || 0, 
-      transactions: transactions?.length || 0, 
-      isLoading 
-    });
-  }, [accounts, transactions, isLoading]);
-
-  // Filtrar e ordenar contas
+  // Filtrar e ordenar contas usando useMemo para evitar problemas de inicialização
   const filteredAndSortedAccounts = useMemo(() => {
-    if (!accounts || !Array.isArray(accounts)) {
-      // Removido console.log durante render - será logado no useEffect acima
+    // Verificações de segurança para evitar erros de inicialização
+    if (!isMounted || !accounts || !Array.isArray(accounts)) {
       return [];
     }
     
-    let filtered = [...accounts];
+    try {
+      // Filtrar apenas contas (excluir cartões de crédito)
+      let filtered = accounts.filter(account => account.type !== 'credit');
 
-    // Filtro por busca
-    if (searchTerm) {
-      filtered = filtered.filter(account => 
-        account.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        account.description?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Filtro por tipo
-    if (selectedType !== 'all') {
-      filtered = filtered.filter(account => account.type === selectedType);
-    }
-
-    // Ordenação
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case 'name':
-          return a.name.localeCompare(b.name);
-        case 'balance':
-          // Usar balances do useUnified
-          const aBalance = balances[a.id] || 0;
-          const bBalance = balances[b.id] || 0;
-          return bBalance - aBalance;
-        case 'type':
-          return a.type.localeCompare(b.type);
-        case 'transactions':
-          // Contar transações por conta
-          const aTransactions = getTransactionsByAccount(a.id).length;
-          const bTransactions = getTransactionsByAccount(b.id).length;
-          return bTransactions - aTransactions;
-        default:
-          return 0;
+      // Filtro por busca
+      if (searchTerm) {
+        filtered = filtered.filter(account => 
+          account.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (account as any).description?.toLowerCase().includes(searchTerm.toLowerCase())
+        );
       }
-    });
 
-    // Removido console.log durante render - será logado no useEffect
-    return filtered;
-  }, [accounts, transactions, searchTerm, selectedType, sortBy, balances, getTransactionsByAccount]);
+      // Filtro por tipo
+      if (selectedType !== 'all') {
+        filtered = filtered.filter(account => account.type === selectedType);
+      }
+
+      // Ordenação
+      filtered.sort((a, b) => {
+        switch (sortBy) {
+          case 'name':
+            return (a.name || '').localeCompare(b.name || '');
+          case 'balance':
+            // Use account's own balance property to avoid circular dependency
+            const aBalance = Number(a.balance) || 0;
+            const bBalance = Number(b.balance) || 0;
+            return bBalance - aBalance;
+          case 'type':
+            return (a.type || '').localeCompare(b.type || '');
+          case 'transactions':
+            // Função comentada - não disponível no contexto
+            return 0;
+          default:
+            return 0;
+        }
+      });
+
+      return filtered;
+    } catch (error) {
+      console.warn('Error filtering and sorting accounts:', error);
+      return [];
+    }
+  }, [isMounted, accounts, searchTerm, selectedType, sortBy]);
 
   // Calcular estatísticas das contas usando useUnified
   const accountStats = useMemo(() => {
     if (!accounts || !Array.isArray(accounts) || accounts.length === 0) {
-      console.log('⚠️ Calculando stats com accounts inválido:', accounts);
       return {
         totalBalance: 0,
         activeAccounts: 0,
@@ -176,18 +169,19 @@ function AccountsPageContentComponent() {
     }
 
     // Usar dados da API em vez de calcular no frontend
-    const totalBalance = dashboardData?.totalBalance || 0;
-    const activeAccounts = accounts.filter(account => account.status === 'active').length;
-    const totalTransactions = dashboardData?.totalTransactions || 0;
+    const totalBalance = balances?.totalBalance || 0;
+    const safeAccounts = Array.isArray(accounts) ? accounts : [];
+    const activeAccounts = safeAccounts.filter(account => (account as any).status === 'active').length;
+    const totalTransactions = transactions?.length || 0;
     
-    const balancesByType = accounts.reduce((acc, account) => {
+    const balancesByType = safeAccounts.reduce((acc, account) => {
       const type = account.type;
       if (!type) return acc;
       
       if (!acc[type]) {
         acc[type] = { balance: 0, count: 0 };
       }
-      acc[type].balance += balances[account.id] || 0;
+      acc[type].balance += balances?.accountBalances?.[account.id] || 0;
       acc[type].count += 1;
       return acc;
     }, {} as Record<string, { balance: number; count: number }>);
@@ -202,13 +196,13 @@ function AccountsPageContentComponent() {
     return {
       totalBalance,
       activeAccounts,
-      totalAccounts: accounts.length,
+      totalAccounts: safeAccounts.length,
       totalTransactions,
       balancesByType,
       positiveBalance,
       negativeBalance,
     };
-  }, [accounts, balances, getTransactionsByAccount]);
+  }, [accounts, balances]);
 
   // Funções de formatação
   const formatCurrency = (value: number) => {
@@ -289,12 +283,12 @@ function AccountsPageContentComponent() {
   const handleAccountUpdated = useCallback(async () => {
     setShowEditModal(false);
     setSelectedAccount(null);
-    await refreshState();
+    await actions?.refresh?.();
     toast({
       title: 'Sucesso',
       description: 'Conta atualizada com sucesso.',
     });
-  }, [refreshState, toast]);
+  }, [actions?.refresh, toast]);
 
   const handleDeleteAccount = useCallback(async (accountId: string, deleteTransactions?: boolean) => {
     try {
@@ -302,6 +296,7 @@ function AccountsPageContentComponent() {
       // Se deleteTransactions for true, excluir conta e transações
       const response = await fetch(`/api/accounts?id=${accountId}&deleteTransactions=${deleteTransactions || false}`, {
         method: 'DELETE',
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -309,7 +304,7 @@ function AccountsPageContentComponent() {
         throw new Error(errorData.error || 'Erro ao excluir conta');
       }
 
-      await refreshState();
+      await actions?.refresh?.();
       toast({
         title: 'Sucesso',
         description: deleteTransactions 
@@ -323,51 +318,88 @@ function AccountsPageContentComponent() {
         variant: 'destructive',
       });
     }
-  }, [toast, refreshState]);
+  }, [toast, actions?.refresh]);
 
   const handleDeleteClick = useCallback((account: Account) => {
     setSelectedAccount(account);
     setShowDeleteModal(true);
   }, []);
 
-  if (isLoading) {
-    return (
-      <ModernAppLayout title="Contas" subtitle="Carregando...">
-        <div className="p-6 space-y-6">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {[...Array(4)].map((_, i) => (
-              <Card key={i}>
-                <CardContent className="p-6">
-                  <div className="animate-pulse">
-                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                    <div className="h-8 bg-gray-200 rounded w-1/2"></div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </ModernAppLayout>
-    );
-  }
+  // Temporariamente removido para debug - sempre mostrar a página
+  // if (isLoading) {
+  //   return (
+  //     <ModernAppLayout title="Contas">
+  //       <div className="p-6 space-y-6">
+  //         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+  //           {[...Array(4)].map((_, i) => (
+  //             <Card key={i}>
+  //               <CardContent className="p-6">
+  //                 <div className="animate-pulse">
+  //                   <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+  //                   <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+  //                 </div>
+  //               </CardContent>
+  //             </Card>
+  //           ))}
+  //         </div>
+  //       </div>
+  //     </ModernAppLayout>
+  //   );
+  // }
 
   return (
     <ModernAppLayout
       title="Contas"
-      subtitle="Saldos calculados dinamicamente das transações"
+      subtitle="Gerencie suas contas bancárias"
     >
       <OptimizedPageTransition>
         <div className="p-4 md:p-6 space-y-6">
           {/* Header com ações */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Contas</h1>
-              <p className="text-muted-foreground">
-                Gerencie suas contas com saldos calculados em tempo real
-              </p>
-            </div>
-            <Button onClick={() => setShowCreateModal(true)}>
-              <Plus className="mr-2 h-4 w-4" />
+            {isLoading && (
+              <div className="text-xs text-yellow-600">
+                ⏳ Carregando dados... (isMounted: {isMounted.toString()}, loading: {loading.toString()})
+              </div>
+            )}
+            <div className="flex-1"></div>
+            <Button
+              onClick={async () => {
+                try {
+                  const response = await fetch('/api/accounts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                      name: `Nova Conta ${Date.now()}`,
+                      type: 'checking',
+                      initialBalance: 0
+                    })
+                  });
+                  
+                  if (response.ok) {
+                    toast({
+                      title: 'Sucesso',
+                      description: 'Conta criada com sucesso!'
+                    });
+                    actions?.refresh?.();
+                  } else {
+                    const error = await response.json();
+                    toast({
+                      title: 'Erro',
+                      description: error.error || 'Erro ao criar conta',
+                      variant: 'destructive'
+                    });
+                  }
+                } catch (error) {
+                  toast({
+                    title: 'Erro',
+                    description: 'Erro ao criar conta',
+                    variant: 'destructive'
+                  });
+                }
+              }}
+            >
+              <Plus className="h-4 w-4 mr-2" />
               Nova Conta
             </Button>
           </div>
@@ -507,7 +539,12 @@ function AccountsPageContentComponent() {
 
           {/* Lista de Contas */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredAndSortedAccounts.length === 0 ? (
+            {isLoading ? (
+              <div className="col-span-full text-center p-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                <p className="text-muted-foreground">Carregando contas...</p>
+              </div>
+            ) : filteredAndSortedAccounts.length === 0 ? (
               <div className="col-span-full text-center p-8">
                 <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">Nenhuma conta encontrada</h3>
@@ -516,16 +553,17 @@ function AccountsPageContentComponent() {
                     ? 'Nenhuma conta corresponde aos filtros selecionados.'
                     : 'Você ainda não possui contas cadastradas.'}
                 </p>
-                <Button onClick={() => setShowCreateModal(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Criar primeira conta
-                </Button>
+                {/* Botão removido - usar formulário de nova transação */}
               </div>
             ) : (
               filteredAndSortedAccounts.map((account) => {
-                // Usar accountMetrics para obter o saldo da conta
-                const accountMetric = accountMetrics?.find(m => m.account.id === account.id);
-                const balance = accountMetric?.balance || 0;
+                // Verificar se account existe antes de acessar suas propriedades
+                if (!account || !account.id) {
+                  return null;
+                }
+                
+                // Usar saldo da conta diretamente
+                const balance = account.balance || 0;
                 const accountTransactions = transactions.filter(t => t.accountId === account.id);
                 const recentTransactions = accountTransactions
                   .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -684,11 +722,7 @@ function AccountsPageContentComponent() {
         </div>
       </OptimizedPageTransition>
       
-      {/* Modal de criação de conta */}
-      <AddAccountModal 
-        open={showCreateModal} 
-        onOpenChange={setShowCreateModal} 
-      />
+      {/* Modal de criação removido - usar formulário de nova transação */}
       
         {/* Modal de histórico de transações */}
         <AccountHistoryModal

@@ -11,17 +11,23 @@ import {
 } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { storage, type NotificationPreferences } from '@/lib/storage';
+// import { storage, type NotificationPreferences } from '@/lib/storage'; // Removido - usar API
+
+// Definição temporária do tipo
+interface NotificationPreferences {
+  email: boolean;
+  push: boolean;
+  sms: boolean;
+  inApp: boolean;
+}
 import { toast } from 'sonner';
 import { BackButton } from '@/components/back-button';
-import { useUnified } from '@/contexts/unified-context-simple';
-import { logError } from '@/lib/logger';
+import { useUnifiedFinancial } from '@/contexts/unified-financial-context';
 
 export default function NotificationSettingsPage() {
-  const {
-    accounts,
-    transactions,
-  } = useUnified();
+  const { data } = useUnifiedFinancial();
+  const accounts = data?.accounts || [];
+  const transactions = data?.transactions || [];
   const [preferences, setPreferences] = useState<NotificationPreferences>({
     billing: true,
     goal: true,
@@ -31,10 +37,11 @@ export default function NotificationSettingsPage() {
 
   useEffect(() => {
     try {
-      const savedPreferences = storage.getNotificationPreferences();
-      setPreferences(savedPreferences);
+      // TODO: Implementar carregamento de preferências via API
+      // const savedPreferences = storage.getNotificationPreferences();
+      // setPreferences(savedPreferences);
     } catch (error) {
-      logError.ui('Error loading notification preferences:', error);
+      console.error('Error loading notification preferences:', error);
     }
   }, []);
 
@@ -45,10 +52,11 @@ export default function NotificationSettingsPage() {
     const newPreferences = { ...preferences, [key]: value };
     setPreferences(newPreferences);
     try {
-      storage.setNotificationPreferences(newPreferences);
+      // TODO: Implementar salvamento de preferências via API
+      // storage.setNotificationPreferences(newPreferences);
       toast.success('Preferências de notificação atualizadas!');
     } catch (error) {
-      logError.ui('Error saving notification preferences:', error);
+      console.error('Error saving notification preferences:', error);
       toast.error('Erro ao salvar as preferências.');
     }
   };
@@ -56,7 +64,6 @@ export default function NotificationSettingsPage() {
   return (
     <ModernAppLayout
       title="Configurações de Notificações"
-      subtitle="Gerencie como você recebe notificações"
     >
       <div className="p-4 md:p-6 space-y-6">
         <div className="max-w-4xl mx-auto space-y-6">

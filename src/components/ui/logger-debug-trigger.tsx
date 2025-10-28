@@ -9,39 +9,19 @@ export function LoggerDebugTrigger() {
   const [isLoggerReady, setIsLoggerReady] = useState(false);
 
   useEffect(() => {
-    // Aguardar o logger estar pronto
-    const handleLoggerReady = () => {
+    // Logger temporariamente desabilitado para corrigir problemas de webpack
+    setIsLoggerReady(false);
+    setErrorCount(0);
+    
+    // Em desenvolvimento, sempre mostrar o painel para debug
+    if (process.env.NODE_ENV === 'development') {
       setIsLoggerReady(true);
-      updateErrorCount();
-    };
-
-    // Verificar se o logger já está disponível
-    if (typeof window !== 'undefined' && (window as any).loggerUtils) {
-      setIsLoggerReady(true);
-      updateErrorCount();
-    } else {
-      // Aguardar evento de logger pronto
-      window.addEventListener('logger-ready', handleLoggerReady);
     }
-
-    // Atualizar contagem de erros periodicamente
-    const interval = setInterval(updateErrorCount, 5000);
-
-    return () => {
-      window.removeEventListener('logger-ready', handleLoggerReady);
-      clearInterval(interval);
-    };
   }, []);
 
   const updateErrorCount = async () => {
-    if (typeof window !== 'undefined' && (window as any).loggerUtils) {
-      try {
-        const errors = await (window as any).loggerUtils.getRecentErrors();
-        setErrorCount(errors.length);
-      } catch (error) {
-        console.warn('Erro ao obter contagem de erros:', error);
-      }
-    }
+    // Logger temporariamente desabilitado
+    setErrorCount(0);
   };
 
   // Só mostrar o botão se o logger estiver pronto ou se houver erros

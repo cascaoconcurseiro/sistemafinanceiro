@@ -1,27 +1,27 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
-import { Label } from '../../ui/label';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../../ui/select';
-import { Textarea } from '../../ui/textarea';
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '../../ui/dialog';
-import { DatePicker } from '../../ui/date-picker';
+} from '@/components/ui/dialog';
+import { DatePicker } from '@/components/ui/date-picker';
 import { TrendingUp, TrendingDown } from 'lucide-react';
-import { storage, type Investment } from '../../../lib/storage';
-import { useUnified } from '../../../contexts/unified-context-simple';
+
+import { useUnifiedFinancial } from '@/contexts/unified-financial-context';
 import { toast } from 'sonner';
 
 interface InvestmentModalProps {
@@ -35,8 +35,11 @@ export function InvestmentModal({
   onSave,
   investment,
 }: InvestmentModalProps) {
-  const { accounts, transactions, createTransaction, updateTransaction } =
-    useUnified();
+  const { data } = useUnifiedFinancial();
+  const accounts = data?.accounts || [];
+  const transactions = data?.transactions || [];
+  const createTransaction = data?.createTransaction;
+  const updateTransaction = data?.updateTransaction;
   const [formData, setFormData] = useState({
     operation: 'buy' as 'buy' | 'sell',
     type: '',

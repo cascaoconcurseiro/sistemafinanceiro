@@ -1,14 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { runReconciliation, fixAccountBalances } from '@/lib/reconciliation-job'
+import { authenticateRequest } from '@/lib/utils/auth-helpers'
 
-// Executar reconciliação manual
+// ✅ CORREÇÃO CRÍTICA: Executar reconciliação manual APENAS para usuários autenticados
+
+export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
+    // ✅ CORREÇÃO CRÍTICA: Adicionar autenticação obrigatória
+    const auth = await authenticateRequest(request);
+    if (!auth.success || !auth.userId) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url)
     const autoFix = searchParams.get('autoFix') === 'true'
 
-    console.log('Iniciando reconciliação manual...')
-    const report = await runReconciliation()
+    console.log(`Iniciando reconciliação manual para usuário ${auth.userId}...`)
+    
+    // ✅ CORREÇÃO CRÍTICA: Passar userId para reconciliação
+    const report = await runReconciliation(auth.userId)
 
     // Se autoFix estiver habilitado e houver contas desbalanceadas
     if (autoFix && report.unbalancedAccounts > 0) {
@@ -52,6 +63,12 @@ export async function GET(request: NextRequest) {
 // Corrigir saldos específicos
 export async function POST(request: NextRequest) {
   try {
+    // ✅ CORREÇÃO CRÍTICA: Adicionar autenticação obrigatória
+    const auth = await authenticateRequest(request);
+    if (!auth.success || !auth.userId) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    }
+
     const { accountIds } = await request.json()
 
     if (!Array.isArray(accountIds)) {
@@ -61,8 +78,27 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log(`Corrigindo saldos para ${accountIds.length} contas...`)
-    const result = await fixAccountBalances(accountIds)
+    // ✅ CORREÇÃO CRÍTICA: Verificar se todas as contas pertencem ao usuário
+    const { prisma } = await import('@/lib/prisma');
+    const userAccounts = await prisma.account.findMany({
+      where: {
+        id: { in: accountIds },
+        userId: auth.userId
+      },
+      select: { id: true }
+    });
+
+    const validAccountIds = userAccounts.map(acc => acc.id);
+    
+    if (validAccountIds.length !== accountIds.length) {
+      return NextResponse.json(
+        { error: 'Algumas contas não pertencem ao usuário ou não existem' },
+        { status: 403 }
+      );
+    }
+
+    console.log(`Corrigindo saldos para ${validAccountIds.length} contas do usuário ${auth.userId}...`)
+    const result = await fixAccountBalances(validAccountIds)
 
     return NextResponse.json({
       success: true,

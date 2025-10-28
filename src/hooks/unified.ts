@@ -76,7 +76,7 @@ export function useUnifiedState<T>(options: UnifiedHookOptions<T>): [UnifiedStat
     if (autoLoad && loadFunction && !state.data && !state.loading) {
       refresh();
     }
-  }, [autoLoad, state.data, state.loading, loadFunction, refresh]); // Adicionando dependências necessárias
+  }, [autoLoad, loadFunction, state.data, state.loading]); // Removendo refresh das dependências para evitar loop
 
   // Save to database whenever data changes
   useEffect(() => {
@@ -469,7 +469,7 @@ export function useUnifiedCache<T>(
         setCacheInfo({ expiresAt: null, isExpired: true });
       }
     }
-  }, [key, actions, cacheInfo.expiresAt]);
+  }, [key, cacheInfo.expiresAt]); // Removendo actions das dependências para evitar loop
 
   const setWithTTL = useCallback((data: T) => {
     const expiresAt = new Date();

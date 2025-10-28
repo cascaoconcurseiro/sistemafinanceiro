@@ -5,6 +5,21 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('Seeding database...')
 
+  // Criar usuário padrão primeiro
+  const defaultUser = await prisma.user.upsert({
+    where: { email: 'usuario@exemplo.com' },
+    update: {},
+    create: {
+      email: 'usuario@exemplo.com',
+      name: 'Usuário Exemplo',
+      password: 'senha123', // Em produção, isso deveria ser hasheado
+      monthlyIncome: 5000.00,
+      emergencyReserve: 10000.00,
+      riskProfile: 'moderado',
+      financialGoals: 'Construir reserva de emergência e investir para aposentadoria'
+    }
+  })
+
   // Criar conta padrão
   const defaultAccount = await prisma.account.upsert({
     where: { id: 'conta-corrente' },
@@ -13,9 +28,10 @@ async function main() {
       id: 'conta-corrente',
       name: 'Conta Corrente',
       type: 'checking',
-      balance: 5000.00,
+      // balance removido - será calculado dinamicamente
       currency: 'BRL',
-      isActive: true
+      isActive: true,
+      userId: defaultUser.id
     }
   })
 
@@ -26,9 +42,10 @@ async function main() {
     create: {
       id: 'trans-1',
       accountId: defaultAccount.id,
+      userId: defaultUser.id,
       amount: 3000.00,
       description: 'Salário',
-      category: 'Renda',
+      // category: 'Renda', // Removido - usar categoryId se necessário
       type: 'income',
       date: new Date('2024-01-15'),
       isRecurring: true
@@ -41,9 +58,10 @@ async function main() {
     create: {
       id: 'trans-2',
       accountId: defaultAccount.id,
+      userId: defaultUser.id,
       amount: -250.00,
       description: 'Supermercado',
-      category: 'Alimentação',
+      // category: 'Alimentação', // Removido - usar categoryId se necessário
       type: 'expense',
       date: new Date('2024-01-16'),
       isRecurring: false
@@ -56,9 +74,10 @@ async function main() {
     create: {
       id: 'trans-3',
       accountId: defaultAccount.id,
+      userId: defaultUser.id,
       amount: -120.00,
       description: 'Combustível',
-      category: 'Transporte',
+      // category: 'Transporte', // Removido - usar categoryId se necessário
       type: 'expense',
       date: new Date('2024-01-17'),
       isRecurring: false
@@ -71,13 +90,14 @@ async function main() {
     update: {},
     create: {
       id: 'goal-1',
+      userId: defaultUser.id,
       name: 'Reserva de Emergência',
       description: 'Reserva para 6 meses de gastos',
-      current: 2000.00,
-      target: 10000.00,
-      targetDate: new Date('2024-12-31'),
+      currentAmount: 2000.00,
+      targetAmount: 10000.00,
+      deadline: new Date('2024-12-31'),
       priority: 'high',
-      isCompleted: false
+      status: 'active'
     }
   })
 
@@ -86,13 +106,14 @@ async function main() {
     update: {},
     create: {
       id: 'goal-2',
+      userId: defaultUser.id,
       name: 'Viagem de Férias',
       description: 'Viagem para Europa',
-      current: 500.00,
-      target: 5000.00,
-      targetDate: new Date('2024-07-01'),
+      currentAmount: 500.00,
+      targetAmount: 5000.00,
+      deadline: new Date('2024-07-01'),
       priority: 'medium',
-      isCompleted: false
+      status: 'active'
     }
   })
 
@@ -101,13 +122,14 @@ async function main() {
     update: {},
     create: {
       id: 'goal-3',
+      userId: defaultUser.id,
       name: 'Novo Notebook',
       description: 'Notebook para trabalho',
-      current: 1200.00,
-      target: 3000.00,
-      targetDate: new Date('2024-03-31'),
+      currentAmount: 1200.00,
+      targetAmount: 3000.00,
+      deadline: new Date('2024-03-31'),
       priority: 'low',
-      isCompleted: false
+      status: 'active'
     }
   })
 

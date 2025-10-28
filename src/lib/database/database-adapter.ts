@@ -326,25 +326,19 @@ class DatabaseAdapter {
    */
   public async updateAccountBalance(accountId: string): Promise<void> {
     try {
-      const transactions = await prisma.transaction.findMany({
-        where: { accountId, status: 'completed' }
-      });
-
-      const balance = transactions.reduce((total, transaction) => {
-        return transaction.type === 'income' 
-          ? total + transaction.amount 
-          : total - transaction.amount;
-      }, 0);
+      // Usar a função de recálculo mais robusta
+      const { recalculateAccountBalance } = await import('@/lib/transaction-audit');
+      const newBalance = await recalculateAccountBalance(accountId);
 
       await prisma.account.update({
         where: { id: accountId },
         data: { 
-          balance,
+          balance: newBalance,
           updatedAt: new Date()
         }
       });
 
-      eventBus.emit('data:account:balance:updated', { accountId, balance });
+      eventBus.emit('data:account:balance:updated', { accountId, balance: newBalance });
     } catch (error) {
       console.error('Erro ao atualizar saldo:', error);
     }
@@ -372,9 +366,19 @@ class DatabaseAdapter {
    */
   public async clearAllData(): Promise<void> {
     try {
+      // Buscar todas as contas antes de limpar para recalcular saldos
+      const accounts = await prisma.account.findMany({ select: { id: true } });
+      
       await prisma.transaction.deleteMany();
       await prisma.budget.deleteMany();
       await prisma.creditCard.deleteMany();
+      
+      // Recalcular saldos de todas as contas (que devem ficar zerados)
+      const { recalculateAccountBalance } = await import('@/lib/transaction-audit');
+      for (const account of accounts) {
+        await recalculateAccountBalance(account.id);
+      }
+      
       await prisma.account.deleteMany();
       
       eventBus.emit('data:all:cleared', {});

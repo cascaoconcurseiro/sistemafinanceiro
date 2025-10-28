@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -23,7 +23,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { DatePicker } from '@/components/ui/date-picker';
 import { ArrowRight, AlertCircle } from 'lucide-react';
-import { useUnified } from '@/contexts/unified-context-simple';
+import { useUnifiedFinancial } from '@/contexts/unified-financial-context';
 import { formatCurrency } from '@/lib/utils';
 import { convertBRDateToISO, convertISODateToBR, getCurrentDateBR } from '@/lib/utils/date-utils';
 import { toast } from 'sonner';
@@ -36,7 +36,12 @@ interface TransferModalProps {
 export function TransferModal({ open, onOpenChange }: TransferModalProps) {
   console.log('TransferModal rendered with open:', open);
   
-  const { accounts = [], transactions = [], actions } = useUnified();
+  const { data, isLoading } = useUnifiedFinancial();
+  
+  // Extrair os dados dos arrays
+  const accountsData = data?.accounts || [];
+  const transactionsData = data?.transactions || [];
+  const actions = data?.actions;
   
   const [formData, setFormData] = useState({
     fromAccount: '',
@@ -46,7 +51,7 @@ export function TransferModal({ open, onOpenChange }: TransferModalProps) {
     date: getCurrentDateBR(),
   });
   
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Reset form when modal opens
   useEffect(() => {
@@ -62,18 +67,32 @@ export function TransferModal({ open, onOpenChange }: TransferModalProps) {
   }, [open]);
 
   // Calculate account balance
-  const getAccountBalance = (account: string) => {
-    if (!Array.isArray(transactions)) return 0;
-    
-    return transactions
-      .filter(t => t.account === account)
-      .reduce((sum, t) => sum + t.amount, 0);
-  };
+  const getAccountBalance = useMemo(() => {
+    return (accountId: string) => {
+      const account = accountsData?.find(a => a.id === accountId);
+      return account?.balance || 0;
+    };
+  }, [accountsData]);
 
-  const fromAccount = accounts?.find(a => a.id === formData.fromAccount);
-  const toAccount = accounts?.find(a => a.id === formData.toAccount);
-  const fromAccountBalance = fromAccount ? getAccountBalance(fromAccount.id) : 0;
-  const transferAmount = parseFloat(formData.amount) || 0;
+  const fromAccount = useMemo(() => 
+    accountsData?.find(a => a.id === formData.fromAccount), 
+    [accountsData, formData.fromAccount]
+  );
+  
+  const toAccount = useMemo(() => 
+    accountsData?.find(a => a.id === formData.toAccount), 
+    [accountsData, formData.toAccount]
+  );
+  
+  const fromAccountBalance = useMemo(() => 
+    fromAccount ? getAccountBalance(fromAccount.id) : 0, 
+    [fromAccount, getAccountBalance]
+  );
+  
+  const transferAmount = useMemo(() => 
+    parseFloat(formData.amount) || 0, 
+    [formData.amount]
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,8 +110,8 @@ export function TransferModal({ open, onOpenChange }: TransferModalProps) {
     }
 
     // Verificar se as contas existem
-    const fromAccount = accounts.find(acc => acc.id === formData.fromAccount);
-    const toAccount = accounts.find(acc => acc.id === formData.toAccount);
+    const fromAccount = accountsData.find(acc => acc.id === formData.fromAccount);
+    const toAccount = accountsData.find(acc => acc.id === formData.toAccount);
     
     if (!fromAccount || !toAccount) {
       toast.error('Uma ou ambas as contas selecionadas não são válidas');
@@ -125,7 +144,7 @@ export function TransferModal({ open, onOpenChange }: TransferModalProps) {
     }
 
     try {
-      setIsLoading(true);
+      setIsSubmitting(true);
 
       // Create transfer transactions using financial engine
       const transferAmount = parseFloat(formData.amount);
@@ -133,7 +152,7 @@ export function TransferModal({ open, onOpenChange }: TransferModalProps) {
       // Create expense transaction for source account
       await actions.createTransaction({
         id: `transfer-out-${Date.now()}`,
-        description: `Transferência para ${accounts.find(a => a.id === formData.toAccount)?.name || 'conta'}: ${formData.description}`,
+        description: `Transferência para ${accountsData.find(a => a.id === formData.toAccount)?.name || 'conta'}: ${formData.description}`,
         amount: -transferAmount,
         date: convertBRDateToISO(formData.date),
         type: 'expense',
@@ -144,7 +163,7 @@ export function TransferModal({ open, onOpenChange }: TransferModalProps) {
       // Create income transaction for destination account
       await actions.createTransaction({
         id: `transfer-in-${Date.now() + 1}`,
-        description: `Transferência de ${accounts.find(a => a.id === formData.fromAccount)?.name || 'conta'}: ${formData.description}`,
+        description: `Transferência de ${accountsData.find(a => a.id === formData.fromAccount)?.name || 'conta'}: ${formData.description}`,
         amount: transferAmount,
         date: convertBRDateToISO(formData.date),
         type: 'income',
@@ -159,7 +178,7 @@ export function TransferModal({ open, onOpenChange }: TransferModalProps) {
       const errorMessage = error instanceof Error ? error.message : 'Erro ao realizar transferência';
       toast.error(errorMessage);
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -189,7 +208,7 @@ export function TransferModal({ open, onOpenChange }: TransferModalProps) {
                   <SelectValue placeholder="Selecionar conta" />
                 </SelectTrigger>
                 <SelectContent>
-                  {accounts?.map((account) => (
+                  {accountsData?.map((account) => (
                     <SelectItem key={account.id} value={account.id}>
                       <div className="flex justify-between items-center w-full">
                         <span>{account.name}</span>
@@ -216,7 +235,7 @@ export function TransferModal({ open, onOpenChange }: TransferModalProps) {
                   <SelectValue placeholder="Selecionar conta" />
                 </SelectTrigger>
                 <SelectContent>
-                  {accounts?.map((account) => (
+                  {accountsData?.map((account) => (
                     <SelectItem 
                       key={account.id} 
                       value={account.id}
@@ -315,12 +334,12 @@ export function TransferModal({ open, onOpenChange }: TransferModalProps) {
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={isLoading}
+              disabled={isSubmitting}
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? 'Transferindo...' : 'Realizar Transferência'}
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Transferindo...' : 'Realizar Transferência'}
             </Button>
           </DialogFooter>
         </form>

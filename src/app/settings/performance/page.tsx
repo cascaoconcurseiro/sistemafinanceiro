@@ -12,7 +12,6 @@ const PerformanceSettingsPage: React.FC = () => {
   return (
     <ModernAppLayout
       title="Performance do Sistema"
-      subtitle="Monitore e otimize a performance da aplicação"
     >
       <div className="space-y-6">
         {/* Header */}

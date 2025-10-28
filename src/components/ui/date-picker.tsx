@@ -6,7 +6,7 @@ import { Calendar } from './calendar';
 import { CalendarIcon, X } from 'lucide-react';
 import { format, parse, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { cn } from '../../lib/utils';
+import { cn } from '@/lib/utils';
 
 interface DatePickerProps {
   value?: string;
@@ -62,7 +62,7 @@ export function DatePicker({
     if (value && value !== inputValue) {
       setInputValue(value);
     }
-  }, [value]);
+  }, [value, inputValue]);
 
   // Fecha o dropdown quando clica fora
   useEffect(() => {

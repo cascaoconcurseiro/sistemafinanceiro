@@ -1,49 +1,5 @@
-import { PrismaClient } from '@prisma/client'
-
-// Interfaces para tipagem
-export interface Account {
-  id: string
-  name: string
-  type: 'checking' | 'savings' | 'investment' | 'credit' | 'cash'
-  balance: number
-  currency?: string
-  description?: string
-  bank?: string
-  color?: string
-  isActive: boolean
-  createdAt: string
-  updatedAt: string
-}
-
-export interface Transaction {
-  id: string
-  description: string
-  amount: number
-  type: 'income' | 'expense' | 'transfer'
-  category: string
-  account: string
-  toAccount?: string
-  date: string
-  tags?: string[]
-  notes?: string
-  status?: 'pending' | 'completed' | 'cancelled'
-  createdAt?: string
-  updatedAt?: string
-}
-
-export interface Goal {
-  id: string
-  name: string
-  description?: string
-  targetAmount: number
-  currentAmount: number
-  targetDate?: string
-  priority?: 'low' | 'medium' | 'high'
-  status?: 'active' | 'completed' | 'paused'
-  isCompleted: boolean
-  createdAt: string
-  updatedAt: string
-}
+import { prisma } from '@/lib/prisma'
+import type { Account, Transaction, Goal, Investment } from '@/types'
 
 export interface Trip {
   id: string
@@ -58,17 +14,6 @@ export interface Trip {
   updatedAt?: Date
 }
 
-export interface Investment {
-  id: string
-  name: string
-  type?: string
-  amount: number
-  currentValue?: number
-  purchaseDate?: Date
-  createdAt?: Date
-  updatedAt?: Date
-}
-
 export interface Contact {
   id: string
   name: string
@@ -78,11 +23,25 @@ export interface Contact {
   updatedAt?: Date
 }
 
+export interface SharedDebt {
+  id: string;
+  creditor: string;
+  debtor: string;
+  originalAmount: number;
+  currentAmount: number;
+  description: string;
+  transactionId?: string;
+  status: 'active' | 'paid' | 'cancelled';
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 class DatabaseService {
-  private prisma: PrismaClient
+  // Usar a instância global do Prisma com middleware
+  private prisma = prisma
 
   constructor() {
-    this.prisma = new PrismaClient()
+    // Não precisa mais criar uma nova instância
   }
 
   // Verificar se o serviço está disponível (apenas no servidor)
@@ -254,27 +213,33 @@ class DatabaseService {
     }
 
     try {
-      await this.prisma.transaction.upsert({
-        where: { id: transaction.id },
-        update: {
-          accountId: transaction.account,
-          amount: transaction.amount,
-          description: transaction.description,
-          category: transaction.category,
-          type: transaction.type,
-          date: transaction.date,
-          updatedAt: new Date()
-        },
-        create: {
-          id: transaction.id,
-          accountId: transaction.account,
-          amount: transaction.amount,
-          description: transaction.description,
-          category: transaction.category,
-          type: transaction.type,
-          date: transaction.date
-        }
-      })
+      await this.prisma.$transaction(async (tx) => {
+        await tx.transaction.upsert({
+          where: { id: transaction.id },
+          update: {
+            accountId: transaction.account,
+            amount: transaction.amount,
+            description: transaction.description,
+            category: transaction.category,
+            type: transaction.type,
+            date: transaction.date,
+            updatedAt: new Date()
+          },
+          create: {
+            id: transaction.id,
+            accountId: transaction.account,
+            amount: transaction.amount,
+            description: transaction.description,
+            category: transaction.category,
+            type: transaction.type,
+            date: transaction.date
+          }
+        });
+
+        // Recalcular saldo da conta após upsert
+        const { recalculateAccountBalance } = await import('@/lib/transaction-audit');
+        await recalculateAccountBalance(transaction.account, tx);
+      });
     } catch (error) {
       console.error('Erro ao salvar transação:', error)
     }
@@ -287,13 +252,29 @@ class DatabaseService {
     }
 
     try {
-      await this.prisma.transaction.update({
-        where: { id },
-        data: {
-          ...updates,
-          updatedAt: new Date()
-        }
-      })
+      // Buscar a transação para obter o accountId
+      const existingTransaction = await this.prisma.transaction.findUnique({
+        where: { id }
+      });
+
+      if (!existingTransaction) {
+        console.error('Transação não encontrada para atualização:', id);
+        return;
+      }
+
+      await this.prisma.$transaction(async (tx) => {
+        await tx.transaction.update({
+          where: { id },
+          data: {
+            ...updates,
+            updatedAt: new Date()
+          }
+        });
+
+        // Recalcular saldo da conta após atualização
+        const { recalculateAccountBalance } = await import('@/lib/transaction-audit');
+        await recalculateAccountBalance(existingTransaction.accountId, tx);
+      });
     } catch (error) {
       console.error('Erro ao atualizar transação:', error)
     }
@@ -306,9 +287,25 @@ class DatabaseService {
     }
 
     try {
-      await this.prisma.transaction.delete({
+      // Buscar a transação para obter o accountId antes de deletar
+      const existingTransaction = await this.prisma.transaction.findUnique({
         where: { id }
-      })
+      });
+
+      if (!existingTransaction) {
+        console.error('Transação não encontrada para exclusão:', id);
+        return;
+      }
+
+      await this.prisma.$transaction(async (tx) => {
+        await tx.transaction.delete({
+          where: { id }
+        });
+
+        // Recalcular saldo da conta após exclusão
+        const { recalculateAccountBalance } = await import('@/lib/transaction-audit');
+        await recalculateAccountBalance(existingTransaction.accountId, tx);
+      });
     } catch (error) {
       console.error('Erro ao deletar transação:', error)
     }
@@ -678,6 +675,162 @@ class DatabaseService {
   }
 
   // ============================================================================
+  // SHARED DEBTS
+  // ============================================================================
+
+  async getSharedDebts(): Promise<SharedDebt[]> {
+    if (!this.isAvailable) {
+      console.warn('DatabaseService.getSharedDebts() - Operação apenas no servidor')
+      return []
+    }
+    
+    try {
+      const sharedDebts = await this.prisma.sharedDebt.findMany({
+        orderBy: { createdAt: 'desc' }
+      })
+      
+      return sharedDebts.map(debt => ({
+        id: debt.id,
+        creditor: debt.creditor,
+        debtor: debt.debtor,
+        originalAmount: Number(debt.originalAmount),
+        currentAmount: Number(debt.currentAmount),
+        description: debt.description,
+        transactionId: debt.transactionId || undefined,
+        status: debt.status as 'active' | 'paid' | 'cancelled',
+        createdAt: debt.createdAt,
+        updatedAt: debt.updatedAt
+      }))
+    } catch (error) {
+      console.error('Erro ao buscar dívidas compartilhadas:', error)
+      return []
+    }
+  }
+
+  async saveSharedDebt(debt: Omit<SharedDebt, 'id' | 'createdAt' | 'updatedAt'>): Promise<SharedDebt> {
+    if (!this.isAvailable) {
+      throw new Error('DatabaseService.saveSharedDebt() - Operação apenas no servidor')
+    }
+    
+    try {
+      const savedDebt = await this.prisma.sharedDebt.create({
+        data: {
+          creditor: debt.creditor,
+          debtor: debt.debtor,
+          originalAmount: debt.originalAmount,
+          currentAmount: debt.currentAmount,
+          description: debt.description,
+          transactionId: debt.transactionId || null,
+          status: debt.status
+        }
+      })
+      
+      return {
+        id: savedDebt.id,
+        creditor: savedDebt.creditor,
+        debtor: savedDebt.debtor,
+        originalAmount: Number(savedDebt.originalAmount),
+        currentAmount: Number(savedDebt.currentAmount),
+        description: savedDebt.description,
+        transactionId: savedDebt.transactionId || undefined,
+        status: savedDebt.status as 'active' | 'paid' | 'cancelled',
+        createdAt: savedDebt.createdAt,
+        updatedAt: savedDebt.updatedAt
+      }
+    } catch (error) {
+      console.error('Erro ao salvar dívida compartilhada:', error)
+      throw error
+    }
+  }
+
+  async updateSharedDebt(id: string, updates: Partial<SharedDebt>): Promise<void> {
+    if (!this.isAvailable) {
+      console.warn('DatabaseService.updateSharedDebt() - Operação apenas no servidor')
+      return
+    }
+    
+    try {
+      const updateData: any = {}
+      
+      if (updates.creditor !== undefined) updateData.creditor = updates.creditor
+      if (updates.debtor !== undefined) updateData.debtor = updates.debtor
+      if (updates.originalAmount !== undefined) updateData.originalAmount = updates.originalAmount
+      if (updates.currentAmount !== undefined) updateData.currentAmount = updates.currentAmount
+      if (updates.description !== undefined) updateData.description = updates.description
+      if (updates.transactionId !== undefined) updateData.transactionId = updates.transactionId || null
+      if (updates.status !== undefined) updateData.status = updates.status
+      
+      await this.prisma.sharedDebt.update({
+        where: { id },
+        data: updateData
+      })
+    } catch (error) {
+      console.error('Erro ao atualizar dívida compartilhada:', error)
+      throw error
+    }
+  }
+
+  async deleteSharedDebt(id: string): Promise<void> {
+    if (!this.isAvailable) {
+      console.warn('DatabaseService.deleteSharedDebt() - Operação apenas no servidor')
+      return
+    }
+    
+    try {
+      await this.prisma.sharedDebt.delete({
+        where: { id }
+      })
+    } catch (error) {
+      console.error('Erro ao deletar dívida compartilhada:', error)
+      throw error
+    }
+  }
+
+  // Função adicional para processar pagamentos de dívidas
+  async processDebtPayment(id: string, paymentAmount: number): Promise<SharedDebt> {
+    if (!this.isAvailable) {
+      throw new Error('DatabaseService.processDebtPayment() - Operação apenas no servidor')
+    }
+    
+    try {
+      const debt = await this.prisma.sharedDebt.findUnique({
+        where: { id }
+      })
+      
+      if (!debt) {
+        throw new Error('Dívida não encontrada')
+      }
+      
+      const newCurrentAmount = Math.max(0, Number(debt.currentAmount) - paymentAmount)
+      const newStatus = newCurrentAmount === 0 ? 'paid' : debt.status
+      
+      const updatedDebt = await this.prisma.sharedDebt.update({
+        where: { id },
+        data: {
+          currentAmount: newCurrentAmount,
+          status: newStatus
+        }
+      })
+      
+      return {
+        id: updatedDebt.id,
+        creditor: updatedDebt.creditor,
+        debtor: updatedDebt.debtor,
+        originalAmount: Number(updatedDebt.originalAmount),
+        currentAmount: Number(updatedDebt.currentAmount),
+        description: updatedDebt.description,
+        transactionId: updatedDebt.transactionId || undefined,
+        status: updatedDebt.status as 'active' | 'paid' | 'cancelled',
+        createdAt: updatedDebt.createdAt,
+        updatedAt: updatedDebt.updatedAt
+      }
+    } catch (error) {
+      console.error('Erro ao processar pagamento da dívida:', error)
+      throw error
+    }
+  }
+
+  // ============================================================================
   // CONTACTS (Placeholder - implementar quando modelo estiver no schema)
   // ============================================================================
 
@@ -769,8 +922,8 @@ class DatabaseService {
     }
 
     try {
+      // ✅ CORREÇÃO CRÍTICA: Remover filtro por userId - categorias são globais
       const categories = await this.prisma.category.findMany({
-        where: { userId: this.getCurrentUserId() },
         orderBy: { name: 'asc' }
       })
 
@@ -952,8 +1105,18 @@ class DatabaseService {
     }
 
     try {
-      await this.prisma.transaction.deleteMany()
-      await this.prisma.account.deleteMany()
+      // Buscar todas as contas antes de limpar para recalcular saldos
+      const accounts = await this.prisma.account.findMany({ select: { id: true } });
+      
+      await this.prisma.transaction.deleteMany();
+      
+      // Recalcular saldos de todas as contas (que devem ficar zerados)
+      const { recalculateAccountBalance } = await import('@/lib/transaction-audit');
+      for (const account of accounts) {
+        await recalculateAccountBalance(account.id);
+      }
+      
+      await this.prisma.account.deleteMany();
       console.log('Todos os dados foram limpos do banco de dados')
     } catch (error) {
       console.error('Erro ao limpar dados:', error)

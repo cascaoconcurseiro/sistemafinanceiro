@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { clientDatabaseService } from '@/lib/services/client-database-service';
 
 interface User {
   id: string;
@@ -26,26 +27,51 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Dados agora vêm do banco de dados, não do localStorage
-    console.warn('session-provider - localStorage removido, use banco de dados');
-    // Simular carregamento inicial sem localStorage
-    setUser(null);
-    setIsLoading(false);
+    // Carregar sessão do usuário do banco de dados
+    const loadUserSession = async () => {
+      try {
+        // TODO: Implementar busca de sessão ativa no databaseService
+        // const currentUser = await clientDatabaseService.getCurrentUser();
+        // setUser(currentUser);
+        setUser(null); // Por enquanto, até implementar autenticação
+      } catch (error) {
+        console.error('Erro ao carregar sessão do usuário:', error);
+        setUser(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadUserSession();
   }, []);
 
   const signIn = async (email: string, password: string): Promise<boolean> => {
-    // TODO: Implementar autenticação real via banco de dados
-    console.warn('session signIn - Implementar autenticação real via banco de dados');
-    
-    // Por enquanto, retorna false até implementar autenticação real
-    setUser(null);
-    return false;
+    try {
+      // TODO: Implementar autenticação real via databaseService
+      // const authenticatedUser = await clientDatabaseService.authenticateUser(email, password);
+      // if (authenticatedUser) {
+      //   setUser(authenticatedUser);
+      //   return true;
+      // }
+      
+      console.warn('session signIn - Implementar autenticação real via databaseService');
+      setUser(null);
+      return false;
+    } catch (error) {
+      console.error('Erro durante autenticação:', error);
+      return false;
+    }
   };
 
-  const signOut = () => {
-    setUser(null);
-    // Dados agora são removidos do banco de dados, não do localStorage
-    console.warn('session signOut - localStorage removido, use banco de dados');
+  const signOut = async () => {
+    try {
+      // TODO: Implementar logout via databaseService
+      // await clientDatabaseService.signOut();
+      setUser(null);
+      console.warn('session signOut - Implementar logout via databaseService');
+    } catch (error) {
+      console.error('Erro durante logout:', error);
+    }
   };
 
   return (

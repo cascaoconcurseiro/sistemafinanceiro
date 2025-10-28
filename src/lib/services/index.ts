@@ -1,43 +1,50 @@
 /**
- * ÍNDICE DE SERVIÇOS
- * 
- * Exporta todos os serviços do sistema financeiro
- * Garante acesso centralizado e organizado aos serviços
+ * Services Index
+ * Exporta todos os services para facilitar importação
  */
 
-// Serviço principal
-export { financialService } from './financial-service';
-
-// Adaptador de banco de dados
-export { clientDatabaseAdapter } from '../database/client-database-adapter';
-
-// Sistema de eventos
-export { eventBus } from '../events/event-bus';
-
-// Hook para React
-export { useFinancialData } from '../hooks/useFinancialData';
-
-// Sistema de auditoria e monitoramento
-export { auditLogger } from '../audit/audit-logger';
-export { securityMonitor } from '../audit/security-monitor';
-
-// Inicializador do sistema
-export { systemInitializer } from '../initialization/system-initializer';
-
-// Tipos e interfaces
+// Core Services
+export { validationService, ValidationError, ErrorCodes } from './validation-service';
 export type {
-  Account,
-  Transaction,
-  CreditCard,
-  Budget
-} from './financial-service';
+    ValidationResult,
+    TransactionInput,
+    InstallmentInput,
+    SharedExpenseInput,
+    TransferInput,
+    IntegrityReport,
+    IntegrityIssue,
+} from './validation-service';
 
+export { transactionService } from './transaction-service';
 export type {
-  EventType,
-  SystemEvent,
-  DataState
-} from '../events/event-bus';
+    CreateTransactionResult,
+    DeleteOptions,
+    UpdateTransactionData,
+} from './transaction-service';
 
+export { accountService } from './account-service';
 export type {
-  UseFinancialDataReturn
-} from '../hooks/useFinancialData';
+    BalanceInfo,
+    DeletionValidation,
+    DeleteAccountOptions,
+    ReconciliationResult,
+} from './account-service';
+
+export { creditCardService } from './credit-card-service';
+
+export { budgetService } from './budget-service';
+export type { BudgetUsage, BudgetAlert } from './budget-service';
+
+export { recurringService } from './recurring-service';
+
+// Audit & Notifications
+export { auditService } from './audit-service';
+export { notificationService } from './notification-service';
+export { exportService } from './export-service';
+
+// Advanced Services
+export { categoryService } from './category-service';
+export { analyticsService } from './analytics-service';
+export { fraudDetectionService } from './fraud-detection-service';
+export { currencyService } from './currency-service';
+export { investmentService } from './investment-service';

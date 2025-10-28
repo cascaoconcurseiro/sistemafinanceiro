@@ -1,26 +1,27 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '../ui/dialog';
-import { Button } from '../ui/button';
-import { Label } from '../ui/label';
-import { Switch } from '../ui/switch';
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { Separator } from '../ui/separator';
-import { useSafeTheme } from '../../hooks/use-safe-theme';
+} from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
+import { useSafeTheme } from '@/hooks/use-safe-theme';
 import { useNotifications } from '../../contexts/notification-context';
 import {
   User,
@@ -35,6 +36,7 @@ import {
   Eye,
   Volume2,
   Accessibility,
+  LogOut,
 } from 'lucide-react';
 
 interface UserSettingsModalProps {
@@ -43,10 +45,12 @@ interface UserSettingsModalProps {
 }
 
 export function UserSettingsModal({ isOpen, onClose }: UserSettingsModalProps) {
+  const router = useRouter();
   const { settings, updateSettings, resetSettings, toggleTheme } =
     useSafeTheme();
   const { clearNotifications } = useNotifications();
   const [activeTab, setActiveTab] = useState('appearance');
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleSave = () => {
     // Settings are automatically saved via updateSettings
@@ -59,6 +63,33 @@ export function UserSettingsModal({ isOpen, onClose }: UserSettingsModalProps) {
     ) {
       resetSettings();
       clearNotifications();
+    }
+  };
+
+  const handleLogout = async () => {
+    if (!confirm('Tem certeza que deseja sair?')) {
+      return;
+    }
+
+    setIsLoggingOut(true);
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+      });
+
+      if (response.ok) {
+        // Fechar o modal primeiro
+        onClose();
+        // Forçar reload completo da página para limpar todo o estado
+        window.location.href = '/auth/login';
+      } else {
+        alert('Erro ao fazer logout. Tente novamente.');
+        setIsLoggingOut(false);
+      }
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+      alert('Erro ao fazer logout. Tente novamente.');
+      setIsLoggingOut(false);
     }
   };
 
@@ -430,11 +461,22 @@ export function UserSettingsModal({ isOpen, onClose }: UserSettingsModalProps) {
           </TabsContent>
         </Tabs>
 
-        <div className="flex justify-end gap-2 pt-4 border-t">
-          <Button variant="outline" onClick={onClose}>
-            Cancelar
+        <div className="flex justify-between items-center pt-4 border-t">
+          <Button 
+            variant="outline" 
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+            className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950/20"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            {isLoggingOut ? 'Saindo...' : 'Sair'}
           </Button>
-          <Button onClick={handleSave}>Salvar Configurações</Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSave}>Salvar Configurações</Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

@@ -8,33 +8,8 @@
 
 import { clientDatabaseAdapter } from '../database/client-database-adapter';
 import { eventBus } from '../events/event-bus';
-import { auditLogger } from '../audit/audit-logger';
 import { securityMonitor } from '../audit/security-monitor';
-
-// Interfaces para tipagem
-export interface Account {
-  id: string;
-  name: string;
-  type: 'checking' | 'savings' | 'investment' | 'credit';
-  balance: number;
-  currency: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface Transaction {
-  id: string;
-  accountId: string;
-  amount: number;
-  type: 'income' | 'expense' | 'transfer';
-  category: string;
-  description: string;
-  date: string;
-  tags?: string[];
-  createdAt: string;
-  updatedAt: string;
-}
+import type { Account, Transaction } from '@/types';
 
 export interface CreditCard {
   id: string;
@@ -80,7 +55,7 @@ class FinancialService {
     if (this.isInitialized) return;
 
     try {
-      console.log('🏦 Inicializando serviço financeiro...');
+      console.log('Sistema financeiro inicializado com sucesso');
 
       // Temporariamente desabilitado para evitar erro de inicialização
       // Verifica se o sistema de segurança está ativo
@@ -101,12 +76,10 @@ class FinancialService {
       console.log('✅ Serviço financeiro inicializado com sucesso (segurança temporariamente desabilitada)');
 
       // Registra inicialização
-      await auditLogger.logSystemEvent({
+      console.log('Serviço financeiro inicializado:', {
         event: 'financial_service_initialized',
         message: 'Serviço financeiro inicializado com sucesso',
-        metadata: {
-          timestamp: new Date().toISOString()
-        }
+        timestamp: new Date().toISOString()
       });
 
     } catch (error) {

@@ -1,27 +1,26 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { databaseService } from '../../../lib/services/database-service';
-import { logComponents, logError } from '../../../lib/logger';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
-import { Label } from '../../ui/label';
+import { clientDatabaseService } from '@/lib/services/client-database-service';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../../ui/select';
-import { Textarea } from '../../ui/textarea';
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '../../ui/dialog';
-import { Badge } from '../../ui/badge';
-import { Avatar, AvatarFallback } from '../../ui/avatar';
+} from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   Plane,
   Plus,
@@ -32,7 +31,7 @@ import {
   DollarSign,
   CalendarIcon,
 } from 'lucide-react';
-import { type Trip } from '../../../lib/storage/storage';
+import { type Trip } from '@/lib/storage';
 import { useToast } from '../../../hooks/use-toast';
 import {
   formatDateInput,
@@ -40,9 +39,9 @@ import {
   convertISODateToBR,
   validateBRDate,
   getCurrentDateBR,
-} from '../../../lib/utils/date-utils';
-import { useTrips } from '../../../contexts/unified-context-simple';
-import { DatePicker } from '../../ui/date-picker';
+} from '@/lib/utils/date-utils';
+import { useUnifiedFinancial } from '@/contexts/unified-financial-context';
+import { DatePicker } from '@/components/ui/date-picker';
 
 interface TripModalProps {
   open: boolean;
@@ -80,15 +79,15 @@ export function TripModal({
   const [showFamilySelector, setShowFamilySelector] = useState(false);
   const [familyMembers, setFamilyMembers] = useState<any[]>([]);
 
-  // Use unified trip system
-  const { create: createTrip, update: updateTrip } = useTrips();
+  // Use unified financial system
+  const { createTransaction, updateTransaction } = useUnifiedFinancial();
 
   // Carregar membros da família
   const loadFamilyMembers = async () => {
     try {
       if (typeof window === 'undefined') return;
       
-      const response = await fetch('/api/family');
+      const response = await fetch('/api/family', { credentials: 'include' });
       if (response.ok) {
         const familyMembers = await response.json();
         setFamilyMembers(Array.isArray(familyMembers) ? familyMembers : []);
@@ -97,7 +96,7 @@ export function TripModal({
         setFamilyMembers([]);
       }
     } catch (error) {
-      logComponents.error('Error loading family members:', error);
+      console.error('Error loading family members:', error);
       setFamilyMembers([]);
     }
   };
@@ -153,6 +152,59 @@ export function TripModal({
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // Estado para armazenar a duração calculada
+  const [duration, setDuration] = useState('');
+  
+  // Função para calcular duração (definida antes do useEffect)
+  const calculateDuration = (startDate: string, endDate: string): string => {
+    // Verificações defensivas
+    if (!startDate?.trim() || !endDate?.trim()) {
+      return '';
+    }
+
+    // Validação das datas
+    const startValid = validateBRDate(startDate);
+    const endValid = validateBRDate(endDate);
+    
+    if (!startValid || !endValid) {
+      return '';
+    }
+
+    try {
+      const startISO = convertBRDateToISO(startDate);
+      const endISO = convertBRDateToISO(endDate);
+      
+      // Verificação adicional das conversões
+      if (!startISO || !endISO) {
+        return '';
+      }
+
+      // Adicionar horário para evitar problemas de timezone
+      const start = new Date(startISO + 'T12:00:00');
+      const end = new Date(endISO + 'T12:00:00');
+      
+      // Verificação se as datas são válidas
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        return '';
+      }
+
+      // Cálculo da diferença em dias
+      const timeDiff = end.getTime() - start.getTime();
+      const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24)) + 1;
+      
+      return days > 0 ? `${days} dia${days > 1 ? 's' : ''}` : '';
+    } catch (error) {
+      console.error('❌ Error calculating duration:', error);
+      return '';
+    }
+  };
+  
+  // useEffect para recalcular duração quando as datas mudarem
+  useEffect(() => {
+    const newDuration = calculateDuration(formData.startDate, formData.endDate);
+    setDuration(newDuration);
+  }, [formData.startDate, formData.endDate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -316,8 +368,9 @@ export function TripModal({
         
         // Update trip using API
         const response = await fetch('/api/trips', {
-          method: 'PUT',
-          headers: {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
@@ -328,19 +381,18 @@ export function TripModal({
         });
 
         if (!response.ok) {
-          throw new Error('Erro ao atualizar viagem');
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Erro ao atualizar viagem');
         }
 
-        const updatedTrip = await response.json();
+        const result = await response.json();
         
-        console.log('Viagem atualizada com sucesso');
+        console.log('✅ Viagem atualizada com sucesso:', result.data);
         toast({
           title: 'Sucesso',
           description: 'Viagem atualizada com sucesso!',
         });
       } else {
-        console.log('Criando nova viagem:', tripData);
-        
         // Create trip using API
         const tripDataWithId = {
           ...tripData,
@@ -351,6 +403,7 @@ export function TripModal({
 
         const response = await fetch('/api/trips', {
           method: 'POST',
+          credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
           },
@@ -358,13 +411,14 @@ export function TripModal({
         });
 
         if (!response.ok) {
-          throw new Error('Erro ao salvar viagem');
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Erro ao salvar viagem');
         }
 
-        const newTrip = await response.json();
+        const result = await response.json();
         
         // Guard defensivo para verificar se a viagem foi criada
-        if (!newTrip || !newTrip.id) {
+        if (!result || !result.success || !result.data) {
           toast({
             title: 'Erro',
             description: 'Falha ao criar viagem - resposta inválida',
@@ -373,8 +427,6 @@ export function TripModal({
           setIsLoading(false);
           return;
         }
-        
-        console.log('Nova viagem criada:', newTrip);
 
         toast({
           title: 'Sucesso',
@@ -392,9 +444,14 @@ export function TripModal({
         }
       }
 
+      // Disparar evento customizado para atualizar a lista de viagens
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('tripCreated'));
+      }
+
       onOpenChange(false);
     } catch (error) {
-      logError.ui('Erro no handleSubmit:', error);
+      console.error('Erro no handleSubmit:', error);
       toast({
         title: 'Erro',
         description: error instanceof Error ? error.message : 'Erro ao salvar viagem',
@@ -405,54 +462,7 @@ export function TripModal({
     }
   };
 
-  const getDuration = () => {
-    // Verificações defensivas
-    if (!formData.startDate?.trim() || !formData.endDate?.trim()) {
-      return '';
-    }
 
-    // Validação das datas
-    if (!validateBRDate(formData.startDate) || !validateBRDate(formData.endDate)) {
-      return '';
-    }
-
-    try {
-      const startISO = convertBRDateToISO(formData.startDate);
-      const endISO = convertBRDateToISO(formData.endDate);
-      
-      // Verificação adicional das conversões
-      if (!startISO || !endISO) {
-        return '';
-      }
-
-      const start = new Date(startISO);
-      const end = new Date(endISO);
-      
-      // Verificação se as datas são válidas
-      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-        return '';
-      }
-
-      // Cálculo da diferença em dias
-      const timeDiff = end.getTime() - start.getTime();
-      const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24)) + 1;
-      
-      // Log para debug (remover em produção)
-      console.log('getDuration:', {
-        startDate: formData.startDate,
-        endDate: formData.endDate,
-        startISO,
-        endISO,
-        timeDiff,
-        days
-      });
-      
-      return days > 0 ? `${days} dia${days > 1 ? 's' : ''}` : '';
-    } catch (error) {
-      console.error('Erro no cálculo de duração:', error);
-      return '';
-    }
-  };
 
   return (
     <>
@@ -524,13 +534,36 @@ export function TripModal({
                   <Label htmlFor="startDate">Data de Início *</Label>
                   <DatePicker
                     id="startDate"
+                    format="ISO"
                     value={convertBRDateToISO(formData.startDate)}
-                    onChange={(value) =>
-                      setFormData({
-                        ...formData,
-                        startDate: convertISODateToBR(value),
-                      })
-                    }
+                    onChange={(value) => {
+                      if (!value) {
+                        return;
+                      }
+                      
+                      // O DatePicker pode retornar tanto formato BR quanto ISO
+                      let brDate: string;
+                      
+                      if (value.includes('/')) {
+                        // Já está em formato BR
+                        brDate = value;
+                      } else if (value.includes('-')) {
+                        // Está em formato ISO, converter para BR
+                        brDate = convertISODateToBR(value);
+                      } else {
+                        return;
+                      }
+                      
+                      // Validar antes de atualizar
+                      if (!validateBRDate(brDate)) {
+                        return;
+                      }
+                      
+                      setFormData((prev) => ({
+                        ...prev,
+                        startDate: brDate,
+                      }));
+                    }}
                     placeholder="Selecionar data de início"
                     required
                     maxDate={
@@ -544,13 +577,36 @@ export function TripModal({
                   <Label htmlFor="endDate">Data de Fim *</Label>
                   <DatePicker
                     id="endDate"
+                    format="ISO"
                     value={convertBRDateToISO(formData.endDate)}
-                    onChange={(value) =>
-                      setFormData({
-                        ...formData,
-                        endDate: convertISODateToBR(value),
-                      })
-                    }
+                    onChange={(value) => {
+                      if (!value) {
+                        return;
+                      }
+                      
+                      // O DatePicker pode retornar tanto formato BR quanto ISO
+                      let brDate: string;
+                      
+                      if (value.includes('/')) {
+                        // Já está em formato BR
+                        brDate = value;
+                      } else if (value.includes('-')) {
+                        // Está em formato ISO, converter para BR
+                        brDate = convertISODateToBR(value);
+                      } else {
+                        return;
+                      }
+                      
+                      // Validar antes de atualizar
+                      if (!validateBRDate(brDate)) {
+                        return;
+                      }
+                      
+                      setFormData((prev) => ({
+                        ...prev,
+                        endDate: brDate,
+                      }));
+                    }}
                     placeholder="Selecionar data de fim"
                     required
                     minDate={
@@ -563,13 +619,13 @@ export function TripModal({
               </div>
 
               {/* Exibição da duração da viagem */}
-              {formData.startDate && formData.endDate && getDuration() && (
+              {formData.startDate && formData.endDate && duration && (
                 <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
                   <p className="text-sm font-medium text-blue-800 flex items-center gap-2">
                     <CalendarIcon className="w-4 h-4" />
                     Duração da Viagem
                   </p>
-                  <p className="text-lg font-semibold text-blue-700">{getDuration()}</p>
+                  <p className="text-lg font-semibold text-blue-700">{duration}</p>
                 </div>
               )}
             </div>

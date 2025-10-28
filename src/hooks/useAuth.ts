@@ -22,6 +22,7 @@ export interface AuthState {
   error?: string;
 }
 
+// 🔒 HOOK DE AUTENTICAÇÃO OTIMIZADO
 export const useAuth = () => {
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
@@ -29,48 +30,108 @@ export const useAuth = () => {
     isAuthenticated: false
   });
 
-  // Carregar autenticação real do banco de dados
+  // 🔒 CARREGAR AUTENTICAÇÃO OTIMIZADA - Evita conflitos com AuthGuard
   useEffect(() => {
+    let isMounted = true;
+    
     const initAuth = async () => {
       try {
-        // TODO: Implementar carregamento de usuário do banco de dados
-        // Por enquanto, sem autenticação automática
-        console.log('Autenticação deve ser implementada via banco de dados');
+        // Verificar se tem token antes de fazer requisição
+        const hasToken = typeof document !== 'undefined' && document.cookie.includes('access_token');
         
-        setAuthState({
-          user: null,
-          isLoading: false,
-          isAuthenticated: false
+        if (!hasToken) {
+          if (isMounted) {
+            setAuthState({
+              user: null,
+              isLoading: false,
+              isAuthenticated: false
+            });
+          }
+          return;
+        }
+        
+        const response = await fetch('/api/auth/me', {
+          credentials: 'include',
+          cache: 'no-cache'
         });
+        
+        if (!isMounted) return;
+        
+        const result = await response.json();
+        
+        if (result.success && result.user) {
+          setAuthState({
+            user: result.user,
+            isLoading: false,
+            isAuthenticated: true
+          });
+        } else {
+          setAuthState({
+            user: null,
+            isLoading: false,
+            isAuthenticated: false
+          });
+        }
       } catch (error) {
-        setAuthState({
-          user: null,
-          isLoading: false,
-          isAuthenticated: false,
-          error: 'Erro ao carregar autenticação'
-        });
+        console.error('Erro ao carregar autenticação:', error);
+        if (isMounted) {
+          setAuthState({
+            user: null,
+            isLoading: false,
+            isAuthenticated: false,
+            error: 'Erro ao carregar autenticação'
+          });
+        }
       }
     };
 
-    initAuth();
+    // Pequeno delay para evitar conflito com AuthGuard
+    const timeoutId = setTimeout(initAuth, 200);
+    
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
     setAuthState(prev => ({ ...prev, isLoading: true, error: undefined }));
 
     try {
-      // TODO: Implementar login real via API do banco de dados
-      console.log('Login deve ser implementado via banco de dados');
-      
-      // Por enquanto, retorna erro indicando que precisa ser implementado
-      throw new Error('Autenticação não implementada - use dados do banco');
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ email, password }),
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.data?.user) {
+        setAuthState({
+          user: result.data.user,
+          isLoading: false,
+          isAuthenticated: true
+        });
+        return { success: true };
+      } else {
+        setAuthState(prev => ({
+          ...prev,
+          isLoading: false,
+          error: result.error || 'Erro no login'
+        }));
+        return { success: false, error: result.error || 'Erro no login' };
+      }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro no login';
       setAuthState(prev => ({
         ...prev,
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Erro no login'
+        error: errorMessage
       }));
-      return { success: false, error: error instanceof Error ? error.message : 'Erro no login' };
+      return { success: false, error: errorMessage };
     }
   }, []);
 
@@ -78,20 +139,36 @@ export const useAuth = () => {
     setAuthState(prev => ({ ...prev, isLoading: true }));
 
     try {
-      // TODO: Implementar logout real
-      setAuthState({
-        user: null,
-        isLoading: false,
-        isAuthenticated: false
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
       });
-      return { success: true };
+
+      const result = await response.json();
+
+      if (result.success) {
+        setAuthState({
+          user: null,
+          isLoading: false,
+          isAuthenticated: false
+        });
+        return { success: true };
+      } else {
+        setAuthState(prev => ({
+          ...prev,
+          isLoading: false,
+          error: result.error || 'Erro no logout'
+        }));
+        return { success: false, error: result.error || 'Erro no logout' };
+      }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro no logout';
       setAuthState(prev => ({
         ...prev,
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Erro no logout'
+        error: errorMessage
       }));
-      return { success: false, error: error instanceof Error ? error.message : 'Erro no logout' };
+      return { success: false, error: errorMessage };
     }
   }, []);
 
@@ -149,5 +226,5 @@ export const useAuth = () => {
   };
 };
 
-// Dados mockados removidos - implementar autenticação real via banco de dados
-const mockUser = null;
+// Implementar autenticação real via banco de dados
+// TODO: Implementar sistema de autenticação completo com JWT/sessions

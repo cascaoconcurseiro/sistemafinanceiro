@@ -1,6 +1,6 @@
 /**
- * Storage Service - Gerenciamento de dados locais
- * Este arquivo fornece uma interface simples para armazenamento local
+ * Storage Service - Tipos e interfaces para dados
+ * Este arquivo fornece apenas tipos, sem lógica de banco de dados
  */
 
 export interface Trip {
@@ -11,74 +11,82 @@ export interface Trip {
   endDate: string;
   budget: number;
   spent: number;
-  status: 'planejamento' | 'andamento' | 'concluida';
-  expenses: Array<{
-    id: string;
-    description: string;
-    amount: number;
-    category: string;
-    date: string;
-  }>;
+  status: 'planned' | 'active' | 'completed';
+  currency: string;
+  participants: string[];
+  description?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface SharedDebt {
+  id: string;
+  creditor: string;
+  debtor: string;
+  originalAmount: number;
+  currentAmount: number;
+  description?: string;
+  status: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 class StorageService {
-  private isClient(): boolean {
-    return typeof window !== 'undefined';
+  // DEPRECATED: Use API routes instead
+  // This class is kept for type compatibility only
+  
+  async getTrips(): Promise<Trip[]> {
+    console.warn('storage.getTrips() is deprecated. Use /api/trips instead');
+    return [];
   }
 
-  private getStorageData<T>(key: string): T[] {
-    if (!this.isClient()) return [];
-    
-    try {
-      const data = localStorage.getItem(key);
-      return data ? JSON.parse(data) : [];
-    } catch (error) {
-      console.error(`Error reading ${key} from localStorage:`, error);
-      return [];
-    }
+  async saveTrip(trip: Trip): Promise<void> {
+    console.warn('storage.saveTrip() is deprecated. Use /api/trips instead');
   }
 
-  private saveStorageData<T>(key: string, data: T[]): void {
-    if (!this.isClient()) return;
-    
-    try {
-      localStorage.setItem(key, JSON.stringify(data));
-    } catch (error) {
-      console.error(`Error saving ${key} to localStorage:`, error);
-    }
+  async updateTrip(id: string, updates: Partial<Trip>): Promise<void> {
+    console.warn('storage.updateTrip() is deprecated. Use /api/trips instead');
   }
 
-  // Trip methods
-  getTrips(): Trip[] {
-    return this.getStorageData<Trip>('sua-grana-trips');
+  async deleteTrip(id: string): Promise<void> {
+    console.warn('storage.deleteTrip() is deprecated. Use /api/trips instead');
   }
 
-  saveTrip(trip: Trip): void {
-    const trips = this.getTrips();
-    const existingIndex = trips.findIndex(t => t.id === trip.id);
-    
-    if (existingIndex >= 0) {
-      trips[existingIndex] = trip;
-    } else {
-      trips.push(trip);
-    }
-    
-    this.saveStorageData('sua-grana-trips', trips);
+  // SharedDebt methods - DEPRECATED
+  async getSharedDebts(): Promise<SharedDebt[]> {
+    console.warn('storage.getSharedDebts() is deprecated. Use API routes instead');
+    return [];
   }
 
-  updateTrip(id: string, updates: Partial<Trip>): void {
-    const trips = this.getTrips();
-    const index = trips.findIndex(t => t.id === id);
-    
-    if (index >= 0) {
-      trips[index] = { ...trips[index], ...updates };
-      this.saveStorageData('sua-grana-trips', trips);
-    }
+  async saveSharedDebt(debt: Omit<SharedDebt, 'id' | 'createdAt' | 'updatedAt'>): Promise<SharedDebt> {
+    console.warn('storage.saveSharedDebt() is deprecated. Use API routes instead');
+    throw new Error('Not implemented');
   }
 
-  deleteTrip(id: string): void {
-    const trips = this.getTrips().filter(t => t.id !== id);
-    this.saveStorageData('sua-grana-trips', trips);
+  async updateSharedDebt(id: string, updates: Partial<SharedDebt>): Promise<void> {
+    console.warn('storage.updateSharedDebt() is deprecated. Use API routes instead');
+  }
+
+  async deleteSharedDebt(id: string): Promise<void> {
+    console.warn('storage.deleteSharedDebt() is deprecated. Use API routes instead');
+  }
+  processDebtPayment(
+    creditor: string,
+    debtor: string,
+    amount: number,
+    description?: string,
+    transactionId?: string
+  ): Promise<{
+    paidDebts: SharedDebt[];
+    remainingAmount: number;
+    newDebt?: SharedDebt;
+  }> {
+    // TODO: Implementar lógica de processamento de pagamento de dívidas
+    console.warn('processDebtPayment - Implementação pendente no DatabaseService');
+    return Promise.resolve({
+      paidDebts: [],
+      remainingAmount: amount,
+    });
   }
 
   generateId(): string {

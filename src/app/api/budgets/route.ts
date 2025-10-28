@@ -4,26 +4,37 @@ import { z } from 'zod';
 
 // Schema para validação de budget
 const BudgetSchema = z.object({
+  accountId: z.string().optional(),
   name: z.string().min(1, 'Nome é obrigatório'),
   amount: z.number().positive('Valor deve ser positivo'),
   category: z.string().min(1, 'Categoria é obrigatória'),
   period: z.enum(['monthly', 'weekly', 'yearly']).default('monthly'),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
-  isActive: z.boolean().default(true),
-  alertThreshold: z.number().min(0).max(100).default(80)
+  startDate: z.string().transform((str) => new Date(str)),
+  endDate: z.string().transform((str) => new Date(str)),
+  isActive: z.boolean().default(true)
 });
 
 // GET /api/budgets - Buscar todos os orçamentos
+
+export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
+    // ✅ CORREÇÃO CRÍTICA: Adicionar autenticação
+    const { authenticateRequest } = await import('@/lib/utils/auth-helpers');
+    const auth = await authenticateRequest(request);
+    
+    if (!auth.success || !auth.userId) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const period = searchParams.get('period');
     const active = searchParams.get('active');
 
-    // Buscar orçamentos
+    // ✅ CORREÇÃO CRÍTICA: Filtrar por userId
     const budgets = await prisma.budget.findMany({
       where: {
+        userId: auth.userId, // ✅ Isolamento de dados
         ...(active === 'true' && { isActive: true }),
         ...(period && { period })
       },
@@ -73,30 +84,31 @@ export async function GET(request: NextRequest) {
               gte: startDate,
               lte: endDate
             },
-            type: 'expense' // Apenas despesas contam para o orçamento
+            type: 'expense', // Apenas despesas contam para o orçamento
+            deletedAt: null // Excluir transações deletadas
           }
         });
 
-        // Calcular total gasto
+        // Calcular total gasto (valores já são negativos para despesas)
         const totalSpent = transactions.reduce((sum, transaction) => 
-          sum + Math.abs(transaction.amount), 0
+          sum + Math.abs(Number(transaction.amount)), 0
         );
 
         // Calcular porcentagem gasta
-        const percentage = budget.amount > 0 ? (totalSpent / budget.amount) * 100 : 0;
+        const percentage = Number(budget.amount) > 0 ? (totalSpent / Number(budget.amount)) * 100 : 0;
 
         // Determinar status
         let status: 'good' | 'warning' | 'exceeded' = 'good';
         if (percentage > 100) {
           status = 'exceeded';
-        } else if (percentage >= budget.alertThreshold) {
+        } else if (percentage >= Number(budget.alertThreshold)) {
           status = 'warning';
         }
 
         return {
           ...budget,
           spent: totalSpent,
-          remaining: Math.max(0, budget.amount - totalSpent),
+          remaining: Math.max(0, Number(budget.amount) - totalSpent),
           percentage: Math.round(percentage * 100) / 100,
           status,
           transactionCount: transactions.length,
@@ -128,12 +140,21 @@ export async function GET(request: NextRequest) {
 // POST /api/budgets - Criar novo orçamento
 export async function POST(request: NextRequest) {
   try {
+    // ✅ CORREÇÃO CRÍTICA: Adicionar autenticação
+    const { authenticateRequest } = await import('@/lib/utils/auth-helpers');
+    const auth = await authenticateRequest(request);
+    
+    if (!auth.success || !auth.userId) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    }
+
     const body = await request.json();
     const validatedData = BudgetSchema.parse(body);
 
-    // Verificar se já existe orçamento ativo para a mesma categoria no período
+    // ✅ CORREÇÃO CRÍTICA: Verificar se já existe orçamento ativo para a mesma categoria no período (filtrado por usuário)
     const existingBudget = await prisma.budget.findFirst({
       where: {
+        userId: auth.userId, // ✅ Isolamento de dados
         category: validatedData.category,
         period: validatedData.period,
         isActive: true
@@ -150,12 +171,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Criar orçamento
+    // ✅ CORREÇÃO CRÍTICA: Criar orçamento com userId
     const budget = await prisma.budget.create({
       data: {
-        ...validatedData,
-        startDate: validatedData.startDate ? new Date(validatedData.startDate) : null,
-        endDate: validatedData.endDate ? new Date(validatedData.endDate) : null
+        userId: auth.userId, // ✅ Associar ao usuário autenticado
+        accountId: validatedData.accountId,
+        name: validatedData.name,
+        amount: validatedData.amount,
+        category: validatedData.category,
+        period: validatedData.period,
+        startDate: validatedData.startDate,
+        endDate: validatedData.endDate,
+        isActive: validatedData.isActive
       }
     });
 
@@ -190,6 +217,14 @@ export async function POST(request: NextRequest) {
 // PUT /api/budgets - Atualizar orçamento
 export async function PUT(request: NextRequest) {
   try {
+    // ✅ CORREÇÃO CRÍTICA: Adicionar autenticação
+    const { authenticateRequest } = await import('@/lib/utils/auth-helpers');
+    const auth = await authenticateRequest(request);
+    
+    if (!auth.success || !auth.userId) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { id, ...updateData } = body;
 
@@ -203,9 +238,12 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Verificar se orçamento existe
-    const existingBudget = await prisma.budget.findUnique({
-      where: { id }
+    // ✅ CORREÇÃO CRÍTICA: Verificar se orçamento existe e pertence ao usuário
+    const existingBudget = await prisma.budget.findFirst({
+      where: { 
+        id,
+        userId: auth.userId // ✅ Isolamento de dados
+      }
     });
 
     if (!existingBudget) {
@@ -220,7 +258,10 @@ export async function PUT(request: NextRequest) {
 
     // Atualizar orçamento
     const updatedBudget = await prisma.budget.update({
-      where: { id },
+      where: { 
+        id,
+        userId: auth.userId // ✅ Isolamento de dados
+      },
       data: {
         ...updateData,
         startDate: updateData.startDate ? new Date(updateData.startDate) : undefined,
@@ -249,6 +290,14 @@ export async function PUT(request: NextRequest) {
 // DELETE /api/budgets - Deletar orçamento
 export async function DELETE(request: NextRequest) {
   try {
+    // ✅ CORREÇÃO CRÍTICA: Adicionar autenticação
+    const { authenticateRequest } = await import('@/lib/utils/auth-helpers');
+    const auth = await authenticateRequest(request);
+    
+    if (!auth.success || !auth.userId) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
@@ -262,9 +311,12 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Verificar se orçamento existe
-    const existingBudget = await prisma.budget.findUnique({
-      where: { id }
+    // ✅ CORREÇÃO CRÍTICA: Verificar se orçamento existe e pertence ao usuário
+    const existingBudget = await prisma.budget.findFirst({
+      where: { 
+        id,
+        userId: auth.userId // ✅ Isolamento de dados
+      }
     });
 
     if (!existingBudget) {
@@ -277,15 +329,21 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Verificar se há transactions vinculadas
+    // ✅ CORREÇÃO CRÍTICA: Verificar se há transactions vinculadas (filtrado por usuário)
     const linkedTransactions = await prisma.transaction.count({
-      where: { budgetId: id }
+      where: { 
+        budgetId: id,
+        userId: auth.userId // ✅ Isolamento de dados
+      }
     });
 
     if (linkedTransactions > 0) {
       // Soft delete - apenas desativar
       await prisma.budget.update({
-        where: { id },
+        where: { 
+          id,
+          userId: auth.userId // ✅ Isolamento de dados
+        },
         data: { 
           isActive: false,
           updatedAt: new Date()
@@ -299,7 +357,10 @@ export async function DELETE(request: NextRequest) {
     } else {
       // Hard delete - remover completamente
       await prisma.budget.delete({
-        where: { id }
+        where: { 
+          id,
+          userId: auth.userId // ✅ Isolamento de dados
+        }
       });
 
       return NextResponse.json({

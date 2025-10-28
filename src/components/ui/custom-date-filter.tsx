@@ -198,7 +198,7 @@ export function filterByPeriod<T extends { date: string }>(
   }
 
   return data.filter((item) => {
-    const itemDate = new Date(item.date);
+    const itemDate = new Date(item.date + 'T12:00:00'); // Fix timezone issue
 
     switch (period) {
       case 'current-month':

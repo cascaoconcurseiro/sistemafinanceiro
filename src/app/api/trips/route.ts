@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
+import { authenticateRequest } from '@/lib/utils/auth-helpers';
 
 // Singleton para evitar múltiplas instâncias do Prisma
 const globalForPrisma = globalThis as unknown as {
@@ -16,30 +17,38 @@ const TripSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
   destination: z.string().min(1, 'Destino é obrigatório'),
   description: z.string().optional(),
-  startDate: z.string().datetime(),
-  endDate: z.string().datetime(),
+  startDate: z.string(),
+  endDate: z.string(),
   budget: z.number().min(0).default(0),
+  spent: z.number().min(0).default(0).optional(),
   currency: z.string().default('BRL'),
   status: z.enum(['planned', 'active', 'completed', 'cancelled']).default('planned'),
   participants: z.array(z.string()).optional(),
 });
 
+
+export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
-    const destination = searchParams.get('destination');
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
+    // Autenticação obrigatória
+    const auth = await authenticateRequest(request);
+    if (!auth.success) {
+      return NextResponse.json(
+        { success: false, error: auth.error },
+        { status: 401 }
+      );
+    }
+    const userId = auth.userId!;
+    console.log('👤 [API Trips GET] UserId autenticado:', userId);
 
-    let whereClause: any = {};
-
-    if (status) whereClause.status = status;
-    if (destination) whereClause.destination = { contains: destination, mode: 'insensitive' };
-
-    const [trips, total] = await Promise.all([
-      prisma.trip.findMany({
-        where: whereClause,
+    // Buscar viagens do usuário com tratamento de erro
+    let trips = [];
+    try {
+      console.log('🔍 [API Trips GET] Buscando viagens para userId:', userId);
+      trips = await prisma.trip.findMany({
+        where: {
+          userId
+        },
         include: {
           transactions: {
             where: {
@@ -49,7 +58,7 @@ export async function GET(request: NextRequest) {
               id: true,
               amount: true,
               description: true,
-              category: true,
+              categoryId: true,
               type: true,
               date: true,
               status: true
@@ -65,41 +74,78 @@ export async function GET(request: NextRequest) {
             }
           }
         },
-        orderBy: {
-          startDate: 'desc'
-        },
-        skip: (page - 1) * limit,
-        take: limit
-      }),
-      prisma.trip.count({ where: whereClause })
-    ]);
+        orderBy: { createdAt: 'desc' }
+      });
+      console.log('✅ [API Trips GET] Viagens encontradas:', trips.length);
+      console.log('📋 [API Trips GET] Viagens:', trips.map(t => ({ 
+        id: t.id, 
+        name: t.name, 
+        userId: t.userId,
+        startDate: t.startDate,
+        endDate: t.endDate 
+      })));
+    } catch (error) {
+      console.log('❌ [API Trips GET] Erro na consulta:', error);
+      // Retornar dados vazios se a tabela não existir
+      trips = [];
+    }
 
-    // Calcular estatísticas baseadas nas transações
+    // Calcular estatísticas e atualizar status automaticamente
     const tripsWithStats = trips.map(trip => {
       const expenses = trip.transactions.filter(t => t.type === 'expense');
-      const totalSpent = expenses.reduce((sum, t) => sum + Number(t.amount), 0);
+      const totalSpent = expenses.reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0);
       const remainingBudget = Number(trip.budget) - totalSpent;
       const budgetUtilization = Number(trip.budget) > 0 ? (totalSpent / Number(trip.budget)) * 100 : 0;
 
+      // Calcular status baseado nas datas
+      const now = new Date();
+      const startDate = new Date(trip.startDate);
+      const endDate = new Date(trip.endDate);
+      
+      let calculatedStatus = trip.status;
+      
+      // Atualizar status automaticamente baseado nas datas
+      if (now < startDate) {
+        calculatedStatus = 'planned'; // Ainda não começou
+      } else if (now >= startDate && now <= endDate) {
+        calculatedStatus = 'active'; // Em andamento
+      } else if (now > endDate) {
+        calculatedStatus = 'completed'; // Já terminou
+      }
+
       return {
         ...trip,
+        status: calculatedStatus, // Usar status calculado
         totalSpent,
         remainingBudget,
         budgetUtilization: Math.round(budgetUtilization * 100) / 100,
-        expenseCount: expenses.length,
-        transactions: trip.transactions
+        expenseCount: expenses.length
       };
     });
+
+    // Calcular estatísticas gerais usando status calculado
+    const totalBudget = trips.reduce((sum, trip) => sum + Number(trip.budget), 0);
+    const totalSpent = tripsWithStats.reduce((sum, trip) => sum + trip.totalSpent, 0);
+    const activeTrips = tripsWithStats.filter(trip => trip.status === 'active').length;
+    const plannedTrips = tripsWithStats.filter(trip => trip.status === 'planned').length;
+    const completedTrips = tripsWithStats.filter(trip => trip.status === 'completed').length;
 
     return NextResponse.json({
       success: true,
       data: {
         trips: tripsWithStats,
         pagination: {
-          page,
-          limit,
-          total,
-          totalPages: Math.ceil(total / limit)
+          page: 1,
+          limit: 10,
+          total: trips.length,
+          totalPages: Math.ceil(trips.length / 10)
+        },
+        stats: {
+          totalBudget,
+          totalSpent,
+          activeTrips,
+          plannedTrips,
+          completedTrips
         }
       }
     }, {
@@ -127,40 +173,51 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Autenticação obrigatória
+    const auth = await authenticateRequest(request);
+    if (!auth.success) {
+      return NextResponse.json(
+        { success: false, error: auth.error },
+        { status: 401 }
+      );
+    }
+    const userId = auth.userId!;
+    console.log('👤 [API Trips POST] UserId autenticado:', userId);
+
     const body = await request.json();
+    console.log('🔍 [API Trips POST] Dados recebidos:', body);
+    console.log('👤 [API Trips POST] Criando viagem para userId:', userId);
     
     // Validação com Zod
-    const validatedData = TripSchema.parse(body);
+    try {
+      const validatedData = TripSchema.parse(body);
+      console.log('✅ [API Trips] Dados validados:', validatedData);
+    } catch (validationError) {
+      console.error('❌ [API Trips] Erro de validação:', validationError);
+      throw validationError;
+    }
 
+    const validatedData = TripSchema.parse(body);
+    
+    console.log('💾 [API Trips POST] Criando viagem com userId:', userId);
+    
     const trip = await prisma.trip.create({
       data: {
+        userId,
         name: validatedData.name,
         destination: validatedData.destination,
         description: validatedData.description || null,
         startDate: new Date(validatedData.startDate),
         endDate: new Date(validatedData.endDate),
         budget: validatedData.budget,
+        spent: validatedData.spent || 0,
         currency: validatedData.currency,
         status: validatedData.status,
         participants: validatedData.participants ? JSON.stringify(validatedData.participants) : null,
-      },
-      include: {
-        transactions: {
-          where: {
-            deletedAt: null
-          }
-        },
-        _count: {
-          select: {
-            transactions: {
-              where: {
-                deletedAt: null
-              }
-            }
-          }
-        }
       }
     });
+
+    console.log('✅ [API Trips POST] Viagem criada:', { id: trip.id, name: trip.name, userId: trip.userId });
 
     return NextResponse.json({
       success: true,
@@ -231,7 +288,7 @@ export async function PUT(request: NextRequest) {
             id: true,
             amount: true,
             description: true,
-            category: true,
+            categoryId: true,
             type: true,
             date: true,
             status: true

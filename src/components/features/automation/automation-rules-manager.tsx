@@ -1,28 +1,27 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { logComponents, logError } from '../../../lib/logger';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
-import { Label } from '../../ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../../ui/select';
-import { Switch } from '../../ui/switch';
-import { Textarea } from '../../ui/textarea';
+} from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '../../ui/dialog';
-import { Badge } from '../../ui/badge';
+} from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
 import {
   Zap,
   Plus,
@@ -99,8 +98,8 @@ export function AutomationRulesManager({
         // Dados agora são salvos no banco de dados, não no localStorage
         console.warn('automation-rules-manager save default - localStorage removido, use banco de dados');
     } catch (error) {
-      logError.components('Error loading automation rules:', error);
-      setRules([]);
+        console.error('Error loading automation rules:', error);
+        setRules([]);
     }
   };
 

@@ -13,8 +13,34 @@ export function formatCurrency(amount: number, currency = 'BRL'): string {
 }
 
 export function formatDate(date: string | Date): string {
-  const dateObj = typeof date === 'string' ? new Date(date) : date
-  return new Intl.DateTimeFormat('pt-BR').format(dateObj)
+  try {
+    let dateObj: Date;
+    
+    if (date instanceof Date) {
+      dateObj = date;
+    } else if (typeof date === 'string') {
+      dateObj = new Date(date);
+    } else {
+      console.warn('Formato de data inválido:', typeof date, date);
+      return 'Data inválida';
+    }
+    
+    // Verificar se a data é válida
+    if (isNaN(dateObj.getTime())) {
+      console.warn('Data inválida detectada:', date);
+      return 'Data inválida';
+    }
+    
+    // Usar formatação mais robusta para evitar problemas de timezone
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    
+    return `${day}/${month}/${year}`;
+  } catch (error) {
+    console.warn('Erro ao formatar data:', error, date);
+    return 'Data inválida';
+  }
 }
 
 export function formatPercentage(value: number): string {
@@ -22,6 +48,14 @@ export function formatPercentage(value: number): string {
     style: 'percent',
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
+  }).format(value / 100)
+}
+
+export function formatPercent(value: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'percent',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(value / 100)
 }
 

@@ -32,10 +32,10 @@ export function useRealTimeEvents(options: UseRealTimeEventsOptions = {}) {
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Verificar se deve conectar (não conectar em desenvolvimento por padrão)
-  const shouldConnect = () => {
+  const shouldConnect = useCallback(() => {
     const isDevelopment = process.env.NODE_ENV === 'development';
     return !isDevelopment || enableInDevelopment;
-  };
+  }, [enableInDevelopment]);
 
   // Função para conectar ao SSE
   const connect = useCallback(() => {

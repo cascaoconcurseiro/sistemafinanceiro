@@ -1,65 +1,46 @@
-// Tipos principais do sistema SuaGrana
-// Baseado no schema Prisma atualizado
+/**
+ * TIPOS PRINCIPAIS DO SISTEMA SUAGRANA
+ * 
+ * IMPORTANTE: Este arquivo agora re-exporta tipos do arquivo consolidado.
+ * Todos os novos tipos devem ser definidos em ./consolidated.ts
+ * 
+ * Este arquivo mantém compatibilidade com código existente.
+ */
 
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  avatar?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+// Re-exportar todos os tipos do arquivo consolidado
+export * from './consolidated';
 
-// TRANSAÇÃO - UNIDADE MÍNIMA DO SISTEMA FINANCEIRO
-// Esta é a única fonte da verdade para todas as operações financeiras
-export interface Transaction {
-  // Campos obrigatórios - núcleo da transação
-  id: string;
-  amount: number; // Valor sempre positivo, o tipo define se é entrada ou saída
-  description: string;
-  date: string; // Data da transação (não confundir com data de criação)
-  accountId: string; // Conta de origem/destino
-  categoryId: string; // Categoria obrigatória para classificação
-  type: TransactionType; // Tipo fundamental da operação
-  status: TransactionStatus; // Status da transação
-  
-  // Campos para transferências (quando type = 'transfer')
-  toAccountId?: string; // Conta de destino para transferências
-  transferId?: string; // ID que conecta as duas transações de uma transferência
-  transferGroupId?: string; // ID do grupo de transferência (nova implementação)
-  
-  // Campos para cartão de crédito e parcelamento
-  parentTransactionId?: string; // Para transações filhas (parcelas)
-  installmentNumber?: number; // Número da parcela atual
-  totalInstallments?: number; // Total de parcelas
-  creditCardId?: string; // ID do cartão de crédito
-  dueDate?: string; // Data de vencimento (para cartão de crédito)
-  
-  // Campos para recorrência
-  recurringRuleId?: string; // ID da regra de recorrência
-  isRecurring?: boolean; // Se é uma transação recorrente
-  
-  // Campos opcionais para enriquecimento
-  notes?: string;
-  tags?: string[]; // Tags para classificação adicional
-  location?: string; // Local da transação
-  receipt?: string; // URL ou referência do comprovante
-  
-  // Campos de auditoria
-  createdAt: string;
-  updatedAt: string;
-  createdBy?: string; // Usuário que criou
-  lastModifiedBy?: string; // Último usuário que modificou
-  
-  // Metadados para integrações
-  externalId?: string; // ID de sistemas externos (bancos, APIs)
-  source?: 'manual' | 'import' | 'api' | 'recurring'; // Origem da transação
-  
-  // Campos calculados (não persistidos, calculados dinamicamente)
-  runningBalance?: number; // Saldo corrente após esta transação
-  categoryName?: string; // Nome da categoria (join)
-  accountName?: string; // Nome da conta (join)
-}
+// Manter exports específicos para compatibilidade
+export type {
+  Transaction,
+  Account,
+  Goal,
+  Investment,
+  Trip,
+  Contact,
+  User,
+  Category,
+  CreditCard,
+  RecurringRule,
+  TransactionFormData,
+  AccountFormData,
+  GoalFormData,
+  TransactionFilters,
+  AccountFilters,
+  GoalFilters,
+  InvestmentFilters,
+  ApiResponse,
+  PaginatedResponse,
+  TransactionSummary,
+  AccountSummary,
+  DashboardData,
+  UseTransactionsResult,
+  UseAccountsResult,
+  UseGoalsResult,
+  Notification,
+  AppSettings,
+  NotificationSettings
+} from './consolidated';
 
 export interface Category {
   id: string;
@@ -465,6 +446,7 @@ export enum AccountType {
   CREDIT_CARD = 'credit_card',
   INVESTMENT = 'investment',
   CASH = 'cash',
+  TRAVEL = 'travel',
 }
 
 export enum BudgetPeriod {

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Limpar Cache - SuaGrana</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .step {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 10px;
+            border-left: 4px solid #4CAF50;
+        }
+        .step h3 {
+            margin-top: 0;
+            color: #4CAF50;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            width: 100%;
+            margin: 10px 0;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #45a049;
+            transform: scale(1.05);
+        }
+        .warning {
+            background: rgba(255, 152, 0, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #FF9800;
+            margin: 20px 0;
+        }
+        .success {
+            background: rgba(76, 175, 80, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #4CAF50;
+            margin: 20px 0;
+            display: none;
+        }
+        code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Limpar Cache do Navegador</h1>
+        
+        <div class="warning">
+            <strong>⚠️ IMPORTANTE:</strong> O erro de datas inválidas está acontecendo porque seu navegador está usando código JavaScript antigo em cache.
+        </div>
+
+        <div class="step">
+            <h3>Opção 1: Limpar Cache Automaticamente</h3>
+            <p>Clique no botão abaixo para tentar limpar o cache automaticamente:</p>
+            <button onclick="limparCache()">🗑️ Limpar Cache e Recarregar</button>
+        </div>
+
+        <div class="step">
+            <h3>Opção 2: Limpar Cache Manualmente (RECOMENDADO)</h3>
+            <p><strong>Windows/Linux:</strong></p>
+            <ol>
+                <li>Pressione <code>Ctrl + Shift + Delete</code></li>
+                <li>Selecione "Imagens e arquivos em cache"</li>
+                <li>Clique em "Limpar dados"</li>
+                <li>Pressione <code>Ctrl + Shift + R</code> para recarregar</li>
+            </ol>
+            <p><strong>Mac:</strong></p>
+            <ol>
+                <li>Pressione <code>Cmd + Shift + Delete</code></li>
+                <li>Selecione "Imagens e arquivos em cache"</li>
+                <li>Clique em "Limpar dados"</li>
+                <li>Pressione <code>Cmd + Shift + R</code> para recarregar</li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h3>Opção 3: Usar Aba Anônima</h3>
+            <p>Abra uma nova aba anônima/privada:</p>
+            <ul>
+                <li><strong>Chrome/Edge:</strong> <code>Ctrl + Shift + N</code></li>
+                <li><strong>Firefox:</strong> <code>Ctrl + Shift + P</code></li>
+            </ul>
+            <p>Depois acesse: <code>http://localhost:3000</code></p>
+        </div>
+
+        <div class="step">
+            <h3>Opção 4: DevTools (Para Desenvolvedores)</h3>
+            <ol>
+                <li>Pressione <code>F12</code> para abrir DevTools</li>
+                <li>Clique com botão direito no ícone de reload</li>
+                <li>Selecione "Empty Cache and Hard Reload"</li>
+            </ol>
+        </div>
+
+        <div class="success" id="success">
+            <strong>✅ Cache limpo!</strong> Redirecionando para a aplicação...
+        </div>
+
+        <div class="warning" style="margin-top: 30px;">
+            <strong>📝 Nota:</strong> Após limpar o cache, o erro <code>RangeError: Invalid time value</code> deve desaparecer completamente.
+        </div>
+    </div>
+
+    <script>
+        function limparCache() {
+            // Limpar localStorage
+            localStorage.clear();
+            
+            // Limpar sessionStorage
+            sessionStorage.clear();
+            
+            // Tentar limpar cache do service worker
+            if ('caches' in window) {
+                caches.keys().then(function(names) {
+                    for (let name of names) {
+                        caches.delete(name);
+                    }
+                });
+            }
+            
+            // Desregistrar service workers
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    for(let registration of registrations) {
+                        registration.unregister();
+                    }
+                });
+            }
+            
+            // Mostrar mensagem de sucesso
+            document.getElementById('success').style.display = 'block';
+            
+            // Redirecionar após 2 segundos
+            setTimeout(function() {
+                window.location.href = '/?nocache=' + Date.now();
+            }, 2000);
+        }
+        
+        // Adicionar timestamp para evitar cache
+        console.log('Cache Cleaner loaded at:', new Date().toISOString());
+    </script>
+</body>
+</html>

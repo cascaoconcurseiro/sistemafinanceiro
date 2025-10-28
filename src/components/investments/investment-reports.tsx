@@ -1,17 +1,17 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Badge } from '../ui/badge';
-import { Button } from '../ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../ui/select';
+} from '@/components/ui/select';
 import {
   BarChart,
   Bar,
@@ -41,15 +41,15 @@ import {
   Percent,
   Activity,
 } from 'lucide-react';
-import { useUnified } from '../../contexts/unified-context-simple';
-import { useSafeTheme } from '../../hooks/use-safe-theme';
-import { AssetType } from '../../lib/types/investments';
+import { useInvestments } from '@/contexts/unified-financial-context';
+import { useSafeTheme } from '@/hooks/use-safe-theme';
+import { AssetType } from '@/lib/types/investments';
 import {
   formatCurrency,
   formatPercentage,
   calculatePerformanceMetrics,
   calculateCurrentValue,
-} from '../../lib/utils/investment-calculations';
+} from '@/lib/utils/investment-calculations';
 import {
   format,
   subMonths,
@@ -91,41 +91,10 @@ const getAssetTypeLabel = (type: AssetType) => {
 };
 
 export function InvestmentReports({ className }: InvestmentReportsProps) {
-  const { accounts, transactions, balances } = useUnified();
+  const { investments, portfolio, isLoading } = useInvestments();
   const { settings } = useSafeTheme();
   const [selectedPeriod, setSelectedPeriod] = useState<ReportPeriod>('1y');
   const [selectedTab, setSelectedTab] = useState('overview');
-
-  // Calculate investment data from transactions
-  const investments = useMemo(() => {
-    const investmentMap = new Map();
-    
-    transactions
-      .filter(t => t.category === 'investment' && t.type === 'expense')
-      .forEach(transaction => {
-        const symbol = transaction.description?.split(' ')[0] || 'UNKNOWN';
-        const existing = investmentMap.get(symbol);
-        
-        if (existing) {
-          existing.totalInvested += Math.abs(transaction.amount);
-          existing.quantity += transaction.metadata?.quantity || 1;
-        } else {
-          investmentMap.set(symbol, {
-            id: symbol,
-            symbol,
-            name: transaction.description || symbol,
-            type: transaction.metadata?.assetType || 'stock',
-            totalInvested: Math.abs(transaction.amount),
-            quantity: transaction.metadata?.quantity || 1,
-            currentPrice: transaction.metadata?.unitPrice || 0,
-            purchaseDate: transaction.date,
-            status: 'active'
-          });
-        }
-      });
-    
-    return Array.from(investmentMap.values());
-  }, [transactions]);
 
   // Calcular período de análise
   const getPeriodDates = (period: ReportPeriod) => {
@@ -876,3 +845,4 @@ export function InvestmentReports({ className }: InvestmentReportsProps) {
     </div>
   );
 }
+

@@ -1,35 +1,113 @@
 /** @type {import('next').NextConfig} */
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+});
+
 const nextConfig = {
-  eslint: {
-    // 🔒 HABILITADO: ESLint deve rodar durante builds para bloquear violações financeiras
-    ignoreDuringBuilds: false,
-    // Diretórios para verificar
-    dirs: ['src', 'pages', 'components', 'hooks', 'lib', 'utils'],
+  // ✅ Otimizações de produção
+  productionBrowserSourceMaps: false,
+  poweredByHeader: false,
+  swcMinify: true, // ✅ Minificação mais rápida com SWC
+  compress: true,
+  
+  // ✅ Otimizações de imagens
+  images: {
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 60,
   },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
+  
+  // ✅ Experimental
   experimental: {
     optimizeCss: true,
-    optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
+    optimizePackageImports: ['@/components', '@/lib'],
   },
-  images: {
-    unoptimized: true,
-  },
-  trailingSlash: false,
-  generateEtags: false,
-  poweredByHeader: false,
-  compress: true,
-  reactStrictMode: true, // Habilitando strict mode para debug
   
-  webpack: (config) => {
-    config.resolve.fallback = {
-      fs: false,
-      net: false,
-      tls: false,
-    };
+  // ✅ TypeScript e ESLint habilitados (não ignorar erros)
+  typescript: {
+    ignoreBuildErrors: false, // ✅ Detectar erros de tipo
+  },
+  eslint: {
+    ignoreDuringBuilds: false, // ✅ Detectar problemas de código
+  },
+  
+  webpack: (config, { dev, isServer }) => {
+    // Otimizações de produção
+    if (!dev && !isServer) {
+      config.optimization = {
+        ...config.optimization,
+        moduleIds: 'deterministic',
+        splitChunks: {
+          chunks: 'all',
+          cacheGroups: {
+            vendor: {
+              test: /[\\/]node_modules[\\/]/,
+              name: 'vendor',
+              chunks: 'all',
+              priority: 20,
+            },
+            react: {
+              test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/,
+              name: 'react',
+              chunks: 'all',
+              priority: 30,
+            },
+          },
+        },
+      };
+    }
+    
+    // Fallbacks para cliente
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        crypto: false,
+        'child_process': false,
+        'fs/promises': false,
+        'async_hooks': false,
+      };
+    }
+    
     return config;
+  },
+  
+  // Configurações PWA e CORS
+  async headers() {
+    return [
+      {
+        source: '/sw.js',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=0, must-revalidate',
+          },
+        ],
+      },
+      {
+        source: '/api/:path*',
+        headers: [
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: process.env.ALLOWED_ORIGINS || 'http://localhost:3000',
+          },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET,POST,PUT,DELETE,OPTIONS',
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: 'Content-Type, Authorization',
+          },
+          {
+            key: 'Access-Control-Max-Age',
+            value: '86400',
+          },
+        ],
+      },
+    ];
   },
 };
 
-module.exports = nextConfig;
+module.exports = withBundleAnalyzer(nextConfig);

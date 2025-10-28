@@ -1,13 +1,5 @@
 import { prisma } from '@/lib/prisma';
-
-interface Goal {
-  id: string;
-  name: string;
-  current: number;
-  target: number;
-  targetDate?: Date;
-  isCompleted?: boolean;
-}
+import type { Goal } from '@/types';
 
 export class GoalNotificationService {
   /**

@@ -3,9 +3,9 @@
 import { ModernAppLayout } from '@/components/modern-app-layout';
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { useAccounts, useTransactions } from '@/contexts/unified-context-simple';
+import { useAccounts, useTransactions } from '@/contexts/unified-financial-context';
 
-import { storage, type Trip } from '@/lib/storage';
+import type { Trip } from '@/lib/storage';
 import { TripDetails } from '@/components/trip-details';
 
 export default function TripPage() {
@@ -30,14 +30,57 @@ export default function TripPage() {
     setIsMounted(true);
   }, []);
 
+  // Listener para atualizar orçamento quando gastos compartilhados forem pagos
+  useEffect(() => {
+    const handleTripBudgetUpdate = (event: CustomEvent) => {
+      const { tripId: updatedTripId, amountReturned } = event.detail;
+      
+      if (trip && trip.id === updatedTripId) {
+        console.log('🔄 [TripPage] Atualizando orçamento da viagem:', {
+          tripId: updatedTripId,
+          valorDevolvido: amountReturned,
+          gastoAnterior: trip.spent
+        });
+        
+        // Atualizar o gasto da viagem (diminuir)
+        const newSpent = Math.max(0, (trip.spent || 0) - amountReturned);
+        
+        setTrip(prevTrip => prevTrip ? {
+          ...prevTrip,
+          spent: newSpent
+        } : null);
+        
+        // Também atualizar via API para persistir
+        fetch(`/api/trips/${trip.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            spent: newSpent
+          })
+        }).catch(error => {
+          console.error('Erro ao atualizar viagem na API:', error);
+        });
+      }
+    };
+
+    window.addEventListener('tripBudgetUpdated', handleTripBudgetUpdate as EventListener);
+    
+    return () => {
+      window.removeEventListener('tripBudgetUpdated', handleTripBudgetUpdate as EventListener);
+    };
+  }, [trip]);
+
   useEffect(() => {
     if (isMounted && params.id) {
       console.log('Carregando viagem com ID:', params.id);
       
       // Primeiro tenta carregar da API
-      fetch('/api/trips')
+      fetch('/api/trips', { credentials: 'include' })
         .then(response => response.json())
-        .then(trips => {
+        .then(responseData => {
+          // Extrair o array de trips da resposta da API
+          const trips = responseData.data?.trips || [];
           console.log('Viagens encontradas na API:', trips.length, trips);
           const foundTrip = trips.find((t) => t.id === params.id);
           
@@ -45,24 +88,17 @@ export default function TripPage() {
             console.log('Viagem encontrada na API:', foundTrip);
             setTrip(foundTrip);
           } else {
-            // Fallback para localStorage se não encontrar na API
-            console.log('Viagem não encontrada na API, tentando localStorage...');
-            const localTrips = storage.getTrips();
-            console.log('Viagens encontradas no localStorage:', localTrips.length, localTrips);
-            const localTrip = localTrips.find((t) => t.id === params.id);
-            console.log('Viagem encontrada no localStorage:', localTrip);
-            setTrip(localTrip || null);
+            // localStorage foi removido - dados agora vêm apenas do banco de dados
+            console.warn('Viagem não encontrada na API - localStorage removido, use apenas banco de dados');
+            setTrip(null);
           }
           setLoading(false);
         })
         .catch(error => {
           console.error('Erro ao carregar viagens da API:', error);
-          // Fallback para localStorage em caso de erro
-          const localTrips = storage.getTrips();
-          console.log('Fallback - Viagens encontradas no localStorage:', localTrips.length, localTrips);
-          const localTrip = localTrips.find((t) => t.id === params.id);
-          console.log('Fallback - Viagem encontrada no localStorage:', localTrip);
-          setTrip(localTrip || null);
+          // localStorage foi removido - dados agora vêm apenas do banco de dados
+          console.warn('Erro na API - localStorage removido, use apenas banco de dados');
+          setTrip(null);
           setLoading(false);
         });
     }
@@ -72,7 +108,6 @@ export default function TripPage() {
     return (
       <ModernAppLayout
         title="Detalhes da Viagem"
-        subtitle="Gerencie os gastos e planejamento da sua viagem"
       >
         <div className="p-4 md:p-6">
           <div className="animate-pulse space-y-6">
@@ -88,7 +123,6 @@ export default function TripPage() {
     return (
       <ModernAppLayout
         title="Viagem não encontrada"
-        subtitle="A viagem solicitada não foi encontrada"
       >
         <div className="p-4 md:p-6">
           <div className="text-center py-12">
@@ -107,15 +141,23 @@ export default function TripPage() {
   return (
     <ModernAppLayout
       title={`Viagem: ${trip.name}`}
-      subtitle="Gerencie os gastos e planejamento da sua viagem"
     >
       <div className="p-4 md:p-6">
         <TripDetails
           trip={trip}
           onUpdate={(updatedTrip) => {
             setTrip(updatedTrip);
-            // Optionally save to storage
-            storage.updateTrip(updatedTrip.id, updatedTrip);
+            // Update via API
+            fetch('/api/trips', {
+              method: 'PUT',
+              credentials: 'include',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(updatedTrip),
+            }).catch(error => {
+              console.error('Erro ao atualizar viagem:', error);
+            });
           }}
         />
       </div>

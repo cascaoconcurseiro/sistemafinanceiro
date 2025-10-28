@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://suagrana:suagrana@db:5432/suagrana
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - NEXTAUTH_URL=http://localhost:3000
+    depends_on:
+      - db
+    restart: unless-stopped
+    networks:
+      - suagrana-network
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=suagrana
+      - POSTGRES_PASSWORD=suagrana
+      - POSTGRES_DB=suagrana
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    networks:
+      - suagrana-network
+
+volumes:
+  postgres-data:
+
+networks:
+  suagrana-network:
+    driver: bridge

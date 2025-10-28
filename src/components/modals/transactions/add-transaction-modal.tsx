@@ -2,31 +2,31 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useDebouncedCallback } from '../../../hooks/use-debounce';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
-import { Label } from '../../ui/label';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../../ui/select';
-import { Textarea } from '../../ui/textarea';
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '../../ui/dialog';
-import { Switch } from '../../ui/switch';
-import { Badge } from '../../ui/badge';
-import { Avatar, AvatarFallback } from '../../ui/avatar';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
-import { Separator } from '../../ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
-import { RadioGroup, RadioGroupItem } from '../../ui/radio-group';
-import { DatePicker } from '../../ui/date-picker';
+} from '@/components/ui/dialog';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { DatePicker } from '@/components/ui/date-picker';
 import {
   DollarSign,
   Users,
@@ -42,24 +42,23 @@ import {
   MapPin,
   CreditCard,
 } from 'lucide-react';
-// Removed UnifiedFinancialSystem import - using direct storage access
-import type { Trip, SharedDebt, Transaction } from '../../../lib/storage';
-import { transactionManager } from '../../../lib/transaction-manager';
+// Fixed imports to prevent 500 errors
 import { toast } from 'sonner';
 import { FamilySelector } from '../../features/travel/family-selector';
-import { SmartSuggestionsComponent } from '../../ui/smart-suggestions';
-import { useCreateUnifiedTransaction } from '../../../hooks/use-unified-transactions';
-import { useUnified } from '../../../contexts/unified-context-simple';
+import { SmartSuggestionsComponent } from '@/components/ui/smart-suggestions';
+import { useUnifiedFinancial } from '../../../contexts/unified-financial-context';
 import {
   formatDateInput,
   convertBRDateToISO,
   convertISODateToBR,
   validateBRDate,
   getCurrentDateBR,
-} from '../../../lib/utils/date-utils';
+} from '@/lib/utils/date-utils';
 import { useSafeTheme } from '../../../hooks/use-safe-theme';
-import { logComponents, logError } from '../../../lib/logger';
-import { parseNumber, isValidNumber } from '../../../lib/utils/number-utils';
+// Logger removed to prevent errors
+import { parseNumber, isValidNumber } from '@/lib/utils/number-utils';
+import { storage } from '@/lib/storage';
+import { SharedDebt, Trip, Transaction } from '@prisma/client';
 
 interface AddTransactionModalProps {
   open: boolean;
@@ -76,8 +75,83 @@ export function AddTransactionModal({
   editingTransaction,
   tripId,
 }: AddTransactionModalProps) {
-  const { accounts, actions, isLoading: engineLoading } = useUnified();
-  const createTransactionMutation = useCreateUnifiedTransaction();
+  // ✅ CORREÇÃO: Usar apenas o contexto unificado
+  const { accounts, actions, loading } = useUnifiedFinancial();
+  
+  // Ensure accounts is always an array to prevent undefined errors
+  const safeAccounts = accounts || [];
+
+  // Função para renderizar as opções de contas separadas por tipo
+  // ✅ CORREÇÃO: Renderizar opções de contas de forma otimizada
+  const renderAccountOptions = () => {
+    if (loading) {
+      return (
+        <SelectItem value="loading" disabled>
+          Carregando contas...
+        </SelectItem>
+      );
+    }
+
+    if (safeAccounts.length === 0) {
+      return (
+        <SelectItem value="no-accounts" disabled>
+          Nenhuma conta cadastrada. Crie uma conta primeiro.
+        </SelectItem>
+      );
+    }
+
+    // ✅ CORREÇÃO: Filtrar cartões de crédito considerando diferentes formatos
+    const bankAccounts = safeAccounts.filter(account => 
+      account.type !== 'credit_card' && 
+      account.type !== 'PASSIVO' && 
+      !account.id.startsWith('card-')
+    );
+    
+    const creditCards = safeAccounts.filter(account => 
+      account.type === 'credit_card' || 
+      account.type === 'PASSIVO' || 
+      account.id.startsWith('card-')
+    );
+
+    return (
+      <>
+        {/* Seção de Contas Bancárias */}
+        {bankAccounts.length > 0 && (
+          <>
+            <div className="px-2 py-1 text-xs font-medium text-gray-500 border-b">
+              💰 Contas Bancárias
+            </div>
+            {bankAccounts.map((account) => (
+              <SelectItem
+                key={account.id}
+                value={String(account.id)}
+              >
+                {account.name} - R$ {(Number(account.balance) || 0).toFixed(2)}
+              </SelectItem>
+            ))}
+          </>
+        )}
+        
+        {/* Seção de Cartões de Crédito */}
+        {creditCards.length > 0 && (
+          <>
+            <div className="px-2 py-1 text-xs font-medium text-gray-500 border-b">
+              💳 Cartões de Crédito
+            </div>
+            {creditCards.map((account) => (
+              <SelectItem
+                key={account.id}
+                value={String(account.id)}
+              >
+                {account.name} - Disponível: R$ {(Number(account.balance) || 0).toFixed(2)}
+              </SelectItem>
+            ))}
+          </>
+        )}
+      </>
+    );
+  };
+
   const { settings } = useSafeTheme();
   // Simplified without auto-fill for now
   const [formData, setFormData] = useState({
@@ -85,11 +159,14 @@ export function AddTransactionModal({
     amount: '',
     type: 'expense' as 'income' | 'expense',
     category: '',
+    subcategory: '', // Adicionado campo subcategory
     account: '',
+    creditCard: '', // Campo creditCard já presente
     date: getCurrentDateBR(),
     notes: '',
     isShared: false,
     selectedContacts: [] as string[],
+    sharedWith: [] as string[], // Adicionado campo sharedWith
     sharedPercentages: {} as Record<string, number>,
     divisionMethod: 'equal' as 'equal' | 'percentage' | 'amount',
     tripId: '',
@@ -116,6 +193,7 @@ export function AddTransactionModal({
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
   const [availableTags, setAvailableTags] = useState<string[]>([]);
+  const [loadedCategories, setLoadedCategories] = useState<Array<{ id: string; name: string; type: string }>>([]);
   const [availableCurrencies] = useState([
     { code: 'BRL', name: 'Real Brasileiro', symbol: 'R$' },
     { code: 'USD', name: 'Dólar Americano', symbol: '$' },
@@ -136,50 +214,118 @@ export function AddTransactionModal({
   // Load family members from database API
   const [contacts, setContacts] = useState<Array<{ id: string; name: string; email?: string }>>([]);
   
+  // Verificar se a conta selecionada é um cartão de crédito
+  const selectedAccount = safeAccounts.find(acc => acc.id === formData.account);
+  const isSelectedAccountCreditCard = selectedAccount?.type === 'credit_card';
+  
+  // ✅ CORREÇÃO: Carregar categorias
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const response = await fetch('/api/categories');
+        if (response.ok) {
+          const data = await response.json();
+          setLoadedCategories(data);
+          console.log('✅ [TransactionModal] Categorias carregadas:', data.length);
+        }
+      } catch (error) {
+        console.error('❌ [TransactionModal] Erro ao carregar categorias:', error);
+        setLoadedCategories([]);
+      }
+    };
+    
+    if (open) {
+      loadCategories();
+    }
+  }, [open]);
+
   useEffect(() => {
     const loadFamilyMembers = async () => {
       try {
-        const response = await fetch('/api/family');
+        console.log('👨‍👩‍👧‍👦 [TransactionModal] Carregando membros da família...');
+        const response = await fetch('/api/family-members', {
+          credentials: 'include',
+          cache: 'no-cache'
+        });
+        
         if (response.ok) {
           const members = await response.json();
-          const formattedMembers = members.map((member: { id: string; name: string; email?: string }) => ({
-            id: member.id,
-            name: member.name,
-            email: member.email || undefined
-          }));
-          setContacts(formattedMembers);
+          console.log('✅ [TransactionModal] Membros recebidos:', members);
+          
+          // Verificar se é um array
+          if (Array.isArray(members)) {
+            const formattedMembers = members.map((member: { id: string; name: string; email?: string }) => ({
+              id: member.id,
+              name: member.name,
+              email: member.email || undefined
+            }));
+            setContacts(formattedMembers);
+            console.log('✅ [TransactionModal] Membros formatados:', formattedMembers.length);
+          } else {
+            console.warn('⚠️ [TransactionModal] API retornou objeto em vez de array:', members);
+            setContacts([]);
+          }
+        } else {
+          console.error('❌ [TransactionModal] Erro ao carregar membros:', response.status);
+          setContacts([]);
         }
       } catch (error) {
-        logError.ui('Error loading family members:', error);
+        console.error('❌ [TransactionModal] Erro ao carregar membros:', error);
         setContacts([]);
       }
     };
     
-    loadFamilyMembers();
-  }, []);
+    // ✅ CORREÇÃO: Carregar quando o modal abrir
+    if (open) {
+      loadFamilyMembers();
+    }
+  }, [open]);
   const [trips, setTrips] = useState<Trip[]>([]);
 
-  // Load trips from storage
+  // ✅ CORREÇÃO: Carregar viagens do banco de dados
   useEffect(() => {
-    const loadData = () => {
+    const loadTrips = async () => {
       try {
-        /**
-         * @deprecated localStorage não é mais usado - dados ficam no banco
-         * Dados agora vêm do banco via DataService
-         */
-        // TODO: Implementar carregamento via DataService
-        // const tripsData = await DataService.getActiveTrips();
-        // setTrips(tripsData);
-
-        // Accounts are already loaded from useUnified hook
-        // No need to set local state as accounts come from the hook
+        console.log('✈️ [TransactionModal] Carregando viagens...');
+        const response = await fetch('/api/trips', {
+          credentials: 'include',
+          cache: 'no-cache'
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          console.log('✅ [TransactionModal] Resposta da API:', result);
+          
+          // ✅ CORREÇÃO: API retorna { success: true, data: { trips: [] } }
+          let tripsData = [];
+          if (result.success && result.data && result.data.trips) {
+            tripsData = result.data.trips;
+          } else if (Array.isArray(result)) {
+            tripsData = result;
+          } else if (result.trips) {
+            tripsData = result.trips;
+          }
+          
+          setTrips(tripsData);
+          console.log('✅ [TransactionModal] Viagens carregadas:', tripsData.length);
+          if (tripsData.length > 0) {
+            console.log('📋 [TransactionModal] Viagens:', tripsData.map(t => ({ id: t.id, name: t.name })));
+          }
+        } else {
+          console.error('❌ [TransactionModal] Erro ao carregar viagens:', response.status);
+          setTrips([]);
+        }
       } catch (error) {
-        logError.ui('Error loading data:', error);
+        console.error('❌ [TransactionModal] Erro ao carregar viagens:', error);
         setTrips([]);
       }
     };
-    loadData();
-  }, [accounts]);
+    
+    // Carregar quando o modal abrir
+    if (open) {
+      loadTrips();
+    }
+  }, [open]);
 
   // Initialize form data with editing transaction or trip data
   useEffect(() => {
@@ -195,15 +341,15 @@ export function AddTransactionModal({
         date: editingTransaction.date
           ? convertISODateToBR(editingTransaction.date)
           : getCurrentDateBR(),
-        notes: editingTransaction.notes || '',
-        isShared: !!(editingTransaction.metadata?.sharedWith && editingTransaction.metadata.sharedWith.length > 0),
-        selectedContacts: editingTransaction.metadata?.sharedWith || [],
-        sharedPercentages: editingTransaction.metadata?.sharedPercentages || {},
+        notes: editingTransaction.description || '', // Usar description como notes
+        isShared: editingTransaction.isShared || false,
+        selectedContacts: [], // Inicializar vazio
+        sharedPercentages: {},
         divisionMethod: 'equal' as 'equal' | 'percentage' | 'amount',
-        tripId: editingTransaction.metadata?.tripId || tripId || '',
-        isLinkedToTrip: !!(editingTransaction.metadata?.tripId || tripId),
-        installments: editingTransaction.installmentInfo?.totalInstallments || 1,
-        recurring: editingTransaction.recurringInfo?.isRecurring || false,
+        tripId: editingTransaction.tripId || tripId || '',
+        isLinkedToTrip: !!(editingTransaction.tripId || tripId),
+        installments: editingTransaction.totalInstallments || 1,
+        recurring: editingTransaction.isRecurring || false,
         recurringFrequency: 'monthly' as 'weekly' | 'monthly' | 'yearly',
         recurringType: 'indefinite' as 'indefinite' | 'specific',
         recurringEndDate: '',
@@ -245,6 +391,21 @@ export function AddTransactionModal({
     }
   }, [formData.tripId, formData.isLinkedToTrip, trips]);
 
+  // ✅ REMOVIDO: Não auto-selecionar conta - usuário deve escolher manualmente
+  // useEffect(() => {
+  //   if (open && !editingTransaction && !formData.account && safeAccounts.length > 0) {
+  //     const firstAccount = safeAccounts[0];
+  //     console.log('🏦 [TransactionModal] Auto-selecionando primeira conta:', {
+  //       id: firstAccount.id,
+  //       name: firstAccount.name
+  //     });
+  //     setFormData((prev) => ({
+  //       ...prev,
+  //       account: firstAccount.id
+  //     }));
+  //   }
+  // }, [open, editingTransaction, safeAccounts, formData.account]);
+
   // Reset form function
   const resetForm = () => {
     setFormData({
@@ -252,11 +413,14 @@ export function AddTransactionModal({
       amount: '',
       type: 'expense',
       category: '',
+      subcategory: '', // Adicionado
       account: '',
+      creditCard: '', // Adicionado
       date: getCurrentDateBR(),
       notes: '',
       isShared: false,
       selectedContacts: [],
+      sharedWith: [], // Adicionado
       sharedPercentages: {},
       divisionMethod: 'equal',
       tripId: tripId || '',
@@ -564,7 +728,7 @@ export function AddTransactionModal({
           `Convertido: ${amount} ${fromCurrency} = ${convertedValue} ${toCurrency}`
         );
       } catch (error) {
-        logError.ui('Erro na conversão de moeda:', error);
+        console.error('Erro na conversão de moeda:', error);
         toast.error('Erro ao converter moeda');
       }
     },
@@ -808,7 +972,7 @@ export function AddTransactionModal({
 
     try {
       // Validação crítica: verificar se há contas disponíveis
-      if (!accounts || accounts.length === 0) {
+      if (safeAccounts.length === 0) {
         toast.error('Não é possível criar transações sem contas cadastradas. Cadastre uma conta primeiro.');
         setIsLoading(false);
         return;
@@ -842,17 +1006,28 @@ export function AddTransactionModal({
         return;
       }
 
-      // Validação de conta obrigatória
-      if (!formData.account || formData.account === 'Dinheiro') {
-        toast.error('Por favor, selecione uma conta válida para a transação');
-        setIsLoading(false);
-        return;
+      // ✅ CORREÇÃO: Validação de conta obrigatória (exceto quando "Pago por outra pessoa")
+      if (!formData.isPaidBy) {
+        if (!formData.account || formData.account === 'Dinheiro') {
+          toast.error('Por favor, selecione uma conta válida para a transação');
+          setIsLoading(false);
+          return;
+        }
+
+        // Verificar se a conta selecionada existe na lista de contas disponíveis
+        const selectedAccount = safeAccounts.find(acc => acc.id === formData.account);
+        if (!selectedAccount) {
+          toast.error('A conta selecionada não é válida. Por favor, selecione uma conta existente');
+          setIsLoading(false);
+          return;
+        }
+      } else {
+        console.log('ℹ️ [TransactionModal] Pago por outra pessoa - pulando validação de conta');
       }
 
-      // Verificar se a conta selecionada existe na lista de contas disponíveis
-      const selectedAccount = accounts.find(acc => acc.id === formData.account);
-      if (!selectedAccount) {
-        toast.error('A conta selecionada não é válida. Por favor, selecione uma conta existente');
+      // ✅ CORREÇÃO: Validação para "Pago por outra pessoa" (mesmo sem compartilhamento)
+      if (formData.isPaidBy && !formData.paidByPerson) {
+        toast.error('Selecione quem pagou a despesa');
         setIsLoading(false);
         return;
       }
@@ -860,6 +1035,7 @@ export function AddTransactionModal({
       if (formData.isShared && formData.type === 'expense') {
         if (formData.selectedContacts.length === 0) {
           toast.error('Selecione pelo menos um membro para compartilhar');
+          setIsLoading(false);
           return;
         }
 
@@ -867,12 +1043,7 @@ export function AddTransactionModal({
           toast.error(
             `A soma dos percentuais deve ser 100%. Atual: ${getTotalPercentage.toFixed(1)}%`
           );
-          return;
-        }
-
-        // Validação para "Pago por"
-        if (formData.isPaidBy && !formData.paidByPerson) {
-          toast.error('Selecione quem pagou a despesa');
+          setIsLoading(false);
           return;
         }
       }
@@ -951,29 +1122,125 @@ export function AddTransactionModal({
         await actions.updateTransaction(editingTransaction.id, updatedTransaction);
         toast.success('Transação atualizada com sucesso!');
       } else {
-        // Check if it's an installment transaction
+        // Check if it's an installment transaction - use /api/transactions (not optimized)
         if (formData.installments > 1) {
-          const baseTransaction = {
+          // ✅ CORREÇÃO: formData.category já é o categoryId
+          const categoryId = formData.category;
+          
+          if (!categoryId) {
+            throw new Error('Por favor, selecione uma categoria para transações parceladas');
+          }
+          
+          // ✅ CORREÇÃO: Preparar dados corretamente para parcelamento
+          const transactionData: any = {
             description: formData.description,
             amount: Math.abs(adjustedFinalAmount),
-            type: formData.isShared && formData.type === 'expense' ? 'shared' : formData.type,
-            account: formData.account,
-            category: formData.category,
-            subcategory: formData.subcategory || undefined,
+            type: formData.type === 'expense' ? 'DESPESA' : 'RECEITA',
+            categoryId: categoryId,
             date: convertBRDateToISO(formData.date),
-            notes: formData.notes,
-            tags: selectedTags,
+            totalInstallments: formData.installments,
+            notes: formData.isPaidBy 
+              ? `${formData.notes || ''}\n[Pago por: ${contacts.find(c => c.id === formData.paidByPerson)?.name || 'Outra pessoa'}]`.trim()
+              : formData.notes,
+            tripId: formData.tripId || undefined,
+            isShared: formData.isShared || false,
+            paidBy: formData.isPaidBy ? formData.paidByPerson : undefined,
+            status: formData.isPaidBy ? 'pending' : 'cleared',
           };
 
-          // Create installment transactions using transactionManager
-          await transactionManager.createInstallmentTransaction(
-            baseTransaction,
-            formData.installments,
-            convertBRDateToISO(formData.date)
-          );
+          // ✅ Adicionar accountId/creditCardId apenas se NÃO for "pago por outra pessoa"
+          if (!formData.isPaidBy) {
+            // ✅ CORREÇÃO: Remover prefixo 'card-' do creditCardId
+            const accountValue = formData.account.replace(/^card-/, '');
+            
+            console.log('🏦 [TransactionModal] Adicionando conta:', {
+              original: formData.account,
+              cleaned: accountValue,
+              isCreditCard: isSelectedAccountCreditCard,
+              selectedAccount
+            });
+            
+            if (isSelectedAccountCreditCard) {
+              transactionData.creditCardId = accountValue;
+            } else {
+              transactionData.accountId = accountValue;
+            }
+          } else {
+            console.log('👤 [TransactionModal] Pago por outra pessoa:', formData.paidByPerson);
+          }
+
+          // ✅ Adicionar sharedWith se for compartilhado
+          if (formData.isShared && formData.selectedContacts.length > 0) {
+            transactionData.sharedWith = formData.selectedContacts; // Enviar como array
+            console.log('👥 [TransactionModal] Compartilhado com:', formData.selectedContacts);
+          }
+
+          // ✅ DEBUG: Log do payload antes de enviar
+          console.log('📤 [TransactionModal] Enviando dados para API:', transactionData);
+          
+          // ✅ CORREÇÃO: Usar API /transactions para parceladas (não a otimizada)
+          const response = await fetch('/api/transactions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(transactionData),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            console.error('❌ [TransactionModal] Erro da API:', errorData);
+            const errorMsg = errorData.details 
+              ? `${errorData.error}: ${errorData.details.join(', ')}`
+              : errorData.error || 'Erro ao criar transação parcelada';
+            throw new Error(errorMsg);
+          }
+
+          console.log('✅ [TransactionModal] Transação parcelada criada com sucesso');
+          
+          // ✅ NOVO: Se parcelado E pago por outra pessoa, criar dívida para cada parcela
+          if (formData.isPaidBy && formData.paidByPerson) {
+            const paidByContact = contacts.find(c => c.id === formData.paidByPerson);
+            if (paidByContact) {
+              const installmentAmount = Math.abs(adjustedFinalAmount) / formData.installments;
+              const totalDebt = Math.abs(adjustedFinalAmount);
+              
+              console.log('💰 Criando dívida para parcelamento:', {
+                pessoa: paidByContact.name,
+                valorTotal: totalDebt,
+                parcelas: formData.installments,
+                valorPorParcela: installmentAmount
+              });
+              
+              try {
+                // Criar dívida total (não por parcela)
+                await fetch('/api/shared-debts', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  credentials: 'include',
+                  body: JSON.stringify({
+                    creditorId: paidByContact.id,
+                    creditorName: paidByContact.name,
+                    originalAmount: totalDebt,
+                    currentAmount: totalDebt,
+                    description: `Parcelamento: ${formData.description} (${formData.installments}x de R$ ${installmentAmount.toFixed(2)})`,
+                    status: 'active',
+                  }),
+                });
+                
+                toast.info(
+                  `Dívida Parcelada Registrada: Você deve ${formData.installments}x de R$ ${installmentAmount.toFixed(2)} = R$ ${totalDebt.toFixed(2)} para ${paidByContact.name}`
+                );
+              } catch (error) {
+                console.error('❌ Erro ao criar dívida parcelada:', error);
+              }
+            }
+          }
+          
+          // Refresh data
+          await actions.forceRefresh();
         }
         // Check if it's a recurring transaction
-        else if (formData.recurring?.enabled) {
+        else if (formData.recurring) {
           const baseTransaction = {
             description: formData.description,
             amount: Math.abs(adjustedFinalAmount),
@@ -994,37 +1261,126 @@ export function AddTransactionModal({
             enabled: true,
           };
 
-          // Create recurring transaction using transactionManager
-          transactionManager.createRecurringTransaction(baseTransaction, recurringConfig);
-        }
-        // Regular transaction
-        else {
-          // Save new transaction using API
-          const transactionData = {
-            description: formData.description,
-            amount: Math.abs(adjustedFinalAmount), // API espera valor positivo
-            type: formData.type === 'expense' ? 'debit' : 'credit', // Converter para tipos da API
-            category: formData.category,
-            accountId: formData.account,
+          // Create recurring transaction using API /transactions (not optimized)
+          const recurringData = {
+            description: baseTransaction.description,
+            amount: Math.abs(baseTransaction.amount),
+            type: baseTransaction.type === 'expense' ? 'DESPESA' : 'RECEITA', // API /transactions usa português
+            category: baseTransaction.category,
+            accountId: baseTransaction.account,
+            creditCardId: isSelectedAccountCreditCard ? formData.account : undefined,
             date: convertBRDateToISO(formData.date),
-            status: 'cleared',
+            notes: baseTransaction.notes,
+            recurring: recurringConfig,
           };
 
+          // ✅ CORREÇÃO: Usar API /transactions para recorrentes (não a otimizada)
           const response = await fetch('/api/transactions', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(transactionData),
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(recurringData),
           });
 
           if (!response.ok) {
             const errorData = await response.json();
-            console.error('Erro da API:', errorData);
-            throw new Error(errorData.error || 'Erro ao salvar transação');
+            throw new Error(errorData.error || 'Erro ao criar transação recorrente');
           }
 
-          const savedTransaction = await response.json();
+          console.log('✅ [TransactionModal] Transação recorrente criada com sucesso');
+          
+          // Refresh data
+          await actions.forceRefresh();
+        }
+        // Regular transaction
+        else {
+          // ✅ CORREÇÃO: Buscar ID da categoria pelo nome ou usar a primeira disponível
+          console.log('🔍 [TransactionModal] Buscando categoria:', {
+            formDataCategory: formData.category,
+            loadedCategories: loadedCategories.length,
+            categoriesNames: loadedCategories.map(c => c.name)
+          });
+          
+          let selectedCategory = loadedCategories.find(c => c.name === formData.category);
+          
+          // Se não encontrou, tentar buscar por tipo (RECEITA ou DESPESA)
+          if (!selectedCategory) {
+            const categoryType = formData.type === 'expense' ? 'DESPESA' : 'RECEITA';
+            const categoriesOfType = loadedCategories.filter(c => c.type === categoryType);
+            
+            if (categoriesOfType.length > 0) {
+              // Usar a primeira categoria do tipo correto
+              selectedCategory = categoriesOfType[0];
+              console.warn(`⚠️ [TransactionModal] Categoria "${formData.category}" não encontrada. Usando "${selectedCategory.name}" como fallback.`);
+              toast.warning(`Categoria "${formData.category}" não encontrada. Usando "${selectedCategory.name}".`);
+            } else {
+              console.error('❌ [TransactionModal] Nenhuma categoria disponível do tipo:', categoryType);
+              throw new Error(`Nenhuma categoria de ${categoryType} disponível. Por favor, crie categorias primeiro.`);
+            }
+          }
+          
+          // ✅ VALIDAÇÃO CRÍTICA: Verificar se a conta selecionada existe (exceto quando "Pago por outra pessoa")
+          let selectedAccountForTransaction = null;
+          
+          if (!formData.isPaidBy) {
+            // Apenas validar conta se NÃO for "Pago por outra pessoa"
+            selectedAccountForTransaction = safeAccounts.find(acc => acc.id === formData.account);
+            
+            if (!selectedAccountForTransaction) {
+              console.error('❌ [TransactionModal] Conta não encontrada:', {
+                formDataAccount: formData.account,
+                availableAccounts: safeAccounts.map(a => ({ id: a.id, name: a.name }))
+              });
+              throw new Error('A conta selecionada não existe. Por favor, selecione uma conta válida.');
+            }
+            
+            console.log('✅ [TransactionModal] Conta validada:', {
+              id: selectedAccountForTransaction.id,
+              name: selectedAccountForTransaction.name,
+              type: selectedAccountForTransaction.type
+            });
+          } else {
+            // ✅ CORREÇÃO: Quando "Pago por outra pessoa", usar primeira conta disponível como placeholder
+            selectedAccountForTransaction = safeAccounts[0];
+            console.log('ℹ️ [TransactionModal] Pago por outra pessoa - usando conta placeholder:', selectedAccountForTransaction?.name);
+          }
+          
+          // Save new transaction using API
+          const paidByContact = formData.isPaidBy && formData.paidByPerson 
+            ? contacts.find(c => c.id === formData.paidByPerson)
+            : null;
+          
+          const transactionData = {
+            description: formData.description,
+            amount: Math.abs(adjustedFinalAmount), // API espera valor positivo
+            type: formData.type, // 'income' ou 'expense' (API fará o mapeamento)
+            category: formData.category, // Nome da categoria (para compatibilidade)
+            categoryId: selectedCategory?.id, // ✅ ID da categoria (obrigatório)
+            accountId: selectedAccountForTransaction?.id, // ✅ ID validado da conta
+            creditCardId: isSelectedAccountCreditCard ? selectedAccountForTransaction?.id : undefined,
+            date: convertBRDateToISO(formData.date),
+            notes: formData.notes,
+            tripId: formData.tripId || undefined,
+            isShared: formData.isShared || formData.isPaidBy || false,
+            // ✅ CORREÇÃO CRÍTICA: Enviar array, não string JSON
+            sharedWith: formData.isShared && formData.selectedContacts.length > 0 
+              ? formData.selectedContacts
+              : formData.isPaidBy && formData.paidByPerson
+                ? [formData.paidByPerson]
+                : undefined,
+            paidBy: formData.isPaidBy ? formData.paidByPerson : undefined,
+            status: formData.isPaidBy ? 'pending' : 'cleared',
+            metadata: formData.isPaidBy && paidByContact
+              ? JSON.stringify({ paidByName: paidByContact.name })
+              : undefined,
+          };
+          
+          console.log('📤 [TransactionModal] Enviando transação via contexto unificado:', transactionData);
+
+          // ✅ CORREÇÃO: Usar actions.createTransaction() do contexto unificado
+          const savedTransaction = await actions.createTransaction(transactionData);
+          
+          console.log('✅ [TransactionModal] Transação criada com sucesso:', savedTransaction);
 
           // Se for transação compartilhada, criar billing payments
           if (formData.isShared && formData.sharedWith && formData.sharedWith.length > 0) {
@@ -1033,64 +1389,88 @@ export function AddTransactionModal({
               sharedWith: formData.sharedWith,
               amount: adjustedFinalAmount // Usar o valor original com sinal
             };
-            storage.createBillingPayments(transactionForBilling);
+            // Remover createBillingPayments que não existe
+            // await storage.createSharedExpense(transactionForBilling);
           }
         }
       }
 
-      // Process debt logic if "Pago por" is enabled
+      // ✅ CORREÇÃO: Process debt logic if "Pago por outra pessoa" is enabled
       if (
-        formData.isShared &&
         formData.type === 'expense' &&
         formData.isPaidBy &&
         formData.paidByPerson
       ) {
+        console.log('💰 [TransactionModal] Processando "Pago por outra pessoa"');
+        
         const paidByContact = contacts.find(
           (c) => c.id === formData.paidByPerson
         );
+        
         if (paidByContact) {
-          const userShare = getMyAmount; // Valor que o usuário deve
+          const userShare = formData.isShared ? getMyAmount : adjustedFinalAmount;
+          
+          console.log('💰 Valor que você deve:', userShare);
+          console.log('💰 Pessoa que pagou:', paidByContact.name);
 
-          // Processar pagamento de dívida
-          const result = storage.processDebtPayment(
-            'user',
-            paidByContact.name,
-            userShare
-          );
-
-          if (result.debtPaid > 0) {
-            toast.success(
-              `Dívida Quitada! R$ ${result.debtPaid.toFixed(2)} de dívida anterior foi quitada com ${paidByContact.name}.`
-            );
-          }
-
-          if (result.newDebtCreated) {
-            toast.info(
-              `Nova Dívida Criada: Você deve R$ ${result.remainingAmount.toFixed(2)} para ${paidByContact.name}.`
-            );
-          }
-
-          if (result.debtPaid === 0 && !result.newDebtCreated) {
-            // Criar nova dívida se não havia dívidas anteriores
-            const newDebt: SharedDebt = {
-              id: `debt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-              creditor: paidByContact.name,
-              debtor: 'user',
-              originalAmount: userShare,
-              currentAmount: userShare,
-              description: `Despesa: ${formData.description}`,
-              transactionId: transactionData.id || `trans_${Date.now()}`,
-              status: 'active',
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            };
-
-            const financialSystem = UnifiedFinancialSystem.getInstance();
-            await financialSystem.createSharedDebt(newDebt);
-
-            toast.info(
-              `Dívida Registrada: Você deve R$ ${userShare.toFixed(2)} para ${paidByContact.name}.`
-            );
+          try {
+            // ✅ CORREÇÃO: Criar ou atualizar dívida via API
+            const debtsResponse = await fetch('/api/shared-debts', {
+              credentials: 'include',
+            });
+            
+            if (debtsResponse.ok) {
+              const debtsData = await debtsResponse.json();
+              const existingDebts = debtsData.debts || [];
+              
+              // Procurar dívida existente com esta pessoa
+              const existingDebt = existingDebts.find((d: any) => 
+                (d.creditorId === paidByContact.id || d.debtorId === paidByContact.id) && 
+                d.status === 'active'
+              );
+              
+              if (existingDebt) {
+                // Atualizar dívida existente
+                const currentAmount = Number(existingDebt.currentAmount);
+                const newAmount = currentAmount + userShare;
+                
+                await fetch(`/api/shared-debts/${existingDebt.id}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  credentials: 'include',
+                  body: JSON.stringify({
+                    currentAmount: newAmount,
+                    description: `${existingDebt.description} + ${formData.description}`,
+                  }),
+                });
+                
+                toast.info(
+                  `Dívida Atualizada: Você deve R$ ${newAmount.toFixed(2)} para ${paidByContact.name}.`
+                );
+              } else {
+                // Criar nova dívida
+                await fetch('/api/shared-debts', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  credentials: 'include',
+                  body: JSON.stringify({
+                    creditorId: paidByContact.id,
+                    creditorName: paidByContact.name,
+                    originalAmount: userShare,
+                    currentAmount: userShare,
+                    description: `Despesa: ${formData.description}`,
+                    status: 'active',
+                  }),
+                });
+                
+                toast.info(
+                  `Dívida Registrada: Você deve R$ ${userShare.toFixed(2)} para ${paidByContact.name}.`
+                );
+              }
+            }
+          } catch (error) {
+            console.error('❌ Erro ao processar dívida:', error);
+            toast.error('Erro ao registrar dívida');
           }
         }
       }
@@ -1106,11 +1486,46 @@ export function AddTransactionModal({
             : `${formData.type === 'income' ? 'Receita' : 'Despesa'} adicionada com sucesso!`
       );
 
-      // If linked to a trip, update trip expenses
+      // ✅ NOVO: Atualizar despesas de viagem
       if (formData.tripId && formData.type === 'expense') {
-        const tripAmount = finalConvertedAmount || amount;
-
-        storage.addTripExpense(formData.tripId, tripAmount);
+        try {
+          console.log('✈️ Atualizando despesas da viagem:', formData.tripId);
+          
+          // Buscar viagem atual
+          const tripResponse = await fetch(`/api/trips/${formData.tripId}`, {
+            credentials: 'include',
+          });
+          
+          if (tripResponse.ok) {
+            const tripData = await tripResponse.json();
+            const currentSpent = Number(tripData.spent || 0);
+            
+            // ✅ IMPORTANTE: Se "Pago por outra pessoa", não adicionar ao spent da viagem
+            // porque você não gastou, outra pessoa gastou
+            if (!formData.isPaidBy) {
+              const tripAmount = adjustedFinalAmount;
+              const newSpent = currentSpent + Math.abs(tripAmount);
+              
+              await fetch(`/api/trips/${formData.tripId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ spent: newSpent }),
+              });
+              
+              console.log('✅ Despesas da viagem atualizadas:', {
+                anterior: currentSpent,
+                adicionado: Math.abs(tripAmount),
+                novo: newSpent
+              });
+            } else {
+              console.log('ℹ️ Pago por outra pessoa - não atualizar spent da viagem');
+            }
+          }
+        } catch (error) {
+          console.error('❌ Erro ao atualizar viagem:', error);
+          // Não falhar a transação se houver erro na viagem
+        }
       }
 
       // Call onSave callback if provided
@@ -1124,7 +1539,7 @@ export function AddTransactionModal({
       onOpenChange(false);
     } catch (error) {
       toast.error('Erro ao salvar transação');
-      logError.transaction('Transaction save error:', error);
+      console.error('Transaction save error:', error);
     } finally {
       setIsLoading(false);
     }
@@ -1318,13 +1733,11 @@ export function AddTransactionModal({
                             <SelectValue placeholder="Selecione..." />
                           </SelectTrigger>
                           <SelectContent>
-                            {categories.income
-                              .filter(
-                                (category) => category && category.trim() !== ''
-                              )
-                              .map((category) => (
-                                <SelectItem key={category} value={category}>
-                                  {category}
+                            {loadedCategories
+                              .filter((cat) => cat.type === 'RECEITA')
+                              .map((cat) => (
+                                <SelectItem key={cat.id} value={cat.id}>
+                                  {cat.name}
                                 </SelectItem>
                               ))}
                           </SelectContent>
@@ -1334,22 +1747,37 @@ export function AddTransactionModal({
                         <Label htmlFor="account">Conta de Destino *</Label>
                         <Select
                           value={formData.account}
-                          onValueChange={(value) =>
-                            setFormData({ ...formData, account: value })
-                          }
+                          onValueChange={(value) => {
+                            console.log('🏦 [TransactionModal] Conta selecionada:', {
+                              value,
+                              accountExists: safeAccounts.some(a => a.id === value),
+                              availableAccounts: safeAccounts.map(a => ({ id: a.id, name: a.name }))
+                            });
+                            setFormData({ ...formData, account: value });
+                          }}
                           required
-                          disabled={accounts.length === 0}
+                          disabled={loading || safeAccounts.length === 0}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder={accounts.length === 0 ? "Nenhuma conta cadastrada" : "Selecione..."} />
+                            <SelectValue placeholder={
+                              loading 
+                                ? "Carregando contas..." 
+                                : safeAccounts.length === 0 
+                                  ? "Nenhuma conta cadastrada" 
+                                  : "Selecione..."
+                            } />
                           </SelectTrigger>
                           <SelectContent>
-                            {accounts.length === 0 ? (
+                            {loading ? (
+                              <SelectItem value="loading" disabled>
+                                Carregando contas...
+                              </SelectItem>
+                            ) : safeAccounts.length === 0 ? (
                               <SelectItem value="no-accounts" disabled>
                                 Nenhuma conta cadastrada. Crie uma conta primeiro.
                               </SelectItem>
                             ) : (
-                              accounts
+                              safeAccounts
                                 .filter(
                                   (account) =>
                                     account.id && String(account.id).trim() !== ''
@@ -1359,7 +1787,7 @@ export function AddTransactionModal({
                                     key={account.id}
                                     value={String(account.id)}
                                   >
-                                    {account.name} - {account.bank}
+                                    {account.name}
                                   </SelectItem>
                                 ))
                             )}
@@ -1696,14 +2124,11 @@ export function AddTransactionModal({
                             <SelectValue placeholder="Selecione..." />
                           </SelectTrigger>
                           <SelectContent>
-                            {/* Default categories */}
-                            {categories.expense
-                              .filter(
-                                (category) => category && category.trim() !== ''
-                              )
-                              .map((category) => (
-                                <SelectItem key={category} value={category}>
-                                  {category}
+                            {loadedCategories
+                              .filter((cat) => cat.type === 'DESPESA')
+                              .map((cat) => (
+                                <SelectItem key={cat.id} value={cat.id}>
+                                  {cat.name}
                                 </SelectItem>
                               ))}
 
@@ -1748,38 +2173,46 @@ export function AddTransactionModal({
                         <Label htmlFor="account">Pago com *</Label>
                         <Select
                           value={formData.account}
-                          onValueChange={(value) =>
-                            setFormData({ ...formData, account: value })
-                          }
-                          required
-                          disabled={accounts.length === 0}
+                          onValueChange={(value) => {
+                            console.log('🏦 [TransactionModal] Conta selecionada (despesa):', {
+                              value,
+                              accountExists: safeAccounts.some(a => a.id === value),
+                              availableAccounts: safeAccounts.map(a => ({ id: a.id, name: a.name }))
+                            });
+                            setFormData({ ...formData, account: value });
+                          }}
+                          required={!formData.isPaidBy}
+                          disabled={loading || safeAccounts.length === 0 || formData.isPaidBy}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder={accounts.length === 0 ? "Nenhuma conta cadastrada" : "Selecione..."} />
+                            <SelectValue placeholder={
+                              formData.isPaidBy
+                                ? "Não aplicável (pago por outra pessoa)"
+                                : loading 
+                                  ? "Carregando contas..." 
+                                  : safeAccounts.length === 0 
+                                    ? "Nenhuma conta cadastrada" 
+                                    : "Selecione..."
+                            } />
                           </SelectTrigger>
                           <SelectContent>
-                            {accounts.length === 0 ? (
-                              <SelectItem value="no-accounts" disabled>
-                                Nenhuma conta cadastrada. Crie uma conta primeiro.
-                              </SelectItem>
-                            ) : (
-                              accounts
-                                .filter(
-                                  (account) =>
-                                    account.id && String(account.id).trim() !== ''
-                                )
-                                .map((account) => (
-                                  <SelectItem
-                                    key={account.id}
-                                    value={String(account.id)}
-                                  >
-                                    {account.name} - {account.bank}
-                                  </SelectItem>
-                                ))
-                            )}
+                            {renderAccountOptions()}
                           </SelectContent>
                         </Select>
-                        {accounts.length === 0 && (
+                        {formData.isPaidBy && (
+                          <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div className="flex items-center gap-2">
+                              <AlertCircle className="w-4 h-4 text-blue-600" />
+                              <span className="text-sm font-medium text-blue-800">
+                                Conta não necessária
+                              </span>
+                            </div>
+                            <p className="text-sm text-blue-700 mt-1">
+                              Como outra pessoa pagou, não é necessário selecionar conta ou cartão.
+                            </p>
+                          </div>
+                        )}
+                        {!formData.isPaidBy && safeAccounts.length === 0 && (
                           <div className="mt-2 p-3 bg-orange-50 border border-orange-200 rounded-lg">
                             <div className="flex items-center gap-2">
                               <AlertCircle className="w-4 h-4 text-orange-600" />
@@ -1809,32 +2242,37 @@ export function AddTransactionModal({
                       </div>
                     </div>
 
-                    {/* Installments */}
-                    <div>
-                      <Label htmlFor="installments">Parcelas</Label>
-                      <Input
-                        id="installments"
-                        type="number"
-                        min="1"
-                        max="60"
-                        value={formData.installments}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            installments: Number.parseInt(e.target.value) || 1,
-                          })
-                        }
-                      />
-                      {formData.installments > 1 && (
-                        <p className="text-xs text-gray-500 mt-1">
-                          {formData.installments}x de R${' '}
-                          {(
-                            parseNumber(formData.amount) /
-                              formData.installments || 0
-                          ).toFixed(2)}
+                    {/* Installments - Apenas para Cartões de Crédito */}
+                    {isSelectedAccountCreditCard && (
+                      <div>
+                        <Label htmlFor="installments">Parcelas 💳</Label>
+                        <Input
+                          id="installments"
+                          type="number"
+                          min="1"
+                          max="60"
+                          value={formData.installments}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              installments: Number.parseInt(e.target.value) || 1,
+                            })
+                          }
+                        />
+                        {formData.installments > 1 && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            {formData.installments}x de R${' '}
+                            {(
+                              parseNumber(formData.amount) /
+                                formData.installments || 0
+                            ).toFixed(2)}
+                          </p>
+                        )}
+                        <p className="text-xs text-blue-600 mt-1">
+                          💡 Parcelas disponíveis apenas para cartões de crédito
                         </p>
-                      )}
-                    </div>
+                      </div>
+                    )}
 
                     {/* Recurring Expense */}
                     <div className="flex items-center justify-between">
@@ -1974,9 +2412,17 @@ export function AddTransactionModal({
                         <Label>Selecionar Viagem</Label>
                         <Select
                           value={formData.tripId}
-                          onValueChange={(value) =>
-                            setFormData({ ...formData, tripId: value })
-                          }
+                          onValueChange={(value) => {
+                            const selectedTrip = trips.find(t => t.id === value);
+                            setFormData({ 
+                              ...formData, 
+                              tripId: value,
+                              originalCurrency: selectedTrip?.currency || 'BRL'
+                            });
+                            if (selectedTrip && selectedTrip.currency !== 'BRL') {
+                              setShowCurrencyConverter(true);
+                            }
+                          }}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione uma viagem" />
@@ -1987,12 +2433,37 @@ export function AddTransactionModal({
                                 <div className="flex items-center gap-2">
                                   <MapPin className="w-4 h-4" />
                                   {trip.name} - {trip.destination}
+                                  {trip.currency && trip.currency !== 'BRL' && (
+                                    <Badge variant="outline" className="ml-2">
+                                      {trip.currency}
+                                    </Badge>
+                                  )}
                                 </div>
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </div>
+
+                      {/* Aviso sobre moeda da viagem */}
+                      {formData.tripId && (() => {
+                        const selectedTrip = trips.find(t => t.id === formData.tripId);
+                        if (selectedTrip && selectedTrip.currency && selectedTrip.currency !== 'BRL') {
+                          return (
+                            <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                              <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                              <div className="text-sm text-amber-800">
+                                <p className="font-medium mb-1">Moeda da Viagem: {selectedTrip.currency}</p>
+                                <p>
+                                  Esta transação será registrada em <strong>{selectedTrip.currency}</strong>.
+                                  {selectedTrip.currency !== 'BRL' && ' Use o conversor de moedas abaixo se necessário.'}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
 
                       {activeTrip && (
                         <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
@@ -2006,27 +2477,27 @@ export function AddTransactionModal({
                             <div className="flex justify-between items-center text-sm">
                               <span className="text-gray-600">Orçamento:</span>
                               <span className="font-medium">
-                                R$ {activeTrip.budget.toLocaleString('pt-BR')}
+                                R$ {Number(activeTrip.budget).toLocaleString('pt-BR')}
                               </span>
                             </div>
                             <div className="flex justify-between items-center text-sm">
                               <span className="text-gray-600">Já gasto:</span>
                               <span className="font-medium text-red-600">
-                                R$ {activeTrip.spent.toLocaleString('pt-BR')}
+                                R$ {Number(activeTrip.spent).toLocaleString('pt-BR')}
                               </span>
                             </div>
                             <div className="flex justify-between items-center text-sm">
                               <span className="text-gray-600">Disponível:</span>
                               <span
                                 className={`font-medium ${
-                                  activeTrip.budget - activeTrip.spent >= 0
+                                  Number(activeTrip.budget) - Number(activeTrip.spent) >= 0
                                     ? 'text-green-600'
                                     : 'text-red-600'
                                 }`}
                               >
                                 R${' '}
                                 {(
-                                  activeTrip.budget - activeTrip.spent
+                                  Number(activeTrip.budget) - Number(activeTrip.spent)
                                 ).toLocaleString('pt-BR')}
                               </span>
                             </div>
@@ -2609,8 +3080,15 @@ export function AddTransactionModal({
                 >
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={isLoading || accounts.length === 0}>
-                  {isLoading ? 'Salvando...' : 'Salvar Transação'}
+                <Button 
+                  type="submit" 
+                  disabled={
+                    isLoading || 
+                    loading || 
+                    (safeAccounts.length === 0 && !formData.isPaidBy) // ✅ Permitir salvar se "Pago por outra pessoa"
+                  }
+                >
+                  {isLoading ? 'Salvando...' : loading ? 'Carregando...' : 'Salvar Transação'}
                 </Button>
               </div>
             </form>

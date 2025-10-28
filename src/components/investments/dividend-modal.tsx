@@ -1,27 +1,26 @@
 'use client';
 
 import React, { useState } from 'react';
-import { logComponents } from '../../lib/logger';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '../ui/dialog';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../ui/select';
-import { Textarea } from '../ui/textarea';
-import { Calendar } from '../ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, DollarSign } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -29,12 +28,11 @@ import {
   Investment,
   DividendOperationData,
   DividendType,
-} from '../../lib/types/investments';
-import { formatCurrency } from '../../lib/utils/investment-calculations';
-import { useInvestments } from '../../contexts/unified-context-simple';
-import { useSafeTheme } from '../../hooks/use-safe-theme';
-import { useAccounts } from '../../contexts/unified-context-simple';
-import { cn } from '../../lib/utils';
+} from '@/lib/types/investments';
+import { formatCurrency } from '@/lib/utils/investment-calculations';
+import { useInvestments, useAccounts, useUnifiedFinancial } from '@/contexts/unified-financial-context';
+import { useSafeTheme } from '@/hooks/use-safe-theme';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 interface DividendModalProps {
@@ -43,8 +41,11 @@ interface DividendModalProps {
 }
 
 export function DividendModal({ open, onOpenChange }: DividendModalProps) {
-  const { investments, create: createInvestment } = useInvestments();
-  const { accounts } = useAccounts();
+  const investmentsData = useInvestments();
+  const investments = investmentsData?.investments || [];
+  const accountsData = useAccounts();
+  const accounts = accountsData?.accounts || [];
+  const { actions } = useUnifiedFinancial();
   const { settings } = useSafeTheme();
   const [formData, setFormData] = useState({
     investmentId: '',
@@ -60,7 +61,7 @@ export function DividendModal({ open, onOpenChange }: DividendModalProps) {
   const activeInvestments = (investments || []).filter(
     (inv) => inv.status === 'active'
   );
-  const availableAccounts = accounts.filter((acc) => acc.type !== 'credit');
+  const availableAccounts = Array.isArray(accounts) ? accounts.filter((acc) => acc.type !== 'credit') : [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,34 +92,27 @@ export function DividendModal({ open, onOpenChange }: DividendModalProps) {
         return;
       }
 
-      // Registrar dividendo com funcionalidade real
-      const dividendData = {
-        id: `div_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        investmentId: formData.investmentId,
-        investmentSymbol: investment.symbol || investment.name,
+      // Criar transação de dividendo
+      const transactionData = {
+        id: `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         account: formData.account,
-        dividendType: formData.dividendType,
-        amount: amount,
-        valuePerShare: amount / (investment.quantity || 1),
-        exDividendDate: formData.exDividendDate?.toISOString() || null,
-        paymentDate: formData.paymentDate.toISOString(),
-        notes: formData.notes,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        amount: amount, // Positive for income
+        description: `Dividendo ${investment.symbol || investment.name} - ${getDividendTypeLabel(formData.dividendType)}`,
+        category: 'investment_income',
+        type: 'income' as const,
+        date: formData.paymentDate.toISOString(),
+        metadata: {
+          investmentId: formData.investmentId,
+          investmentSymbol: investment.symbol || investment.name,
+          dividendType: formData.dividendType,
+          valuePerShare: amount / (investment.quantity || 1),
+          exDividendDate: formData.exDividendDate?.toISOString() || null,
+          operationType: 'dividend'
+        },
+        notes: formData.notes || undefined,
       };
 
-      /**
-       * @deprecated localStorage não é mais usado - dados ficam no banco
-       * Dados agora são salvos via DataService no backend
-       */
-      console.log(
-        'Salvamento de dividendo - localStorage removido, dados agora vêm do banco via DataService'
-      );
-
-      // TODO: Implementar salvamento via DataService
-      // await DataService.createDividend(dividendData);
-      // await DataService.createTransaction(transactionData);
-      // await DataService.updateAccount(formData.accountId, newBalance);
+      await actions.createTransaction(transactionData);
 
       toast.success(
         `Dividendo de ${new Intl.NumberFormat('pt-BR', {
@@ -140,8 +134,8 @@ export function DividendModal({ open, onOpenChange }: DividendModalProps) {
 
       onOpenChange(false);
     } catch (error) {
-      logError.ui('Erro ao adicionar dividendo:', error);
-      toast.error('Erro ao adicionar dividendo. Tente novamente.');
+        console.error('Erro ao adicionar dividendo:', error);
+        toast.error('Erro ao adicionar dividendo. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -369,5 +363,6 @@ export function DividendModal({ open, onOpenChange }: DividendModalProps) {
     </Dialog>
   );
 }
+
 
 

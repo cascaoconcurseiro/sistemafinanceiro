@@ -328,6 +328,8 @@ export function AdvancedFilters({
     selectedType,
     selectedStatus,
     customFilterValues,
+    filteredData,
+    onFiltersChange,
     customFilters,
   ]);
 

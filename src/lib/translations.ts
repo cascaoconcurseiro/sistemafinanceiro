@@ -6,8 +6,10 @@ export const ACCOUNT_TYPE_TRANSLATIONS = {
   checking: 'Conta Corrente',
   savings: 'Poupança',
   credit: 'Cartão de Crédito',
+  credit_card: 'Cartão de Crédito',
   investment: 'Investimento',
   debit: 'Cartão de Débito',
+  cash: 'Dinheiro',
 } as const;
 
 export const TRANSACTION_TYPE_TRANSLATIONS = {

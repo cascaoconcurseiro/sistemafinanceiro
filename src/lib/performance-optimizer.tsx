@@ -1,7 +1,6 @@
 'use client';
 
-import { memo, useMemo, useCallback, lazy, Suspense } from 'react';
-import { logComponents, logError } from './logger';
+import { memo, useMemo, useCallback, Suspense } from 'react';
 import { debounce } from 'lodash';
 
 // Sistema de cache inteligente para componentes
@@ -151,22 +150,17 @@ export function withPerformanceOptimization<P extends object>(
   return MemoizedComponent;
 }
 
-// Sistema de lazy loading inteligente
+// Sistema de lazy loading inteligente - TEMPORARIAMENTE DESABILITADO
 export function createLazyComponent<T extends React.ComponentType<any>>(
   importFn: () => Promise<{ default: T }>,
   fallback?: React.ReactNode
 ) {
-  const LazyComponent = lazy(importFn);
-
+  // Retorna um componente simples em vez de lazy
   return function LazyWrapper(props: React.ComponentProps<T>) {
     return (
-      <Suspense
-        fallback={
-          fallback || <div className="animate-pulse bg-muted h-20 rounded" />
-        }
-      >
-        <LazyComponent {...props} />
-      </Suspense>
+      <div className="p-4 text-center text-gray-500">
+        Componente lazy temporariamente desabilitado
+      </div>
     );
   };
 }
@@ -367,7 +361,7 @@ export class ComponentPerformanceMonitor {
 
     // Log apenas em desenvolvimento
     if (process.env.NODE_ENV === 'development' && renderTime > 50) {
-      logComponents.warn(
+      console.warn(
         ` ${componentName} render took ${renderTime.toFixed(2)}ms`
       );
     }
@@ -475,7 +469,7 @@ export class AutoPerformanceOptimizer {
         try {
           rule();
         } catch (error) {
-          logError.performance(
+          console.error(
             `Erro ao aplicar regra de otimização ${name}:`,
             error
           );

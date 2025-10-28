@@ -1,44 +1,28 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { logComponents, logError } from '../../../lib/logger';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '../../ui/dialog';
-import { Button } from '../../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
-import { Badge } from '../../ui/badge';
-import { Alert, AlertDescription } from '../../ui/alert';
-import { Checkbox } from '../../ui/checkbox';
-import { Separator } from '../../ui/separator';
-import {
-  Merge,
-  AlertTriangle,
-  CheckCircle,
-  TrendingUp,
-  Calendar,
-} from 'lucide-react';
-import { storage, type Investment } from '../../../lib/storage';
-import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Investment } from '@/types';
+import { useInvestments } from '@/contexts/unified-financial-context';
+import { toast } from '@/hooks/use-toast';
+import { Merge, AlertTriangle, TrendingUp } from 'lucide-react';
 
 interface DuplicateConsolidationProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConsolidationComplete?: () => void;
+  onConsolidationComplete: () => void;
 }
 
 interface DuplicateGroup {
-  ticker: string;
+  symbol: string;
   investments: Investment[];
   totalQuantity: number;
-  totalValue: number;
+  totalInvested: number;
   averagePrice: number;
-  totalFees: number;
-  firstPurchase: string;
-  lastPurchase: string;
 }
 
 export function DuplicateConsolidation({
@@ -46,332 +30,222 @@ export function DuplicateConsolidation({
   onOpenChange,
   onConsolidationComplete,
 }: DuplicateConsolidationProps) {
+  const { investments: investmentsData, update: updateInvestment, delete: deleteInvestment } = useInvestments();
   const [duplicateGroups, setDuplicateGroups] = useState<DuplicateGroup[]>([]);
-  const [selectedTickers, setSelectedTickers] = useState<Set<string>>(
-    new Set()
-  );
+  const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
   const [isConsolidating, setIsConsolidating] = useState(false);
 
   useEffect(() => {
-    if (open) {
-      loadDuplicates();
+    if (open && investmentsData) {
+      findDuplicates();
     }
-  }, [open]);
+  }, [open, investmentsData]);
 
-  const loadDuplicates = () => {
-    const duplicateTickers = storage.getDuplicateTickers();
-    const investments = storage.getInvestments();
+  const findDuplicates = () => {
+    if (!investmentsData) return;
 
-    const groups: DuplicateGroup[] = duplicateTickers.map((ticker) => {
-      const tickerInvestments = investments.filter(
-        (inv) => inv.ticker === ticker && inv.operation === 'buy'
-      );
+    const groupedBySymbol = investmentsData.reduce((acc, investment) => {
+      const symbol = investment.symbol.toUpperCase();
+      if (!acc[symbol]) {
+        acc[symbol] = [];
+      }
+      acc[symbol].push(investment);
+      return acc;
+    }, {} as Record<string, Investment[]>);
 
-      const totalQuantity = tickerInvestments.reduce(
-        (sum, inv) => sum + inv.quantity,
-        0
-      );
-      const totalValue = tickerInvestments.reduce(
-        (sum, inv) => sum + inv.totalValue,
-        0
-      );
-      const totalFees = tickerInvestments.reduce(
-        (sum, inv) => sum + inv.fees,
-        0
-      );
-      const averagePrice = totalQuantity > 0 ? totalValue / totalQuantity : 0;
+    const duplicates = Object.entries(groupedBySymbol)
+      .filter(([_, investments]) => investments.length > 1)
+      .map(([symbol, investments]) => {
+        const totalQuantity = investments.reduce((sum, inv) => sum + inv.quantity, 0);
+        const totalInvested = investments.reduce((sum, inv) => sum + (inv.quantity * inv.averagePrice), 0);
+        const averagePrice = totalInvested / totalQuantity;
 
-      const dates = tickerInvestments
-        .map((inv) => new Date(inv.date))
-        .sort((a, b) => a.getTime() - b.getTime());
-      const firstPurchase = dates[0]?.toISOString().split('T')[0] || '';
-      const lastPurchase =
-        dates[dates.length - 1]?.toISOString().split('T')[0] || '';
+        return {
+          symbol,
+          investments,
+          totalQuantity,
+          totalInvested,
+          averagePrice,
+        };
+      });
 
-      return {
-        ticker,
-        investments: tickerInvestments,
-        totalQuantity,
-        totalValue,
-        averagePrice,
-        totalFees,
-        firstPurchase,
-        lastPurchase,
-      };
-    });
-
-    setDuplicateGroups(groups);
-    // Auto-select all by default
-    setSelectedTickers(new Set(duplicateTickers));
+    setDuplicateGroups(duplicates);
   };
 
-  const toggleTickerSelection = (ticker: string) => {
-    const newSelected = new Set(selectedTickers);
-    if (newSelected.has(ticker)) {
-      newSelected.delete(ticker);
+  const toggleGroupSelection = (symbol: string) => {
+    const newSelected = new Set(selectedGroups);
+    if (newSelected.has(symbol)) {
+      newSelected.delete(symbol);
     } else {
-      newSelected.add(ticker);
+      newSelected.add(symbol);
     }
-    setSelectedTickers(newSelected);
+    setSelectedGroups(newSelected);
   };
 
-  const selectAll = () => {
-    setSelectedTickers(new Set(duplicateGroups.map((group) => group.ticker)));
-  };
-
-  const selectNone = () => {
-    setSelectedTickers(new Set());
-  };
-
-  const handleConsolidation = async () => {
-    if (selectedTickers.size === 0) {
-      toast.error('Selecione pelo menos um ticker para consolidar');
+  const consolidateSelected = async () => {
+    if (selectedGroups.size === 0) {
+      toast({
+        title: "Nenhum grupo selecionado",
+        description: "Selecione pelo menos um grupo para consolidar.",
+        variant: "destructive",
+      });
       return;
     }
 
     setIsConsolidating(true);
 
     try {
-      let consolidatedCount = 0;
+      for (const symbol of selectedGroups) {
+        const group = duplicateGroups.find(g => g.symbol === symbol);
+        if (!group) continue;
 
-      for (const ticker of selectedTickers) {
-        const success = storage.manuallyConsolidateInvestments(ticker);
-        if (success) {
-          consolidatedCount++;
+        // Manter o primeiro investimento e atualizar suas informações
+        const [mainInvestment, ...duplicates] = group.investments;
+        
+        // Atualizar o investimento principal com os valores consolidados
+        await updateInvestment(mainInvestment.id, {
+          ...mainInvestment,
+          quantity: group.totalQuantity,
+          averagePrice: group.averagePrice,
+        });
+
+        // Deletar os investimentos duplicados
+        for (const duplicate of duplicates) {
+          await deleteInvestment(duplicate.id);
         }
       }
 
-      if (consolidatedCount > 0) {
-        toast.success(
-          `${consolidatedCount} ticker(s) consolidado(s) com sucesso!`
-        );
-        onConsolidationComplete?.();
-        loadDuplicates(); // Reload to show updated state
-      } else {
-        toast.error('Nenhuma consolidação foi necessária');
-      }
+      toast({
+        title: "Consolidação concluída",
+        description: `${selectedGroups.size} grupo(s) consolidado(s) com sucesso.`,
+      });
+
+      onConsolidationComplete();
     } catch (error) {
-      logError.ui('Erro na consolidação:', error);
-      toast.error('Erro ao consolidar investimentos');
+      console.error('Erro ao consolidar investimentos:', error);
+      toast({
+        title: "Erro na consolidação",
+        description: "Ocorreu um erro ao consolidar os investimentos.",
+        variant: "destructive",
+      });
     } finally {
       setIsConsolidating(false);
     }
   };
 
-  const formatCurrency = (value: number) => {
-    return value.toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-      minimumFractionDigits: 2,
-    });
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR');
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Merge className="w-5 h-5" />
-            Consolidação de Investimentos Duplicados
+            Consolidar Investimentos Duplicados
           </DialogTitle>
         </DialogHeader>
 
-        {duplicateGroups.length === 0 ? (
-          <Alert>
-            <CheckCircle className="w-4 h-4" />
-            <AlertDescription>
-              Não foram encontrados investimentos duplicados para consolidar.
-              Todos os seus tickers estão organizados!
-            </AlertDescription>
-          </Alert>
-        ) : (
-          <div className="space-y-6">
-            <Alert>
-              <AlertTriangle className="w-4 h-4" />
-              <AlertDescription>
-                <strong>Atenção:</strong> A consolidação irá combinar todas as
-                compras do mesmo ticker em uma única posição, calculando
-                automaticamente o preço médio. Esta ação não pode ser desfeita.
-              </AlertDescription>
-            </Alert>
-
-            <div className="flex justify-between items-center">
-              <div className="text-sm text-gray-600">
-                {duplicateGroups.length} ticker(s) com duplicatas encontrado(s)
+        <div className="space-y-4">
+          {duplicateGroups.length === 0 ? (
+            <Card>
+              <CardContent className="flex items-center justify-center py-8">
+                <div className="text-center">
+                  <TrendingUp className="w-12 h-12 mx-auto text-green-500 mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Nenhuma duplicata encontrada</h3>
+                  <p className="text-muted-foreground">
+                    Todos os seus investimentos estão organizados corretamente.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <AlertTriangle className="w-5 h-5 text-yellow-600" />
+                <div>
+                  <p className="font-medium text-yellow-800">
+                    {duplicateGroups.length} grupo(s) de investimentos duplicados encontrado(s)
+                  </p>
+                  <p className="text-sm text-yellow-700">
+                    A consolidação irá manter o primeiro investimento e somar as quantidades.
+                  </p>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={selectAll}>
-                  Selecionar Todos
-                </Button>
-                <Button variant="outline" size="sm" onClick={selectNone}>
-                  Desmarcar Todos
-                </Button>
-              </div>
-            </div>
 
-            <div className="space-y-4">
-              {duplicateGroups.map((group) => (
-                <Card
-                  key={group.ticker}
-                  className={`transition-all ${
-                    selectedTickers.has(group.ticker)
-                      ? 'ring-2 ring-blue-500'
-                      : ''
-                  }`}
-                >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Checkbox
-                          checked={selectedTickers.has(group.ticker)}
-                          onCheckedChange={() =>
-                            toggleTickerSelection(group.ticker)
-                          }
-                        />
-                        <div>
-                          <CardTitle className="text-lg">
-                            {group.ticker}
-                          </CardTitle>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Badge variant="secondary">
-                              {group.investments.length} operações
-                            </Badge>
-                            <Badge variant="outline">
-                              {group.investments[0]?.type || 'N/A'}
-                            </Badge>
-                          </div>
+              <div className="space-y-3">
+                {duplicateGroups.map((group) => (
+                  <Card key={group.symbol} className="border-l-4 border-l-orange-500">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Checkbox
+                            checked={selectedGroups.has(group.symbol)}
+                            onCheckedChange={() => toggleGroupSelection(group.symbol)}
+                          />
+                          <CardTitle className="text-lg">{group.symbol}</CardTitle>
+                          <Badge variant="secondary">
+                            {group.investments.length} duplicatas
+                          </Badge>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-muted-foreground">Após consolidação:</p>
+                          <p className="font-semibold">
+                            {group.totalQuantity} cotas • R$ {group.averagePrice.toFixed(2)} (preço médio)
+                          </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-blue-600">
-                          {formatCurrency(group.totalValue)}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {group.totalQuantity} cotas
-                        </div>
-                      </div>
-                    </div>
-                  </CardHeader>
-
-                  <CardContent className="space-y-4">
-                    {/* Resumo da Consolidação */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-blue-50 rounded-lg">
-                      <div>
-                        <div className="text-xs text-gray-500 uppercase tracking-wide">
-                          Preço Médio
-                        </div>
-                        <div className="font-semibold">
-                          {formatCurrency(group.averagePrice)}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-500 uppercase tracking-wide">
-                          Total Investido
-                        </div>
-                        <div className="font-semibold">
-                          {formatCurrency(group.totalValue)}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-500 uppercase tracking-wide">
-                          Primeira Compra
-                        </div>
-                        <div className="font-semibold flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          {formatDate(group.firstPurchase)}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-500 uppercase tracking-wide">
-                          Última Compra
-                        </div>
-                        <div className="font-semibold flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          {formatDate(group.lastPurchase)}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Operações Individuais */}
-                    <div>
-                      <div className="text-sm font-medium mb-2">
-                        Operações que serão consolidadas:
-                      </div>
-                      <div className="space-y-2">
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid gap-2">
                         {group.investments.map((investment, index) => (
                           <div
                             key={investment.id}
-                            className="flex justify-between items-center p-2 bg-gray-50 rounded text-sm"
+                            className={`flex justify-between items-center p-3 rounded-lg ${
+                              index === 0 ? 'bg-green-50 border border-green-200' : 'bg-gray-50'
+                            }`}
                           >
                             <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="text-xs">
-                                #{index + 1}
-                              </Badge>
-                              <span>{formatDate(investment.date)}</span>
-                              <span className="text-gray-500">•</span>
-                              <span>{investment.quantity} cotas</span>
+                              {index === 0 && (
+                                <Badge variant="default" className="bg-green-600">
+                                  Principal
+                                </Badge>
+                              )}
+                              <span className="font-medium">{investment.name}</span>
                             </div>
                             <div className="text-right">
-                              <div className="font-medium">
-                                {formatCurrency(investment.price)}
-                              </div>
-                              <div className="text-xs text-gray-500">
-                                Total: {formatCurrency(investment.totalValue)}
-                              </div>
+                              <p className="font-semibold">
+                                {investment.quantity} cotas • R$ {investment.averagePrice.toFixed(2)}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                Total: R$ {(investment.quantity * investment.averagePrice).toFixed(2)}
+                              </p>
                             </div>
                           </div>
                         ))}
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
 
-        <Separator />
-
-        <div className="flex justify-between items-center">
-          <div className="text-sm text-gray-600">
-            {selectedTickers.size > 0 && (
-              <span className="flex items-center gap-1">
-                <TrendingUp className="w-4 h-4" />
-                {selectedTickers.size} ticker(s) selecionado(s) para
-                consolidação
-              </span>
-            )}
-          </div>
-
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            {duplicateGroups.length > 0 && (
-              <Button
-                onClick={handleConsolidation}
-                disabled={selectedTickers.size === 0 || isConsolidating}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                {isConsolidating ? (
-                  'Consolidando...'
-                ) : (
-                  <>
-                    <Merge className="w-4 h-4 mr-2" />
-                    Consolidar Selecionados
-                  </>
-                )}
-              </Button>
-            )}
-          </div>
+              <div className="flex justify-between pt-4">
+                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={consolidateSelected}
+                  disabled={selectedGroups.size === 0 || isConsolidating}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {isConsolidating ? (
+                    "Consolidando..."
+                  ) : (
+                    `Consolidar ${selectedGroups.size} grupo(s)`
+                  )}
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>
   );
 }
-
-

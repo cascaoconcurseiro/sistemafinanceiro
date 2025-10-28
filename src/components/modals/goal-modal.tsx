@@ -1,18 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { logComponents } from '../../lib/logger';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Textarea } from '../ui/textarea';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../ui/select';
+} from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -20,9 +19,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '../ui/dialog';
-import { Progress } from '../ui/progress';
+} from '@/components/ui/dialog';
+import { Progress } from '@/components/ui/progress';
 import { Target, Calendar, DollarSign, TrendingUp } from 'lucide-react';
+import { useUnifiedFinancial } from '@/contexts/unified-financial-context';
+import { toast } from 'sonner';
 
 interface GoalModalProps {
   isOpen: boolean;
@@ -31,6 +32,7 @@ interface GoalModalProps {
 }
 
 export function GoalModal({ isOpen, onClose, initialData }: GoalModalProps) {
+  const { actions } = useUnifiedFinancial();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
@@ -62,52 +64,49 @@ export function GoalModal({ isOpen, onClose, initialData }: GoalModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('🎯 [GoalModal] handleSubmit chamado');
+    console.log('🎯 [GoalModal] formData:', formData);
+    
     setLoading(true);
 
     try {
-      // Create goal using API
       const goalData = {
-        id: `goal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         name: formData.name,
         description: formData.description,
-        targetAmount: parseFloat(formData.target) || 0,
-        currentAmount: parseFloat(formData.current) || 0,
+        targetAmount: parseFloat(formData.targetAmount) || 0,
+        currentAmount: parseFloat(formData.currentAmount) || 0,
         deadline: formData.deadline,
         priority: formData.priority,
-        category: formData.category,
-        monthlyContribution: parseFloat(formData.monthlyContribution) || 0,
         status: 'active',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
       };
 
-      const response = await fetch('/api/goals', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(goalData),
-      });
+      console.log('🎯 [GoalModal] Enviando dados:', goalData);
 
-      if (!response.ok) {
-        throw new Error('Erro ao salvar meta');
+      if (initialData?.id) {
+        await actions.updateGoal(initialData.id, goalData);
+        toast.success('Meta atualizada com sucesso!');
+      } else {
+        await actions.createGoal(goalData);
+        toast.success('Meta criada com sucesso!');
       }
 
-      const savedGoal = await response.json();
+      console.log('✅ [GoalModal] Meta salva com sucesso');
 
       onClose();
       setFormData({
         name: '',
         description: '',
-        target: '',
-        current: '0',
+        targetAmount: '',
+        currentAmount: '0',
         deadline: '',
         priority: 'medium',
         category: 'savings',
         monthlyContribution: '',
       });
+      // Não precisa de refresh manual - contexto faz automaticamente!
     } catch (error) {
-      logError.goal('Erro ao criar meta:', error);
+      console.error('❌ [GoalModal] Erro ao salvar meta:', error);
+      toast.error('Erro ao salvar meta: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
     } finally {
       setLoading(false);
     }
@@ -237,8 +236,8 @@ export function GoalModal({ isOpen, onClose, initialData }: GoalModalProps) {
               </div>
               <Progress value={progress} className="h-2" />
               <div className="flex justify-between text-xs text-gray-500">
-                <span>R$ {parseFloat(formData.current || '0').toFixed(2)}</span>
-                <span>R$ {parseFloat(formData.target || '0').toFixed(2)}</span>
+                <span>R$ {parseFloat(formData.currentAmount || '0').toFixed(2)}</span>
+                <span>R$ {parseFloat(formData.targetAmount || '0').toFixed(2)}</span>
               </div>
             </div>
           )}

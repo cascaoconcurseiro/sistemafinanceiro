@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, memo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Card,
@@ -8,10 +8,10 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '../ui/card';
-import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Plus,
   TrendingUp,
@@ -28,12 +28,12 @@ import {
   Calendar,
   Building2,
 } from 'lucide-react';
-import { useInvestments } from '@/hooks/queries/use-investments';
-import { useSafeTheme } from '../../hooks/use-safe-theme';
+import { useOptimizedInvestments } from '@/hooks/useOptimizedInvestments';
+import { useSafeTheme } from '@/hooks/use-safe-theme';
 import { InvestmentList } from './investment-list';
 import { InvestmentOperationModal } from './investment-operation-modal';
 import { InvestmentReports } from './investment-reports';
-import { InvestmentHistory } from './investment-history';
+// import { InvestmentHistory } from './investment-history'; // Componente não existe
 import { DividendModal } from './dividend-modal';
 import { InvestmentSaleModal } from './investment-sale-modal';
 import { InvestmentIRReport } from './investment-ir-report';
@@ -65,12 +65,11 @@ function calculateAssetDistribution(investments) {
   }));
 }
 
-export function InvestmentDashboard() {
+const InvestmentDashboardComponent = memo(function InvestmentDashboard() {
   const router = useRouter();
-  // Remover dependências do UnifiedContext que não são mais necessárias
-  // const { accounts, transactions } = useUnified()
-
   const { settings } = useSafeTheme();
+  
+  // Modal states
   const [showOperationModal, setShowOperationModal] = useState(false);
   const [operationType, setOperationType] = useState<'buy' | 'sell'>('buy');
   const [showFilters, setShowFilters] = useState(false);
@@ -78,28 +77,40 @@ export function InvestmentDashboard() {
   const [showDividendModal, setShowDividendModal] = useState(false);
   const [showSaleModal, setShowSaleModal] = useState(false);
   
-  // Estados locais
+  // Tab state
   const [selectedTab, setSelectedTab] = useState('portfolio');
+  const [error, setError] = useState(null);
 
-  // Dados dos investimentos - agora usando API em vez de contas genéricas
-  const { data: investmentsData, isLoading, error } = useInvestments()
-  const investments = investmentsData?.investments || []
-  const portfolioSummary = investmentsData?.portfolio || {
-    currentValue: 0,
-    totalInvested: 0,
-    totalGainLoss: 0,
-    totalGainLossPercentage: 0,
-    totalAssets: 0,
-  }
+  // Use optimized investments hook
+  const { investments, portfolio: portfolioSummary, isLoading, error: investmentError } = useOptimizedInvestments();
 
-  // Comentário: localStorage não é mais usado para investimentos
-  // Os dados agora vêm do banco de dados via DataService
+  // Only log when data actually changes
   useEffect(() => {
-    console.log('Investment Dashboard: Dados carregados da API', {
-      investmentsCount: investments.length,
-      portfolioValue: portfolioSummary.currentValue,
-    })
-  }, [investments, portfolioSummary])
+    if (investments.length > 0) {
+      console.log('📊 [InvestmentDashboard] Dados carregados:', {
+        investmentsCount: investments.length,
+        portfolioValue: portfolioSummary.currentValue
+      });
+    }
+  }, [investments.length, portfolioSummary.currentValue]);
+
+  // Memoized callback functions to prevent unnecessary re-renders
+  const handleBuyClick = useCallback(() => {
+    setOperationType('buy');
+    setShowOperationModal(true);
+  }, []);
+
+  const handleSellClick = useCallback(() => {
+    setShowSaleModal(true);
+  }, []);
+
+  const handleDividendClick = useCallback(() => {
+    setShowDividendModal(true);
+  }, []);
+
+  const handleFiltersClick = useCallback(() => {
+    setShowFilters(prev => !prev);
+  }, []);
 
   // Verificações de segurança
   const safeInvestments = investments
@@ -196,17 +207,11 @@ export function InvestmentDashboard() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Investimentos</h1>
-          <p className="text-muted-foreground">
-            Gerencie sua carteira de investimentos
-          </p>
-        </div>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setShowFilters(!showFilters)}
+            onClick={handleFiltersClick}
           >
             <Filter className="h-4 w-4 mr-2" />
             Filtros
@@ -214,7 +219,7 @@ export function InvestmentDashboard() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setShowDividendModal(true)}
+            onClick={handleDividendClick}
           >
             <DollarSign className="h-4 w-4 mr-2" />
             Dividendo
@@ -222,10 +227,7 @@ export function InvestmentDashboard() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => {
-              setOperationType('buy');
-              setShowOperationModal(true);
-            }}
+            onClick={handleBuyClick}
           >
             <Plus className="h-4 w-4 mr-2" />
             Comprar
@@ -233,7 +235,7 @@ export function InvestmentDashboard() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setShowSaleModal(true)}
+            onClick={handleSellClick}
           >
             <TrendingDown className="h-4 w-4 mr-2" />
             Vender
@@ -389,7 +391,7 @@ export function InvestmentDashboard() {
                 <p className="text-muted-foreground mb-4">
                   Use o botão "Dividendo" para registrar os proventos recebidos
                 </p>
-                <Button onClick={() => setShowDividendModal(true)}>
+                <Button onClick={handleDividendClick}>
                   <Plus className="h-4 w-4 mr-2" />
                   Registrar Dividendo
                 </Button>
@@ -503,4 +505,8 @@ export function InvestmentDashboard() {
       />
     </div>
   );
-}
+});
+
+export { InvestmentDashboardComponent as InvestmentDashboard };
+export default InvestmentDashboardComponent;
+

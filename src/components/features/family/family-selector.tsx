@@ -1,25 +1,24 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { logComponents } from '../../../lib/logger';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
-import { Label } from '../../ui/label';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '../../ui/dialog';
-import { Badge } from '../../ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
+} from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../../ui/select';
+} from '@/components/ui/select';
 import { Users, Plus, Search, Check, X, Heart } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -64,7 +63,7 @@ export function FamilySelector({
       // Inicializar com array vazio até implementar banco de dados
       setFamilyMembers([]);
     } catch (error) {
-      logError.ui('Error loading family members:', error);
+      console.error('Error loading family members:', error);
       setFamilyMembers([]);
     }
   };
@@ -123,7 +122,7 @@ export function FamilySelector({
       toast.success('Membro da família adicionado com sucesso!');
       onFamilyMemberCreated?.();
     } catch (error) {
-      logError.ui('Error adding family member:', error);
+      console.error('Error adding family member:', error);
       toast.error('Erro ao adicionar membro da família');
     } finally {
       setIsLoading(false);

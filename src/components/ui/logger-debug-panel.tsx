@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Download, Trash2, RefreshCw, Bug, AlertTriangle, Info, Zap } from 'lucide-react';
-import { loggerUtils, LogEntry } from '@/lib/logger';
 
 interface LoggerDebugPanelProps {
   isOpen: boolean;
@@ -10,14 +9,13 @@ interface LoggerDebugPanelProps {
 }
 
 export function LoggerDebugPanel({ isOpen, onClose }: LoggerDebugPanelProps) {
-  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [logs, setLogs] = useState<any[]>([]);
   const [filter, setFilter] = useState<'all' | 'error' | 'warn' | 'info' | 'debug'>('all');
   const [autoRefresh, setAutoRefresh] = useState(true);
 
   const refreshLogs = () => {
-    const allLogs = loggerUtils.exportLogs();
-    const parsedLogs = JSON.parse(allLogs);
-    setLogs(parsedLogs.reverse()); // Mostrar logs mais recentes primeiro
+    // Stubbed out - no logger access
+    setLogs([]);
   };
 
   useEffect(() => {
@@ -39,7 +37,8 @@ export function LoggerDebugPanel({ isOpen, onClose }: LoggerDebugPanelProps) {
   });
 
   const downloadLogs = () => {
-    const logsData = loggerUtils.exportLogs();
+    // Stubbed out - no logger access
+    const logsData = '[]';
     const blob = new Blob([logsData], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -52,7 +51,7 @@ export function LoggerDebugPanel({ isOpen, onClose }: LoggerDebugPanelProps) {
   };
 
   const clearLogs = () => {
-    loggerUtils.clearLogs();
+    // Stubbed out - no logger access
     setLogs([]);
   };
 
@@ -206,7 +205,7 @@ export function LoggerDebugPanel({ isOpen, onClose }: LoggerDebugPanelProps) {
         <div className="border-t p-4 bg-gray-50 text-sm text-gray-600">
           <div className="flex justify-between items-center">
             <div>
-              Session ID: <code className="bg-gray-200 px-1 rounded">{loggerUtils.getSessionId()}</code>
+              Session ID: <code className="bg-gray-200 px-1 rounded">debug-session</code>
             </div>
             <div>
               Logs em memória: {logs.length} | Erros recentes: {logs.filter(l => l.level === 'error').length}

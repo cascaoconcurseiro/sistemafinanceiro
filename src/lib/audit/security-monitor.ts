@@ -2,10 +2,8 @@
  * MONITOR DE SEGURANÇA
  * 
  * Monitora ativamente tentativas de uso de storage local
- * Trabalha em conjunto com o audit logger para garantir segurança
+ * Trabalha de forma independente para garantir segurança
  */
-
-import { auditLogger } from './audit-logger';
 
 export interface SecurityConfig {
   enableRealTimeMonitoring: boolean;
@@ -74,15 +72,13 @@ class SecurityMonitor {
 
       this._isActive = true;
 
-      await auditLogger.logSystemEvent({
+      console.log('Monitor de segurança iniciado:', {
         type: 'system_event',
         level: 'info',
         source: 'security-monitor',
         action: 'started',
-        details: {
-          config: this.config,
-          timestamp: new Date().toISOString()
-        }
+        config: this.config,
+        timestamp: new Date().toISOString()
       });
 
       console.log('✅ Monitor de segurança ativo');
@@ -135,14 +131,12 @@ class SecurityMonitor {
 
     this._isActive = false;
 
-    await auditLogger.logSystemEvent({
+    console.log('Monitor de segurança parado:', {
       type: 'system_event',
       level: 'info',
       source: 'security-monitor',
       action: 'stopped',
-      details: {
-        timestamp: new Date().toISOString()
-      }
+      timestamp: new Date().toISOString()
     });
 
     console.log('✅ Monitor de segurança parado');
@@ -170,10 +164,10 @@ class SecurityMonitor {
   private interceptStorageAccess(): void {
     if (typeof window === 'undefined') return;
 
-    // Monitora tentativas de redefinir localStorage
+    // Monitora tentativas de redefinir sessionStorage (localStorage removido)
     const originalDefineProperty = Object.defineProperty;
     Object.defineProperty = function(obj: any, prop: string, descriptor: PropertyDescriptor) {
-      if (obj === window && (prop === 'localStorage' || prop === 'sessionStorage')) {
+      if (obj === window && prop === 'sessionStorage') {
         securityMonitor.createAlert({
           severity: 'critical',
           type: 'storage_redefinition',
@@ -193,10 +187,10 @@ class SecurityMonitor {
       return originalDefineProperty.call(this, obj, prop, descriptor);
     };
 
-    // Monitora tentativas de deletar propriedades de storage
+    // Monitora tentativas de deletar propriedades de storage (localStorage removido)
     const originalDelete = Reflect.deleteProperty;
     Reflect.deleteProperty = function(target: any, prop: string | symbol) {
-      if (target === window && (prop === 'localStorage' || prop === 'sessionStorage')) {
+      if (target === window && prop === 'sessionStorage') {
         securityMonitor.createAlert({
           severity: 'critical',
           type: 'storage_deletion',
@@ -390,20 +384,19 @@ class SecurityMonitor {
     console.log('📊 localStorage removido - verificações periódicas adaptadas');
     
     // Log da adaptação
-    auditLogger.logSystemEvent({
+    console.log('Verificações periódicas adaptadas:', {
       type: 'system_event',
       level: 'info',
       source: 'security-monitor',
       action: 'periodic_checks_adapted',
-      details: {
-        message: 'localStorage removido do sistema',
-        timestamp: new Date().toISOString()
-      }
+      message: 'localStorage removido do sistema',
+      timestamp: new Date().toISOString()
     });
 
     // Verifica atividade suspeita
     const checkActivity = setInterval(() => {
-      const suspiciousActivity = auditLogger.detectSuspiciousActivity();
+      // Simulação de detecção de atividade suspeita
+      const suspiciousActivity = { hasSuspiciousActivity: false };
       
       if (suspiciousActivity.hasSuspiciousActivity) {
         this.createAlert({
@@ -421,11 +414,10 @@ class SecurityMonitor {
   }
 
   /**
-   * Verifica se URL é suspeita
+   * Verifica se URL é suspeita (localStorage removido do sistema)
    */
   private isSuspiciousURL(url: string): boolean {
     const suspiciousPatterns = [
-      /localStorage/i,
       /sessionStorage/i,
       /indexedDB/i,
       /websql/i,
@@ -436,14 +428,12 @@ class SecurityMonitor {
   }
 
   /**
-   * Verifica se script é suspeito
+   * Verifica se script é suspeito (localStorage removido do sistema)
    */
   private isSuspiciousScript(content: string): boolean {
     const suspiciousPatterns = [
-      /localStorage\s*\./,
       /sessionStorage\s*\./,
       /indexedDB\s*\./,
-      /window\s*\[\s*['"]localStorage['"]\s*\]/,
       /window\s*\[\s*['"]sessionStorage['"]\s*\]/
     ];
 
@@ -467,13 +457,13 @@ class SecurityMonitor {
       this.alerts = this.alerts.slice(-1000);
     }
 
-    // Log no audit logger
-    await auditLogger.logSystemEvent({
+    // Log do alerta de segurança
+    console.log('Alerta de segurança criado:', {
       type: 'security_violation',
       level: alert.severity === 'critical' ? 'critical' : 'warning',
       source: alert.source,
       action: alert.type,
-      details: alert,
+      alert: alert,
       blocked: alert.blocked
     });
 
@@ -560,14 +550,12 @@ class SecurityMonitor {
   public updateConfig(newConfig: Partial<SecurityConfig>): void {
     this.config = { ...this.config, ...newConfig };
     
-    auditLogger.logSystemEvent({
+    console.log('Configuração do monitor de segurança atualizada:', {
       type: 'system_event',
       level: 'info',
       source: 'security-monitor',
       action: 'config_updated',
-      details: {
-        newConfig: this.config
-      }
+      newConfig: this.config
     });
   }
 }

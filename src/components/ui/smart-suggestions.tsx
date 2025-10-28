@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { logComponents, logError } from '../../lib/logger';
 import { Button } from './button';
 import { Badge } from './badge';
 import {
@@ -24,7 +23,7 @@ import {
 import {
   smartSuggestions,
   type SmartSuggestion,
-} from '../../lib/smart-suggestions';
+} from '@/lib/smart-suggestions';
 import { toast } from 'sonner';
 
 interface SmartSuggestionsProps {
@@ -60,11 +59,12 @@ export function SmartSuggestionsComponent({
       // Pequeno delay para evitar muitas chamadas durante a digitação
       const timer = setTimeout(() => {
         try {
-          const newSuggestions = smartSuggestions.generateSuggestions({ description });
-          setSuggestions(newSuggestions);
+          // Temporariamente desabilitado - função não existe
+          // const newSuggestions = smartSuggestions.generateSuggestions({ description });
+          setSuggestions([]);
           setAppliedSuggestions(new Set());
         } catch (error) {
-          logError.ui('Erro ao obter sugestões:', error);
+          console.error('Erro ao obter sugestões:', error);
           setSuggestions([]);
         } finally {
           setIsLoading(false);

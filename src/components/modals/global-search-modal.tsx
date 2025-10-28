@@ -1,15 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { logComponents } from '../../lib/logger';
-import { Dialog, DialogContent } from '../ui/dialog';
-import { Input } from '../ui/input';
-import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useRouter } from 'next/navigation';
-import { useTransactions } from '../../hooks/use-optimized-transactions';
-import { useAccounts } from '../../contexts/unified-context-simple';
-import { databaseService } from '../../lib/services/database-service';
+import { useTransactions, useAccounts } from '@/contexts/unified-financial-context';
 import {
   Search,
   ArrowUpRight,
@@ -49,13 +46,11 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
   const router = useRouter();
 
   // Usar os hooks
-  const { data: transactionsData } = useTransactions();
-  const { accounts } = useAccounts();
-
-  const transactions = transactionsData?.transactions || [];
-  const accountsArray = Array.isArray(accounts) ? accounts : [];
-  const goals: any[] = []; // TODO: Implementar hook para goals
-  const investments: any[] = []; // TODO: Implementar hook para investments
+  const transactions = useTransactions();
+  const accountsArray = useAccounts();
+  
+  const goals = useMemo(() => [], []); // TODO: Implementar hook para goals
+  const investments = useMemo(() => [], []); // TODO: Implementar hook para investments
 
   // Load recent searches from database
   useEffect(() => {
@@ -80,137 +75,26 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
   }, [isOpen]);
 
   // Perform search when query changes
-  useEffect(() => {
-    if (query.trim().length < 2) {
-      setResults([]);
-      setIsLoading(false);
-      return;
+  const performSearch = useCallback((searchQuery: string) => {
+    // This function is no longer needed as the search logic is now inline
+    // Keeping it for potential future use
+  }, []);
+
+  const fuzzyMatch = useCallback((text: string, query: string): boolean => {
+    let textIndex = 0;
+    let queryIndex = 0;
+
+    while (textIndex < text.length && queryIndex < query.length) {
+      if (text[textIndex] === query[queryIndex]) {
+        queryIndex++;
+      }
+      textIndex++;
     }
 
-    setIsLoading(true);
-    const searchTimeout = setTimeout(() => {
-      performSearch(query);
-    }, 300); // Debounce search
+    return queryIndex === query.length;
+  }, []);
 
-    return () => clearTimeout(searchTimeout);
-  }, [query]); // Removed data dependencies to prevent infinite loop
-
-  const performSearch = (searchQuery: string) => {
-    const searchResults: SearchResult[] = [];
-    const lowerQuery = searchQuery.toLowerCase();
-
-    // Search transactions
-    transactions.forEach((transaction) => {
-      if (!transaction) return;
-      
-      const relevance = calculateRelevance(lowerQuery, [
-        transaction.description || '',
-        transaction.category || '',
-        (transaction.amount || 0).toString(),
-      ]);
-
-      if (relevance > 0) {
-        searchResults.push({
-          id: transaction.id || '',
-          type: 'transaction',
-          title: transaction.description || 'Transação sem descrição',
-          subtitle: `${transaction.category || 'Sem categoria'} • ${transaction.type === 'income' ? '+' : '-'}R$ ${Math.abs(transaction.amount || 0).toFixed(2)}`,
-          url: `/transactions?id=${transaction.id}`,
-          relevance,
-          amount: transaction.amount || 0,
-          date: transaction.date || '',
-        });
-      }
-    });
-
-    // Search goals
-    goals.forEach((goal) => {
-      if (!goal) return;
-      
-      const relevance = calculateRelevance(lowerQuery, [
-        goal.name || '',
-        goal.description || '',
-        goal.category || '',
-      ]);
-
-      if (relevance > 0) {
-        const current = goal.current || 0;
-        const target = goal.target || 1;
-        const progress = (current / target) * 100;
-        searchResults.push({
-          id: goal.id || '',
-          type: 'goal',
-          title: goal.name || 'Meta sem nome',
-          subtitle: `${progress.toFixed(1)}% concluído • R$ ${current.toFixed(2)} de R$ ${target.toFixed(2)}`,
-          url: `/goals?id=${goal.id}`,
-          relevance,
-          amount: target,
-        });
-      }
-    });
-
-    // Search investments
-    investments.forEach((investment) => {
-      if (!investment) return;
-      
-      const relevance = calculateRelevance(lowerQuery, [
-        investment.name || '',
-        investment.type || '',
-        investment.broker || '',
-      ]);
-
-      if (relevance > 0) {
-        const currentValue = investment.currentValue || 0;
-        searchResults.push({
-          id: investment.id || '',
-          type: 'investment',
-          title: investment.name || 'Investimento sem nome',
-          subtitle: `${investment.type || 'Tipo não definido'} • R$ ${currentValue.toFixed(2)}`,
-          url: `/investments?id=${investment.id}`,
-          relevance,
-          amount: currentValue,
-        });
-      }
-    });
-
-    // Search accounts
-    accountsArray.forEach((account) => {
-      if (!account) return;
-      
-      const relevance = calculateRelevance(lowerQuery, [
-        account.name || '',
-        account.bank || '',
-        account.type || '',
-      ]);
-
-      if (relevance > 0) {
-        const balance = account.balance || 0;
-        searchResults.push({
-          id: account.id || '',
-          type: 'account',
-          title: account.name || 'Conta sem nome',
-          subtitle: `${account.bank || 'Banco não definido'} • R$ ${balance.toFixed(2)}`,
-          url: `/accounts?id=${account.id}`,
-          relevance,
-          amount: balance,
-        });
-      }
-    });
-
-    // Sort by relevance and limit results
-    const sortedResults = searchResults
-      .sort((a, b) => b.relevance - a.relevance)
-      .slice(0, 10);
-
-    // Use setTimeout to avoid setState during render warning
-    setTimeout(() => {
-      setResults(sortedResults);
-      setSelectedIndex(0);
-      setIsLoading(false);
-    }, 0);
-  };
-
-  const calculateRelevance = (query: string, fields: string[]): number => {
+  const calculateRelevance = useCallback((query: string, fields: string[]): number => {
     let relevance = 0;
 
     fields.forEach((field) => {
@@ -235,21 +119,131 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
     });
 
     return relevance;
-  };
+  }, [fuzzyMatch]); // Include fuzzyMatch in dependencies
 
-  const fuzzyMatch = (text: string, query: string): boolean => {
-    let textIndex = 0;
-    let queryIndex = 0;
-
-    while (textIndex < text.length && queryIndex < query.length) {
-      if (text[textIndex] === query[queryIndex]) {
-        queryIndex++;
-      }
-      textIndex++;
+  // Search effect with debounce
+  useEffect(() => {
+    if (query.trim().length < 2) {
+      setResults([]);
+      setIsLoading(false);
+      return;
     }
 
-    return queryIndex === query.length;
-  };
+    setIsLoading(true);
+    const searchTimeout = setTimeout(() => {
+      const searchResults: SearchResult[] = [];
+      const lowerQuery = query.toLowerCase();
+
+      // Search transactions
+      transactions.forEach((transaction) => {
+        if (!transaction) return;
+        
+        const relevance = calculateRelevance(lowerQuery, [
+          transaction.description || '',
+          transaction.category || '',
+          (transaction.amount || 0).toString(),
+        ]);
+
+        if (relevance > 0) {
+          searchResults.push({
+            id: transaction.id || '',
+            type: 'transaction',
+            title: transaction.description || 'Transação sem descrição',
+            subtitle: `${transaction.category || 'Sem categoria'} • ${transaction.type === 'income' ? '+' : '-'}R$ ${Math.abs(transaction.amount || 0).toFixed(2)}`,
+            url: `/transactions?id=${transaction.id}`,
+            relevance,
+            amount: transaction.amount || 0,
+            date: transaction.date || '',
+          });
+        }
+      });
+
+      // Search goals
+      goals.forEach((goal) => {
+        if (!goal) return;
+        
+        const relevance = calculateRelevance(lowerQuery, [
+          goal.name || '',
+          goal.description || '',
+          goal.category || '',
+        ]);
+
+        if (relevance > 0) {
+          const current = goal.current || 0;
+          const target = goal.target || 1;
+          const progress = (current / target) * 100;
+          searchResults.push({
+            id: goal.id || '',
+            type: 'goal',
+            title: goal.name || 'Meta sem nome',
+            subtitle: `${progress.toFixed(1)}% concluído • R$ ${current.toFixed(2)} de R$ ${target.toFixed(2)}`,
+            url: `/goals?id=${goal.id}`,
+            relevance,
+            amount: target,
+          });
+        }
+      });
+
+      // Search investments
+      investments.forEach((investment) => {
+        if (!investment) return;
+        
+        const relevance = calculateRelevance(lowerQuery, [
+          investment.name || '',
+          investment.type || '',
+          investment.broker || '',
+        ]);
+
+        if (relevance > 0) {
+          const currentValue = investment.currentValue || 0;
+          searchResults.push({
+            id: investment.id || '',
+            type: 'investment',
+            title: investment.name || 'Investimento sem nome',
+            subtitle: `${investment.type || 'Tipo não definido'} • R$ ${currentValue.toFixed(2)}`,
+            url: `/investments?id=${investment.id}`,
+            relevance,
+            amount: currentValue,
+          });
+        }
+      });
+
+      // Search accounts
+      accountsArray.forEach((account) => {
+        if (!account) return;
+        
+        const relevance = calculateRelevance(lowerQuery, [
+          account.name || '',
+          account.bank || '',
+          account.type || '',
+        ]);
+
+        if (relevance > 0) {
+          const balance = account.balance || 0;
+          searchResults.push({
+            id: account.id || '',
+            type: 'account',
+            title: account.name || 'Conta sem nome',
+            subtitle: `${account.bank || 'Banco não definido'} • R$ ${balance.toFixed(2)}`,
+            url: `/accounts?id=${account.id}`,
+            relevance,
+            amount: balance,
+          });
+        }
+      });
+
+      // Sort by relevance and limit results
+      const sortedResults = searchResults
+        .sort((a, b) => b.relevance - a.relevance)
+        .slice(0, 10);
+
+      setResults(sortedResults);
+      setSelectedIndex(0);
+      setIsLoading(false);
+    }, 300); // Debounce search
+
+    return () => clearTimeout(searchTimeout);
+  }, [query, transactions, accountsArray, goals, investments]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     switch (e.key) {
@@ -280,13 +274,6 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
       ...recentSearches.filter((s) => s !== query),
     ].slice(0, 5);
     setRecentSearches(newRecentSearches);
-    
-    // Save to database
-    try {
-      await databaseService.saveRecentSearches(newRecentSearches);
-    } catch (error) {
-      console.error('Error saving recent searches:', error);
-    }
 
     // Navigate to result
     router.push(result.url);

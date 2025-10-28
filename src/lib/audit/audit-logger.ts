@@ -5,7 +5,7 @@
  * Mantém logs detalhados de todas as operações do sistema
  */
 
-import { clientDatabaseAdapter } from '../adapters/client-database-adapter';
+import { clientDatabaseAdapter } from '../database/client-database-adapter';
 import { databaseService } from '../services/database-service';
 
 export interface AuditLog {
@@ -19,7 +19,7 @@ export interface AuditLog {
 }
 
 export interface SecurityViolation {
-  type: 'localStorage' | 'sessionStorage' | 'indexedDB' | 'webSQL' | 'cookies';
+  type: 'sessionStorage' | 'indexedDB' | 'webSQL' | 'cookies'; // Removido localStorage
   operation: 'getItem' | 'setItem' | 'removeItem' | 'clear' | 'key' | 'open' | 'transaction';
   key?: string;
   value?: any;
@@ -209,10 +209,10 @@ class AuditLogger {
     window.fetch = async (...args) => {
       const url = args[0]?.toString() || '';
       
-      // Detecta tentativas suspeitas
-      if (url.includes('localStorage') || url.includes('sessionStorage')) {
+      // Detecta tentativas suspeitas (localStorage removido do sistema)
+      if (url.includes('sessionStorage')) {
         await this.logSecurityViolation({
-          type: 'localStorage',
+          type: 'sessionStorage',
           operation: 'setItem',
           stackTrace: new Error().stack || '',
           blocked: true
@@ -227,9 +227,9 @@ class AuditLogger {
     XMLHttpRequest.prototype.open = function(...args) {
       const url = args[1]?.toString() || '';
       
-      if (url.includes('localStorage') || url.includes('sessionStorage')) {
+      if (url.includes('sessionStorage')) {
         auditLogger.logSecurityViolation({
-          type: 'localStorage',
+          type: 'sessionStorage',
           operation: 'setItem',
           stackTrace: new Error().stack || '',
           blocked: true
@@ -270,6 +270,9 @@ class AuditLogger {
    * Configura captura de erros
    */
   private setupErrorCapture(): void {
+    // TEMPORARILY DISABLED TO FIX WEBPACK ISSUES
+    // TODO: Re-enable after fixing webpack module loading problems
+    /*
     if (typeof window === 'undefined') return;
 
     // Captura erros JavaScript
@@ -302,6 +305,7 @@ class AuditLogger {
         }
       });
     });
+    */
   }
 
   /**

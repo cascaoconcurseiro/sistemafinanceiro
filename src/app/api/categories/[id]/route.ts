@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { databaseService } from '@/lib/services/database-service';
+import { authenticateRequest } from '@/lib/utils/auth-helpers';
 
 // GET /api/categories/[id] - Buscar categoria específica
 export async function GET(
@@ -7,6 +8,12 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    // ✅ CORREÇÃO CRÍTICA: Adicionar autenticação
+    const auth = await authenticateRequest(request);
+    if (!auth.success || !auth.userId) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    }
+
     const { id } = params;
     
     const categories = await databaseService.getCategories();
@@ -35,6 +42,12 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    // ✅ CORREÇÃO CRÍTICA: Adicionar autenticação
+    const auth = await authenticateRequest(request);
+    if (!auth.success || !auth.userId) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    }
+
     const { id } = params;
     const body = await request.json();
     
@@ -87,6 +100,12 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    // ✅ CORREÇÃO CRÍTICA: Adicionar autenticação
+    const auth = await authenticateRequest(request);
+    if (!auth.success || !auth.userId) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    }
+
     const { id } = params;
     
     // Verificar se categoria existe

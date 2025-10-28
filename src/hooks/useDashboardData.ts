@@ -7,7 +7,7 @@
  */
 
 import { useMemo } from 'react';
-import { useUnified } from '@/contexts/unified-context-simple';
+import { useUnifiedFinancial } from '@/contexts/unified-financial-context';
 
 export interface DashboardData {
   totalBalance: number;
@@ -30,7 +30,7 @@ export interface DashboardData {
 }
 
 export const useDashboardData = (): DashboardData => {
-  const { accounts, transactions, goals, balances, loading, error } = useUnified();
+  const { accounts, transactions, goals, balances, isLoading, error } = useUnifiedFinancial();
 
   return useMemo(() => {
     // 🔒 TRATAMENTO DE ERROS
@@ -55,7 +55,7 @@ export const useDashboardData = (): DashboardData => {
     const totalBalance = balances?.totalBalance || 0;
     const monthlyIncome = balances?.monthlyIncome || 0;
     const monthlyExpenses = balances?.monthlyExpenses || 0;
-    const monthlyBalance = balances?.monthlyBalance || (monthlyIncome - monthlyExpenses);
+    const monthlyBalance = balances?.monthlyBalance || 0;
 
     // 🔒 USAR DADOS PRÉ-CALCULADOS PARA METAS
     const goalsProgress = balances?.goalsProgress || 0;
@@ -70,12 +70,22 @@ export const useDashboardData = (): DashboardData => {
       id: account.id,
       name: account.name,
       type: account.type,
-      balance: balances?.accountBalances?.[account.id] || 0,
-      color: account.color || '#3B82F6'
+      balance: balances?.accountBalances?.[account.id] || account.balance || 0,
+      color: '#3B82F6'
     })) || [];
 
-    // 🔒 USAR DADOS PRÉ-CALCULADOS PARA CATEGORIAS
-    const expensesByCategory = balances?.expensesByCategory || {};
+    // 🔒 CONVERTER DADOS PRÉ-CALCULADOS PARA FORMATO ESPERADO
+    const expensesByCategory: Record<string, { amount: number; percentage: number; color: string }> = {};
+    
+    if (balances?.topExpenseCategories) {
+      balances.topExpenseCategories.forEach(category => {
+        expensesByCategory[category.category] = {
+          amount: category.amount,
+          percentage: category.percentage,
+          color: category.color
+        };
+      });
+    }
 
     // 🔒 USAR DADOS PRÉ-CALCULADOS PARA TENDÊNCIAS
     const incomeVsExpenses = balances?.incomeVsExpenses || {
@@ -101,7 +111,7 @@ export const useDashboardData = (): DashboardData => {
       incomeVsExpenses,
       netWorthTrend
     };
-  }, [accounts, transactions, balances, error]);
+  }, [accounts, transactions, goals, balances, error]);
 };
 
 /**
@@ -112,7 +122,7 @@ export const useDashboardData = (): DashboardData => {
  * OBRIGATÓRIO: Todos os dados devem vir do useUnified.
  */
 export const useFinancialSummary = () => {
-  const { accounts, transactions, balances, error } = useUnified();
+  const { accounts, transactions, balances, error } = useUnifiedFinancial();
 
   return useMemo(() => {
     // 🔒 TRATAMENTO DE ERROS
@@ -139,12 +149,12 @@ export const useFinancialSummary = () => {
     const monthlyExpenses = balances?.monthlyExpenses || 0;
     const monthlyBalance = balances?.monthlyBalance || 0;
     
-    // 🔒 USAR DADOS PRÉ-CALCULADOS PARA CRESCIMENTO
-    const incomeGrowth = balances?.incomeGrowth || 0;
-    const expenseGrowth = balances?.expenseGrowth || 0;
-    const balanceGrowth = balances?.balanceGrowth || 0;
-    const incomeGrowthPercent = balances?.incomeGrowthPercent || 0;
-    const expenseGrowthPercent = balances?.expenseGrowthPercent || 0;
+    // 🔒 DADOS DE CRESCIMENTO (por enquanto zerados - podem ser implementados no Finance Engine)
+    const incomeGrowth = 0;
+    const expenseGrowth = 0;
+    const balanceGrowth = 0;
+    const incomeGrowthPercent = 0;
+    const expenseGrowthPercent = 0;
 
     return {
       totalBalance,
@@ -157,9 +167,9 @@ export const useFinancialSummary = () => {
       incomeGrowthPercent,
       expenseGrowthPercent,
       accountsCount: accounts?.length || 0,
-      transactionsCount: balances?.monthlyTransactionsCount || 0
+      transactionsCount: transactions?.length || 0
     };
-  }, [accounts, balances, error]);
+  }, [accounts, transactions, balances, error]);
 };
 
 /**
@@ -170,7 +180,7 @@ export const useFinancialSummary = () => {
  * OBRIGATÓRIO: Todos os dados devem vir do useUnified.
  */
 export const useCashFlowProjection = (months: number = 12) => {
-  const { balances, error } = useUnified();
+  const { balances, error } = useUnifiedFinancial();
 
   return useMemo(() => {
     // 🔒 TRATAMENTO DE ERROS
@@ -192,7 +202,7 @@ export const useCashFlowProjection = (months: number = 12) => {
  * OBRIGATÓRIO: Todos os dados devem vir do useUnified.
  */
 export const useTopExpenseCategories = (limit: number = 5) => {
-  const { balances, error } = useUnified();
+  const { balances, error } = useUnifiedFinancial();
 
   return useMemo(() => {
     // 🔒 TRATAMENTO DE ERROS

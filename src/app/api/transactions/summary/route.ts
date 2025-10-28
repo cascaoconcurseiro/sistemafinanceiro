@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { databaseService } from '@/lib/services/database-service';
-import { handleApiError } from '../../../../lib/logger';
 import { transactionCache } from '../../../../lib/cache';
 import { Transaction } from '../../../../types';
+import { authenticateRequest } from '@/lib/utils/auth-helpers';
 
 // Tipos para o resumo de transações
 interface CategorySummary {
@@ -35,23 +35,35 @@ interface CacheParams {
 }
 
 // GET - Buscar resumo de transações
+
+export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
+    // ✅ CORREÇÃO CRÍTICA: Adicionar autenticação
+    const auth = await authenticateRequest(request);
+    if (!auth.success || !auth.userId) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const year = searchParams.get('year');
     const month = searchParams.get('month');
     const type = searchParams.get('type');
 
-    // Criar chave de cache baseada nos parâmetros
-    const cacheParams: CacheParams = { year, month, type };
+    // ✅ CORREÇÃO CRÍTICA: Criar chave de cache incluindo userId
+    const cacheParams: CacheParams & { userId: string } = { year, month, type, userId: auth.userId };
     
-    // Tentar obter do cache primeiro
+    // Tentar obter do cache primeiro (por usuário)
     const cachedSummary = transactionCache.getSummary(cacheParams);
     if (cachedSummary) {
       return NextResponse.json(cachedSummary);
     }
 
+    // ✅ CORREÇÃO CRÍTICA: Buscar apenas transações do usuário autenticado
     let transactions: Transaction[] = await databaseService.getTransactions();
+    
+    // Filtrar por usuário
+    transactions = transactions.filter((t: Transaction) => t.userId === auth.userId);
     
     // Verificar se as transações foram carregadas corretamente
     if (!Array.isArray(transactions)) {
@@ -129,7 +141,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(summary);
   } catch (error) {
-    const errorResponse = handleApiError(error, 'TransactionsSummaryAPI', 'buscar resumo de transações');
-    return NextResponse.json(errorResponse, { status: 500 });
+    console.error('TransactionsSummaryAPI - buscar resumo de transações:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -1,50 +1,41 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { logComponents, logError } from '../../lib/logger';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Textarea } from '../ui/textarea';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../ui/select';
+} from '@/components/ui/select';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
-} from '../ui/card';
-import { Badge } from '../ui/badge';
-import { Separator } from '../ui/separator';
+} from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import {
   CalendarIcon,
   Calculator,
   DollarSign,
-  Building2,
-  Wallet,
+  Plus,
 } from 'lucide-react';
-import { Calendar } from '../ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { cn } from '../../lib/utils';
-import { useUnified } from '../../contexts/unified-context-simple';
-import { useSafeTheme } from '../../hooks/use-safe-theme';
-import {
-  AssetType,
-  BuyOperationData,
-  SellOperationData,
-} from '../../lib/types/investments';
-import { formatCurrency } from '../../lib/utils/investment-calculations';
-import { AssetAutocomplete } from './asset-autocomplete';
-import { type AssetData } from '../../lib/data/assets-database';
+import { cn } from '@/lib/utils';
+import { useUnifiedFinancial } from '@/contexts/unified-financial-context';
+import { useSafeTheme } from '@/hooks/use-safe-theme';
+type AssetType = 'stock' | 'fii' | 'etf' | 'crypto' | 'fixed_income' | 'fund' | 'bdr' | 'option' | 'future' | 'other';
+import { formatCurrency } from '@/lib/utils/investment-calculations';
 import { toast } from 'sonner';
 
 interface InvestmentOperationModalProps {
@@ -67,20 +58,25 @@ const ASSET_TYPE_OPTIONS: { value: AssetType; label: string }[] = [
   { value: 'other', label: 'Outro' },
 ];
 
-export function InvestmentOperationModal({
+const InvestmentOperationModalComponent = memo(function InvestmentOperationModal({
   open,
   onOpenChange,
   operationType,
   preSelectedInvestmentId,
 }: InvestmentOperationModalProps) {
-  const {
-    accounts,
-    transactions,
-    balances,
-    createTransaction,
-    updateTransaction,
-  } = useUnified();
+  const { accounts, transactions, actions } = useUnifiedFinancial();
   const { settings } = useSafeTheme();
+
+  // Memoize accounts to prevent unnecessary re-renders
+  const memoizedAccounts = useMemo(() => accounts || [], [accounts]);
+  
+  // Only log when accounts actually change, not on every render
+  const accountsLength = memoizedAccounts.length;
+  useEffect(() => {
+    if (accountsLength > 0) {
+      console.log('🏦 [InvestmentModal] Contas disponíveis:', accountsLength);
+    }
+  }, [accountsLength]);
 
   // Estados do formulário
   const [selectedInvestmentId, setSelectedInvestmentId] = useState(
@@ -97,13 +93,39 @@ export function InvestmentOperationModal({
   const [operationDate, setOperationDate] = useState<Date>(new Date());
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
+  const [customBroker, setCustomBroker] = useState('');
+  const [showCustomBroker, setShowCustomBroker] = useState(false);
 
   // Estados calculados
   const [totalValue, setTotalValue] = useState(0);
   const [netValue, setNetValue] = useState(0);
 
-  // Calculate investment data from transactions
+  // Lista de corretoras (incluindo personalizadas do localStorage)
+  const [brokersList, setBrokersList] = useState(() => {
+    const defaultBrokers = [
+      { value: "xp", label: "XP Investimentos" },
+      { value: "nuinvest", label: "NuInvest" },
+      { value: "clear", label: "Clear Corretora" },
+      { value: "modal", label: "Modal Mais" },
+      { value: "btg", label: "BTG Pactual" },
+      { value: "itau", label: "Itaú Corretora" },
+      { value: "rico", label: "Rico Investimentos" },
+      { value: "inter", label: "Inter Invest" },
+      { value: "toro", label: "Toro Investimentos" },
+      { value: "avenue", label: "Avenue Securities" },
+      { value: "c6", label: "C6 Bank" },
+      { value: "easynvest", label: "Easynvest" }
+    ];
+    
+    // Carregar corretoras personalizadas do localStorage
+    const customBrokers = JSON.parse(localStorage.getItem('customBrokers') || '[]');
+    return [...defaultBrokers, ...customBrokers];
+  });
+
+  // Memoize investment calculations with better caching
   const investments = useMemo(() => {
+    if (!transactions || transactions.length === 0) return [];
+    
     const investmentMap = new Map();
     
     transactions
@@ -111,18 +133,19 @@ export function InvestmentOperationModal({
       .forEach(transaction => {
         const symbol = transaction.description?.split(' ')[0] || 'UNKNOWN';
         const existing = investmentMap.get(symbol);
+        const metadata = (transaction as any).metadata || {};
         
         if (existing) {
           existing.totalInvested += Math.abs(transaction.amount);
-          existing.quantity += transaction.metadata?.quantity || 1;
+          existing.quantity += metadata.quantity || 1;
         } else {
           investmentMap.set(symbol, {
             id: symbol,
             symbol,
             name: transaction.description || symbol,
-            type: transaction.metadata?.assetType || 'stock',
+            type: metadata.assetType || 'stock',
             totalInvested: Math.abs(transaction.amount),
-            quantity: transaction.metadata?.quantity || 1,
+            quantity: metadata.quantity || 1,
             status: 'active'
           });
         }
@@ -131,21 +154,20 @@ export function InvestmentOperationModal({
     return Array.from(investmentMap.values());
   }, [transactions]);
 
-  // Funções auxiliares - usar useMemo para evitar recriação
+  // Memoized computed values to prevent unnecessary recalculations
   const selectedInvestment = useMemo(() => {
-    return selectedInvestmentId
-      ? investments.find((inv) => inv.id === selectedInvestmentId) || null
-      : null;
+    if (!selectedInvestmentId || !investments.length) return null;
+    return investments.find((inv) => inv.id === selectedInvestmentId) || null;
   }, [selectedInvestmentId, investments]);
 
   const selectedAccount = useMemo(() => {
-    return accounts.find((acc) => acc.id === account) || null;
-  }, [account, accounts]);
+    if (!account || !memoizedAccounts.length) return null;
+    return memoizedAccounts.find((acc) => acc.id === account) || null;
+  }, [account, memoizedAccounts]);
 
   const availableInvestments = useMemo(() => {
-    return (investments || []).filter(
-      (inv) => inv.status === 'active' || !inv.status
-    );
+    if (!investments.length) return [];
+    return investments.filter((inv) => inv.status === 'active' || !inv.status);
   }, [investments]);
 
   // Calcular valores quando inputs mudam
@@ -184,7 +206,7 @@ export function InvestmentOperationModal({
     }
   }, [open, operationType, preSelectedInvestmentId, investments]);
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setSelectedInvestmentId('');
     setIdentifier('');
     setName('');
@@ -196,9 +218,33 @@ export function InvestmentOperationModal({
     setFees('');
     setOperationDate(new Date());
     setNotes('');
-  };
+    setCustomBroker('');
+    setShowCustomBroker(false);
+  }, []);
 
-  const handleInvestmentSelect = (investmentId: string) => {
+  const addCustomBroker = useCallback(() => {
+    if (customBroker.trim()) {
+      const newBroker = {
+        value: customBroker.toLowerCase().replace(/\s+/g, '-'),
+        label: customBroker.trim()
+      };
+      
+      const updatedBrokers = [...brokersList, newBroker];
+      setBrokersList(updatedBrokers);
+      
+      // Salvar no localStorage (apenas as personalizadas)
+      const customBrokers = updatedBrokers.filter(broker => 
+        !["xp", "nuinvest", "clear", "modal", "btg", "itau", "rico", "inter", "toro", "avenue", "c6", "easynvest"].includes(broker.value)
+      );
+      localStorage.setItem('customBrokers', JSON.stringify(customBrokers));
+      
+      setBrokerId(newBroker.value);
+      setCustomBroker('');
+      setShowCustomBroker(false);
+    }
+  }, [customBroker, brokersList]);
+
+  const handleInvestmentSelect = useCallback((investmentId: string) => {
     setSelectedInvestmentId(investmentId);
     const investment = investments.find((inv) => inv.id === investmentId);
     if (investment) {
@@ -207,7 +253,7 @@ export function InvestmentOperationModal({
       setAssetType((investment.type as AssetType) || 'stock');
       setBrokerId(investment.broker || '');
     }
-  };
+  }, [investments]);
 
   const validateForm = () => {
     if (operationType === 'sell' && !selectedInvestmentId) {
@@ -248,7 +294,7 @@ export function InvestmentOperationModal({
         // Create investment transaction
         const transactionData = {
           id: `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          account,
+          accountId: account,
           amount: -netValue, // Negative for expense
           description: `${identifier.trim().toUpperCase()} - ${name.trim() || identifier.trim()}`,
           category: 'investment',
@@ -266,7 +312,9 @@ export function InvestmentOperationModal({
           notes: notes.trim() || undefined,
         };
 
-        await createTransaction(transactionData);
+        console.log('💰 [InvestmentModal] Criando transação de compra:', transactionData);
+        await actions.createTransaction(transactionData);
+        console.log('✅ [InvestmentModal] Transação criada com sucesso');
         toast.success(
           `Compra de ${identifier.trim().toUpperCase()} registrada com sucesso!`
         );
@@ -290,7 +338,7 @@ export function InvestmentOperationModal({
 
         const transactionData = {
           id: `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          account,
+          accountId: account,
           amount: totalReceived, // Positive for income
           description: `Venda ${selectedInvestment.symbol || selectedInvestment.name}`,
           category: 'investment',
@@ -308,22 +356,19 @@ export function InvestmentOperationModal({
           notes: notes.trim() || undefined,
         };
 
-        await createTransaction(transactionData);
+        console.log('💰 [InvestmentModal] Criando transação de venda:', transactionData);
+        await actions.createTransaction(transactionData);
+        console.log('✅ [InvestmentModal] Transação criada com sucesso');
         toast.success(
           `Venda de ${selectedInvestment.symbol || selectedInvestment.name} registrada com sucesso!`
         );
       }
 
       // Fechar modal e resetar form
-      onOpenChange(false);
       resetForm();
-
-      // Fechar modal após sucesso
-      setTimeout(() => {
-        onClose();
-      }, 1000);
+      onOpenChange(false);
     } catch (error) {
-      logError.components('Erro na operação:', error);
+      console.error('Erro na operação:', error);
       toast.error('Erro ao registrar operação');
     } finally {
       setLoading(false);
@@ -439,15 +484,10 @@ export function InvestmentOperationModal({
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Ativo *</Label>
-                <AssetAutocomplete
-                  onAssetSelect={(asset) => {
-                    if (asset) {
-                      setIdentifier(asset.ticker || '');
-                      setName(asset.name || '');
-                      setAssetType(asset.assetType || 'stock');
-                    }
-                  }}
+                <Input
                   placeholder="Digite o ticker ou nome do ativo (ex: PETR4, Petrobras)"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value.toUpperCase())}
                 />
               </div>
 
@@ -497,25 +537,58 @@ export function InvestmentOperationModal({
 
               <div className="space-y-2">
                 <Label>Corretora *</Label>
-                <Select value={brokerId} onValueChange={setBrokerId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a corretora" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="xp">XP Investimentos</SelectItem>
-                    <SelectItem value="nuinvest">NuInvest</SelectItem>
-                    <SelectItem value="clear">Clear Corretora</SelectItem>
-                    <SelectItem value="modal">Modal Mais</SelectItem>
-                    <SelectItem value="btg">BTG Pactual</SelectItem>
-                    <SelectItem value="itau">Itaú Corretora</SelectItem>
-                    <SelectItem value="rico">Rico Investimentos</SelectItem>
-                    <SelectItem value="inter">Inter Invest</SelectItem>
-                    <SelectItem value="toro">Toro Investimentos</SelectItem>
-                    <SelectItem value="avenue">Avenue Securities</SelectItem>
-                    <SelectItem value="c6">C6 Bank</SelectItem>
-                    <SelectItem value="easynvest">Easynvest</SelectItem>
-                  </SelectContent>
-                </Select>
+                {!showCustomBroker ? (
+                  <Select 
+                    value={brokerId} 
+                    onValueChange={(value) => {
+                      if (value === '__custom__') {
+                        setShowCustomBroker(true);
+                        setBrokerId('');
+                      } else {
+                        setBrokerId(value);
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a corretora" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {brokersList.map((broker) => (
+                        <SelectItem key={broker.value} value={broker.value}>
+                          {broker.label}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="__custom__" className="border-t">
+                        <div className="flex items-center gap-2">
+                          <Plus className="h-4 w-4" />
+                          Adicionar nova corretora
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Nome da corretora"
+                      value={customBroker}
+                      onChange={(e) => setCustomBroker(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && addCustomBroker()}
+                    />
+                    <Button type="button" size="sm" onClick={addCustomBroker}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setShowCustomBroker(false)}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                )}
+                
+
               </div>
             </div>
           )}
@@ -531,16 +604,22 @@ export function InvestmentOperationModal({
                   <SelectValue placeholder="Selecione a conta" />
                 </SelectTrigger>
                 <SelectContent>
-                  {accounts.map((account) => (
-                    <SelectItem key={account.id} value={account.id}>
-                      <div className="flex items-center justify-between w-full">
-                        <span>{account.name}</span>
-                        <span className="text-muted-foreground text-sm ml-2">
-                          {formatCurrency(account.balance)}
-                        </span>
-                      </div>
+                  {memoizedAccounts.length === 0 ? (
+                    <SelectItem value="no-accounts" disabled>
+                      Nenhuma conta encontrada
                     </SelectItem>
-                  ))}
+                  ) : (
+                    memoizedAccounts.map((account) => (
+                      <SelectItem key={account.id} value={account.id}>
+                        <div className="flex items-center justify-between w-full">
+                          <span>{account.name}</span>
+                          <span className="text-muted-foreground text-sm ml-2">
+                            {formatCurrency(account.balance)}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
 
@@ -722,4 +801,7 @@ export function InvestmentOperationModal({
       </DialogContent>
     </Dialog>
   );
-}
+});
+
+export { InvestmentOperationModalComponent as InvestmentOperationModal };
+

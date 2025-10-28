@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Badge } from '../ui/badge';
-import { Button } from '../ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -11,13 +11,13 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '../ui/table';
+} from '@/components/ui/table';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '../ui/dropdown-menu';
+} from '@/components/ui/dropdown-menu';
 import {
   TrendingUp,
   TrendingDown,
@@ -28,14 +28,14 @@ import {
   Building2,
   Calendar,
 } from 'lucide-react';
-import { Investment, AssetType } from '../../lib/types/investments';
+import { Investment, AssetType } from '@/lib/types/investments';
 import {
   formatCurrency,
   formatPercentage,
   calculateCurrentValue,
-} from '../../lib/utils/investment-calculations';
-import { useUnified } from '../../contexts/unified-context-simple';
-import { useSafeTheme } from '../../hooks/use-safe-theme';
+} from '@/lib/utils/investment-calculations';
+import { useUnifiedFinancial } from '@/contexts/unified-financial-context';
+import { useSafeTheme } from '@/hooks/use-safe-theme';
 
 interface InvestmentListProps {
   investments: Investment[];
@@ -68,7 +68,6 @@ const ASSET_TYPE_COLORS: Record<AssetType, string> = {
 };
 
 export function InvestmentList({ investments }: InvestmentListProps) {
-  const { accounts, transactions, balances } = useUnified();
   const { settings } = useSafeTheme();
   const [selectedInvestment, setSelectedInvestment] =
     useState<Investment | null>(null);
@@ -116,8 +115,9 @@ export function InvestmentList({ investments }: InvestmentListProps) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {investments.map((investment) => {
-          const profitLoss = investment.profitLoss || 0;
-          const profitLossPercentage = investment.profitLossPercentage || 0;
+          const currentValue = (investment.currentPrice || investment.purchasePrice) * investment.quantity;
+          const profitLoss = currentValue - investment.totalInvested;
+          const profitLossPercentage = investment.totalInvested > 0 ? (profitLoss / investment.totalInvested) * 100 : 0;
           const isProfit = profitLoss >= 0;
 
           return (
@@ -129,7 +129,7 @@ export function InvestmentList({ investments }: InvestmentListProps) {
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
                     <CardTitle className="text-lg">
-                      {investment.identifier}
+                      {investment.ticker || investment.symbol}
                     </CardTitle>
                     {investment.name && (
                       <p className="text-sm text-muted-foreground">
@@ -169,14 +169,14 @@ export function InvestmentList({ investments }: InvestmentListProps) {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <Badge className={ASSET_TYPE_COLORS[investment.assetType]}>
-                    {ASSET_TYPE_LABELS[investment.assetType]}
+                  <Badge className={ASSET_TYPE_COLORS[investment.type as AssetType] || 'bg-gray-100 text-gray-800'}>
+                    {ASSET_TYPE_LABELS[investment.type as AssetType] || investment.type}
                   </Badge>
                   <Badge variant="outline" className="text-xs">
-                    {getBrokerName(investment.brokerId)}
+                    {getBrokerName(investment.broker)}
                   </Badge>
-                  {investment.status === 'closed' && (
-                    <Badge variant="secondary">Zerado</Badge>
+                  {investment.status === 'sold' && (
+                    <Badge variant="secondary">Vendido</Badge>
                   )}
                 </div>
               </CardHeader>
@@ -192,7 +192,7 @@ export function InvestmentList({ investments }: InvestmentListProps) {
                   <div>
                     <p className="text-muted-foreground">Preço Médio</p>
                     <p className="font-medium">
-                      {formatCurrency(investment.averagePrice || 0)}
+                      {formatCurrency(investment.purchasePrice || 0)}
                     </p>
                   </div>
                 </div>
@@ -207,7 +207,7 @@ export function InvestmentList({ investments }: InvestmentListProps) {
                   <div>
                     <p className="text-muted-foreground">Valor Atual</p>
                     <p className="font-medium">
-                      {formatCurrency(calculateCurrentValue(investment))}
+                      {formatCurrency(currentValue)}
                     </p>
                   </div>
                 </div>
@@ -290,9 +290,9 @@ export function InvestmentList({ investments }: InvestmentListProps) {
             </TableHeader>
             <TableBody>
               {investments.map((investment) => {
-                const profitLoss = investment.profitLoss || 0;
-                const profitLossPercentage =
-                  investment.profitLossPercentage || 0;
+                const currentValue = (investment.currentPrice || investment.purchasePrice) * investment.quantity;
+                const profitLoss = currentValue - investment.totalInvested;
+                const profitLossPercentage = investment.totalInvested > 0 ? (profitLoss / investment.totalInvested) * 100 : 0;
                 const isProfit = profitLoss >= 0;
 
                 return (
@@ -300,7 +300,7 @@ export function InvestmentList({ investments }: InvestmentListProps) {
                     <TableCell>
                       <div>
                         <div className="font-medium">
-                          {investment.identifier}
+                          {investment.ticker || investment.symbol}
                         </div>
                         {investment.name && (
                           <div className="text-sm text-muted-foreground">
@@ -311,9 +311,9 @@ export function InvestmentList({ investments }: InvestmentListProps) {
                     </TableCell>
                     <TableCell>
                       <Badge
-                        className={ASSET_TYPE_COLORS[investment.assetType]}
+                        className={ASSET_TYPE_COLORS[investment.type as AssetType] || 'bg-gray-100 text-gray-800'}
                       >
-                        {ASSET_TYPE_LABELS[investment.assetType]}
+                        {ASSET_TYPE_LABELS[investment.type as AssetType] || investment.type}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -322,26 +322,26 @@ export function InvestmentList({ investments }: InvestmentListProps) {
                           className="w-3 h-3 rounded-full"
                           style={{
                             backgroundColor: getBrokerColor(
-                              investment.brokerId
+                              investment.broker
                             ),
                           }}
                         />
                         <span className="text-sm">
-                          {getBrokerName(investment.brokerId)}
+                          {getBrokerName(investment.broker)}
                         </span>
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      {(investment.totalQuantity || 0).toLocaleString('pt-BR')}
+                      {(investment.quantity || 0).toLocaleString('pt-BR')}
                     </TableCell>
                     <TableCell className="text-right">
-                      {formatCurrency(investment.averagePrice || 0)}
+                      {formatCurrency(investment.purchasePrice || 0)}
                     </TableCell>
                     <TableCell className="text-right">
                       {formatCurrency(investment.totalInvested || 0)}
                     </TableCell>
                     <TableCell className="text-right">
-                      {formatCurrency(calculateCurrentValue(investment))}
+                      {formatCurrency(currentValue)}
                     </TableCell>
                     <TableCell className="text-right">
                       {investment.status === 'active' ? (
@@ -430,3 +430,4 @@ export function InvestmentList({ investments }: InvestmentListProps) {
     </Card>
   );
 }
+

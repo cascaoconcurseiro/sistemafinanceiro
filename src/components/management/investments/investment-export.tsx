@@ -1,26 +1,25 @@
 'use client';
 
 import { useState } from 'react';
-import { logComponents } from '../../../lib/logger';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '../../ui/dialog';
-import { Button } from '../../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
-import { Checkbox } from '../../ui/checkbox';
-import { Label } from '../../ui/label';
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../../ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
-import { Badge } from '../../ui/badge';
+} from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import {
   FileSpreadsheet,
   FileText,
@@ -376,7 +375,7 @@ export function InvestmentExport({
       }
     } catch (error) {
       toast.error('Erro ao exportar relatório');
-      logError.ui('Export error:', error);
+      console.error('Export error:', error);
     } finally {
       setIsExporting(false);
     }

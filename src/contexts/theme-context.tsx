@@ -28,16 +28,28 @@ export function ThemeProvider({
   storageKey = 'vite-ui-theme',
   ...props
 }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(
-    () => {
-      if (typeof window !== 'undefined') {
-        // Dados de tema agora devem vir do banco de dados, não do localStorage
-        console.warn('theme-context - localStorage removido, use banco de dados para tema');
-        return defaultTheme;
+  const [theme, setTheme] = useState<Theme>(defaultTheme);
+
+  useEffect(() => {
+    // Carregar tema do banco de dados
+    const loadTheme = async () => {
+      try {
+        const response = await fetch('/api/theme-settings');
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          setTheme(result.data.theme || 'system');
+        }
+      } catch (error) {
+        console.error('Erro ao carregar tema:', error);
+        // Usar valores padrão em caso de erro
       }
-      return defaultTheme;
+    };
+
+    if (typeof window !== 'undefined') {
+      loadTheme();
     }
-  );
+  }, []);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -59,10 +71,26 @@ export function ThemeProvider({
 
   const value = {
     theme,
-    setTheme: (theme: Theme) => {
-      // Dados de tema agora devem ser salvos no banco de dados, não no localStorage
-      console.warn('theme-context setTheme - localStorage removido, use banco de dados para salvar tema');
-      setTheme(theme);
+    setTheme: async (newTheme: Theme) => {
+      try {
+        const response = await fetch('/api/theme-settings', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ theme: newTheme }),
+        });
+        
+        if (response.ok) {
+          setTheme(newTheme);
+        } else {
+          throw new Error('Falha ao salvar tema');
+        }
+      } catch (error) {
+        console.error('Erro ao salvar tema no banco de dados:', error);
+        // Ainda assim atualiza o tema localmente
+        setTheme(newTheme);
+      }
     },
   };
 

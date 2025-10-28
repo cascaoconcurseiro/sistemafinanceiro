@@ -7,169 +7,181 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '../../ui/dialog';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
-import { Label } from '../../ui/label';
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../../ui/select';
-import { Textarea } from '../../ui/textarea';
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { storage, type Account } from '../../../lib/storage';
-import {
-  validateRequiredString,
-  validatePositiveNumber,
-  sanitizeString,
-  sanitizeNumber,
-} from '../../../lib/validation';
-import { useLogger } from '../../../lib/logger';
-import { useUnified } from '../../../contexts/unified-context-simple';
+import { sanitizeString, sanitizeNumber, validateRequiredString, validatePositiveNumber } from '@/lib/validation/form-validators';
+
+import { useUnifiedFinancial } from '@/contexts/unified-financial-context';
 
 interface AddAccountModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function AddAccountModal({ open, onOpenChange }: AddAccountModalProps) {
-  const unifiedContext = useUnified();
-  const contextLoading = unifiedContext?.loading || false;
+interface AccountFormData {
+  name: string;
+  type: 'checking' | 'savings' | 'credit' | 'investment' | 'wallet';
+  balance: string;
+  bank: string;
+  description: string;
+  currency: string;
+}
 
-  const logger = useLogger('AddAccountModal');
-  const [formData, setFormData] = useState({
-    name: '',
-    type: 'checking' as Account['type'],
-    balance: '',
-    bank: '',
-    description: '',
-    currency: 'BRL',
+const INITIAL_FORM_DATA: AccountFormData = {
+  name: '',
+  type: 'checking',
+  balance: '0',
+  bank: '',
+  description: '',
+  currency: 'BRL',
+};
+
+export function AddAccountModal({ open, onOpenChange }: AddAccountModalProps) {
+  const unifiedContext = useUnifiedFinancial();
+  const { accounts = [], actions, isLoading: contextLoading } = unifiedContext;
+  
+  console.log('🔍 Modal - Contexto unificado:', {
+    accountsCount: accounts?.length || 0,
+    hasActions: !!actions,
+    contextLoading
   });
+
+  const [formData, setFormData] = useState<AccountFormData>(INITIAL_FORM_DATA);
   const [isLoading, setIsLoading] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
-  // Using sonner toast
 
-  // Reset form when modal closes
   useEffect(() => {
     if (!open) {
-      setFormData({
-        name: '',
-        type: 'checking',
-        balance: '',
-        bank: '',
-        description: '',
-        currency: 'BRL',
-      });
+      setFormData(INITIAL_FORM_DATA);
       setIsLoading(false);
       setFormLoading(false);
     }
   }, [open]);
 
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 AddAccountModal - Estado atual:', {
+        open,
+        accountsCount: Array.isArray(accounts) ? accounts.length : 0,
+        contextLoading,
+        formLoading
+      });
+    }
+  }, [open, accounts, contextLoading, formLoading]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    logger.info('Starting account creation', { formData });
-
-    // Sanitize inputs
     const sanitizedName = sanitizeString(formData.name);
-    const sanitizedBank = sanitizeString(formData.bank);
-    const sanitizedDescription = sanitizeString(formData.description);
     const sanitizedBalance = sanitizeNumber(formData.balance);
 
-    // Comprehensive validation
     if (!validateRequiredString(sanitizedName)) {
       toast.error('Nome da conta é obrigatório.');
       return;
     }
 
-    if (!validatePositiveNumber(sanitizedBalance) && sanitizedBalance !== 0) {
-      toast.error('Por favor, insira um valor válido para o saldo.');
-      return;
-    }
-
-    // Additional business validation
     if (sanitizedName.length > 100) {
       toast.error('Nome da conta deve ter no máximo 100 caracteres.');
       return;
     }
 
+    const safeAccounts = Array.isArray(accounts) ? accounts : [];
+    console.log('🔍 Modal - Contas existentes:', safeAccounts.map(acc => acc.name));
+    
+    const existingAccount = safeAccounts.find(
+      account => account.name?.toLowerCase() === sanitizedName.toLowerCase()
+    );
+    
+    if (existingAccount) {
+      console.log('❌ Modal - Conta já existe localmente:', existingAccount.name);
+      toast.error('Já existe uma conta com este nome.');
+      return;
+    }
+    
+    console.log('✅ Modal - Nome disponível localmente');
+
     setFormLoading(true);
 
     try {
-      const generateId = () => {
+      const generateId = (): string => {
         if (typeof crypto !== 'undefined' && crypto.randomUUID) {
           return crypto.randomUUID();
         }
-        return (
-          Date.now().toString(36) + Math.random().toString(36).substring(2)
-        );
+        return `account_${Date.now()}_${Math.random().toString(36).substring(2)}`;
       };
 
-      const newAccount = {
-        id: generateId(),
+      // Preparar dados para a API (apenas os campos que a API espera)
+      const accountData = {
         name: sanitizedName,
-        type: formData.type,
-        balance: sanitizedBalance,
-        bank: sanitizedBank || undefined,
-        description: sanitizedDescription || undefined,
+        type: formData.type, // Manter lowercase conforme schema
         currency: formData.currency,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
       };
-
-      logger.debug('Creating account', newAccount);
       
-      // Save account using API
+      console.log('🔍 Modal - Enviando dados:', accountData);
+      
       const response = await fetch('/api/accounts', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(newAccount),
+        body: JSON.stringify(accountData),
       });
 
       if (!response.ok) {
-        throw new Error('Erro ao salvar conta');
+        const errorText = await response.text();
+        console.log('❌ Modal - Resposta da API:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText
+        });
+        
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { error: errorText };
+        }
+        
+        throw new Error(errorData.error || errorData.message || `Erro ${response.status}: ${response.statusText}`);
       }
 
       const createdAccount = await response.json();
+      console.log('✅ [Modal] Conta criada:', createdAccount);
       
-      // Atualizar estado do financial engine
-      if (unifiedContext && unifiedContext.refreshData) {
-        await unifiedContext.refreshData();
-      } else {
-        logger.warn('UnifiedContext or refreshData not available');
+      toast.success('Conta criada com sucesso!');
+      
+      // Forçar atualização da lista ANTES de fechar o modal
+      if (actions?.refresh) {
+        console.log('🔄 [Modal] Chamando actions.refresh()...');
+        await actions.refresh();
+        console.log('✅ [Modal] Refresh concluído!');
       }
       
-      logger.info('Account created successfully', createdAccount);
-
-      toast.success('Conta criada com sucesso!');
-
-      // Reset form
-      setFormData({
-        name: '',
-        type: 'checking',
-        balance: '',
-        bank: '',
-        description: '',
-        currency: 'BRL',
-      });
-
+      setFormData(INITIAL_FORM_DATA);
       onOpenChange(false);
+
     } catch (error) {
-      logger.error('Error creating account', error);
-      toast.error(
-        `Erro ao criar conta: ${error instanceof Error ? error.message : 'Erro desconhecido'}`
-      );
+      console.error('❌ Erro ao criar conta:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      toast.error(`Erro ao criar conta: ${errorMessage}`);
     } finally {
       setFormLoading(false);
     }
   };
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: keyof AccountFormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -192,6 +204,8 @@ export function AddAccountModal({ open, onOpenChange }: AddAccountModalProps) {
               onChange={(e) => handleInputChange('name', e.target.value)}
               placeholder="Ex: Conta Corrente Banco do Brasil"
               required
+              disabled={formLoading}
+              maxLength={100}
             />
           </div>
 
@@ -199,16 +213,18 @@ export function AddAccountModal({ open, onOpenChange }: AddAccountModalProps) {
             <Label htmlFor="type">Tipo de Conta *</Label>
             <Select
               value={formData.type}
-              onValueChange={(value) => handleInputChange('type', value)}
+              onValueChange={(value) => handleInputChange('type', value as AccountFormData['type'])}
+              disabled={formLoading}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione o tipo" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="checking">Conta Corrente</SelectItem>
-                <SelectItem value="savings">Poupança</SelectItem>
-                <SelectItem value="credit">Cartão de Crédito</SelectItem>
-                <SelectItem value="investment">Investimento</SelectItem>
+                <SelectItem value="checking">💳 Conta Corrente</SelectItem>
+                <SelectItem value="savings">🏦 Poupança</SelectItem>
+                <SelectItem value="credit">💰 Cartão de Crédito</SelectItem>
+                <SelectItem value="investment">📈 Investimento</SelectItem>
+                <SelectItem value="wallet">👛 Carteira/Dinheiro</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -219,6 +235,7 @@ export function AddAccountModal({ open, onOpenChange }: AddAccountModalProps) {
               <Select
                 value={formData.currency}
                 onValueChange={(value) => handleInputChange('currency', value)}
+                disabled={formLoading}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione a moeda" />
@@ -230,9 +247,7 @@ export function AddAccountModal({ open, onOpenChange }: AddAccountModalProps) {
                   <SelectItem value="GBP">🇬🇧 Libra (GBP)</SelectItem>
                   <SelectItem value="JPY">🇯🇵 Iene (JPY)</SelectItem>
                   <SelectItem value="CAD">🇨🇦 Dólar Canadense (CAD)</SelectItem>
-                  <SelectItem value="AUD">
-                    🇦🇺 Dólar Australiano (AUD)
-                  </SelectItem>
+                  <SelectItem value="AUD">🇦🇺 Dólar Australiano (AUD)</SelectItem>
                   <SelectItem value="CHF">🇨🇭 Franco Suíço (CHF)</SelectItem>
                 </SelectContent>
               </Select>
@@ -247,6 +262,7 @@ export function AddAccountModal({ open, onOpenChange }: AddAccountModalProps) {
                 onChange={(e) => handleInputChange('balance', e.target.value)}
                 placeholder="0.00"
                 required
+                disabled={formLoading}
               />
             </div>
           </div>
@@ -258,6 +274,8 @@ export function AddAccountModal({ open, onOpenChange }: AddAccountModalProps) {
               value={formData.bank}
               onChange={(e) => handleInputChange('bank', e.target.value)}
               placeholder="Ex: Banco do Brasil"
+              disabled={formLoading}
+              maxLength={100}
             />
           </div>
 
@@ -269,6 +287,8 @@ export function AddAccountModal({ open, onOpenChange }: AddAccountModalProps) {
               onChange={(e) => handleInputChange('description', e.target.value)}
               placeholder="Descrição opcional da conta"
               rows={3}
+              disabled={formLoading}
+              maxLength={500}
             />
           </div>
 
@@ -281,7 +301,7 @@ export function AddAccountModal({ open, onOpenChange }: AddAccountModalProps) {
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={formLoading}>
+            <Button type="submit" disabled={formLoading || contextLoading}>
               {formLoading ? 'Criando...' : 'Criar Conta'}
             </Button>
           </div>

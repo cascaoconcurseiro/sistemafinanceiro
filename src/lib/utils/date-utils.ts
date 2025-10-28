@@ -44,7 +44,8 @@ export function convertBRDateToISO(brDate: string): string {
  */
 export function convertISODateToBR(isoDate: string): string {
   try {
-    const parsed = new Date(isoDate);
+    // Adiciona horário para evitar problemas de timezone
+    const parsed = new Date(isoDate + 'T12:00:00');
     if (!isValid(parsed)) return '';
     return format(parsed, 'dd/MM/yyyy', { locale: ptBR });
   } catch {

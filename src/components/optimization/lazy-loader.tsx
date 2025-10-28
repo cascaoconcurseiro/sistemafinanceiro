@@ -1,47 +1,78 @@
 'use client';
 
-import React, { lazy, Suspense } from 'react';
+import React, { Suspense, lazy } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// Componentes pesados com lazy loading
-export const LazyFinancialDashboard = lazy(() =>
-  import('@/components/dashboards/financial/financial-dashboard').then(
-    (module) => ({ default: module.default })
-  )
+// Lazy loading dos componentes
+const InvestmentDashboardComponent = lazy(
+  () => import('@/components/investments/investment-dashboard').then(mod => ({ default: mod.InvestmentDashboard }))
 );
 
-export const LazyAdvancedReportsDashboard = lazy(() =>
-  import('@/components/dashboards/analytics/advanced-reports-dashboard').then(
-    (module) => ({ default: module.default })
-  )
+const AdvancedReportsDashboardComponent = lazy(
+  () => import('@/components/advanced-reports-dashboard')
 );
 
-export const LazyInvestmentPortfolio = lazy(() =>
-  import('@/components/management/investments/investment-portfolio').then(
-    (module) => ({ default: module.default })
-  )
+// Componentes lazy com Suspense
+export const LazyInvestmentDashboard = ({ userId }: { userId?: string }) => (
+  <Suspense
+    fallback={
+      <div className="p-4 space-y-4">
+        <Skeleton className="h-8 w-1/3" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
+        </div>
+        <Skeleton className="h-64" />
+      </div>
+    }
+  >
+    {userId && <InvestmentDashboardComponent userId={userId} />}
+  </Suspense>
 );
 
-// LazyDataVisualization removido - componente não existe
-
-export const LazyInvestmentDashboard = lazy(() =>
-  import('@/components/investments/investment-dashboard').then((module) => ({
-    default: module.InvestmentDashboard,
-  }))
+export const LazyAdvancedReportsDashboard = () => (
+  <Suspense
+    fallback={
+      <div className="p-4 space-y-4">
+        <Skeleton className="h-8 w-1/3" />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+        </div>
+        <Skeleton className="h-96" />
+      </div>
+    }
+  >
+    <AdvancedReportsDashboardComponent />
+  </Suspense>
 );
 
-export const LazyAdvancedAnalyticsDashboard = lazy(
-  () => import('@/components/dashboards/analytics/advanced-analytics-dashboard')
+// Componentes ainda não implementados
+export const LazyInvestmentPortfolio = () => (
+  <div className="p-4 text-center text-gray-500">
+    Investment Portfolio (em desenvolvimento)
+  </div>
 );
 
-export const LazyFinancialAnalysisDashboard = lazy(
-  () => import('@/components/financial-analysis-dashboard')
+export const LazyAdvancedAnalyticsDashboard = () => (
+  <div className="p-4 text-center text-gray-500">
+    Advanced Analytics Dashboard (em desenvolvimento)
+  </div>
 );
 
-export const LazySmartNotificationCenter = lazy(() =>
-  import('@/components/smart-notification-center').then((module) => ({
-    default: module.SmartNotificationCenter,
-  }))
+export const LazyFinancialAnalysisDashboard = () => (
+  <div className="p-4 text-center text-gray-500">
+    Financial Analysis Dashboard (em desenvolvimento)
+  </div>
+);
+
+export const LazySmartNotificationCenter = () => (
+  <div className="p-4 text-center text-gray-500">
+    Smart Notification Center (em desenvolvimento)
+  </div>
 );
 
 // Componente wrapper com loading skeleton

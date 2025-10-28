@@ -7,14 +7,17 @@
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { ReactQueryProvider } from '@/providers/react-query-provider';
-import { UnifiedProvider } from '@/contexts/unified-context-simple';
+import { UnifiedProvider } from '@/contexts/unified-financial-context';
 import { NotificationProvider } from '@/contexts/notification-context';
+import { PeriodProvider } from '@/contexts/period-context';
+import { GlobalModalProvider } from '@/contexts/ui/global-modal-context';
 import { GlobalModals } from '@/components/global-modals';
 import { PWAManager } from '@/components/pwa-manager';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
-import { LoggerInitializer } from '@/components/logger-initializer';
-import { LoggerDebugTrigger } from '@/components/ui/logger-debug-trigger';
-
+import { ConditionalHeader } from '@/components/layout/conditional-header';
+import { AuthProvider } from '@/providers/auth-provider';
+import { ReminderChecker } from '@/components/reminder-checker';
+import { AuthInterceptor } from '@/components/auth-interceptor';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -42,19 +45,30 @@ export default function RootLayout({
         <meta charSet="utf-8" />
       </head>
       <body className={`${inter.className} bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100`}>
-        <LoggerInitializer />
         <ErrorBoundary>
-          <ReactQueryProvider>
-            <NotificationProvider>
-              <UnifiedProvider>
-                <PWAManager />
-                <GlobalModals />
-                {children}
-              </UnifiedProvider>
-            </NotificationProvider>
-          </ReactQueryProvider>
+          <AuthProvider>
+            <ReactQueryProvider>
+              <NotificationProvider>
+                <UnifiedProvider>
+                  <PeriodProvider>
+                    <GlobalModalProvider>
+                    {/* PWAManager temporariamente desabilitado */}
+                    <AuthInterceptor />
+                    <ReminderChecker />
+                    <GlobalModals />
+                    <div className="min-h-screen flex flex-col">
+                      {/* ConditionalHeader removido - usando ModernAppLayout nas páginas */}
+                      <main className="flex-1">
+                        {children}
+                      </main>
+                    </div>
+                  </GlobalModalProvider>
+                  </PeriodProvider>
+                </UnifiedProvider>
+              </NotificationProvider>
+            </ReactQueryProvider>
+          </AuthProvider>
         </ErrorBoundary>
-        <LoggerDebugTrigger />
       </body>
     </html>
   );

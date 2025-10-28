@@ -1,19 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { databaseService } from '@/lib/services/database-service';
+import { authenticateRequest } from '@/lib/utils/auth-helpers';
 import { Category } from '@/types';
 
 // GET /api/categories - Buscar todas as categorias
+
+export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
+    // Verificar autenticação
+    const auth = await authenticateRequest(request);
+    if (!auth.success || !auth.userId) {
+      return NextResponse.json(
+        { error: 'Não autenticado' },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type'); // 'income', 'expense', 'transfer'
     const active = searchParams.get('active'); // 'true', 'false'
 
-    // Buscar categorias do banco
+    // Buscar categorias do banco (apenas do usuário autenticado)
     const categories = await databaseService.getCategories();
     
-    // Aplicar filtros se fornecidos
-    let filteredCategories = categories;
+    // ✅ Filtrar apenas categorias do usuário
+    let filteredCategories = categories.filter(cat => cat.userId === auth.userId);
     
     if (type) {
       filteredCategories = filteredCategories.filter(cat => cat.type === type);
@@ -37,6 +49,15 @@ export async function GET(request: NextRequest) {
 // POST /api/categories - Criar nova categoria
 export async function POST(request: NextRequest) {
   try {
+    // ✅ CORREÇÃO CRÍTICA: Adicionar autenticação
+    const auth = await authenticateRequest(request);
+    if (!auth.success || !auth.userId) {
+      return NextResponse.json(
+        { error: 'Não autenticado' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     
     // Validar dados obrigatórios
@@ -69,7 +90,7 @@ export async function POST(request: NextRequest) {
       color: body.color || '#8884d8',
       icon: body.icon || '📁',
       isActive: body.isActive !== false, // Default true
-      userId: '1' // Por enquanto usando usuário fixo
+      userId: auth.userId // ✅ Usar userId autenticado
     };
 
     const newCategory = await databaseService.createCategory(categoryData);
@@ -87,6 +108,15 @@ export async function POST(request: NextRequest) {
 // PUT /api/categories - Atualizar categoria (bulk update)
 export async function PUT(request: NextRequest) {
   try {
+    // ✅ CORREÇÃO CRÍTICA: Adicionar autenticação
+    const auth = await authenticateRequest(request);
+    if (!auth.success || !auth.userId) {
+      return NextResponse.json(
+        { error: 'Não autenticado' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     
     if (!Array.isArray(body)) {
@@ -125,6 +155,15 @@ export async function PUT(request: NextRequest) {
 // DELETE /api/categories - Desativar categoria (soft delete)
 export async function DELETE(request: NextRequest) {
   try {
+    // ✅ CORREÇÃO CRÍTICA: Adicionar autenticação
+    const auth = await authenticateRequest(request);
+    if (!auth.success || !auth.userId) {
+      return NextResponse.json(
+        { error: 'Não autenticado' },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     

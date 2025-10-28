@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { logComponents, logError } from '../lib/logger';
 import { UnifiedFinancialSystem } from '@/lib/unified-financial-system';
 import { toast } from 'sonner';
 
@@ -39,7 +38,7 @@ export function useIncomeSettings() {
           setIncomeSettings(saved.data);
         }
       } catch (error) {
-        logError.hooks('Error loading income settings:', error);
+        console.error('Error loading income settings:', error);
         toast.error('Erro ao carregar configuracoes de renda');
       } finally {
         setIsLoading(false);
@@ -64,7 +63,7 @@ export function useIncomeSettings() {
       toast.success('Configuracoes de renda salvas com sucesso');
       return true;
     } catch (error) {
-      logError.hooks('Error saving income settings:', error);
+      console.error('Error saving income settings:', error);
       toast.error('Erro ao salvar configuracoes de renda');
       return false;
     }

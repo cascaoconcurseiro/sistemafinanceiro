@@ -1,18 +1,18 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Badge } from '../ui/badge';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../ui/select';
+} from '@/components/ui/select';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,13 +20,13 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '../ui/dropdown-menu';
+} from '@/components/ui/dropdown-menu';
 import {
   Tabs,
   TabsList,
   TabsTrigger,
   TabsContent,
-} from '../ui/tabs';
+} from '@/components/ui/tabs';
 import {
   FileText,
   Download,
@@ -48,27 +48,15 @@ import {
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { useInvestments, useUnifiedFinancial } from '@/contexts/unified-financial-context';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import ExcelJS from 'exceljs';
-import { DatePicker } from '../ui/date-picker';
+import { DatePicker } from '@/components/ui/date-picker';
+import type { Investment, Transaction } from '@/types';
 
 interface IRReportProps {
   className?: string;
-}
-
-interface Investment {
-  id: string;
-  name: string;
-  symbol?: string;
-  type: string;
-  quantity: number;
-  purchasePrice: number;
-  currentPrice?: number;
-  purchaseDate: string;
-  broker?: string;
-  status: string;
-  fees?: number;
 }
 
 interface Dividend {
@@ -80,16 +68,6 @@ interface Dividend {
   valuePerShare: number;
   paymentDate: string;
   exDividendDate?: string;
-  notes?: string;
-}
-
-interface Transaction {
-  id: string;
-  description: string;
-  amount: number;
-  type: string;
-  category: string;
-  date: string;
   notes?: string;
 }
 
@@ -129,6 +107,8 @@ interface MonthlyTaxCalculation {
 }
 
 export function InvestmentIRReport({ className }: IRReportProps) {
+  const { investments, isLoading } = useInvestments();
+  const { transactions } = useUnifiedFinancial();
   const [startDate, setStartDate] = useState<Date>(startOfYear(new Date()));
   const [endDate, setEndDate] = useState<Date>(endOfYear(new Date()));
   const [selectedYear, setSelectedYear] = useState<string>(
@@ -136,45 +116,49 @@ export function InvestmentIRReport({ className }: IRReportProps) {
   );
   const [filterType, setFilterType] = useState<'year' | 'custom'>('year');
 
-  /**
-   * @deprecated localStorage não é mais usado - dados ficam no banco
-   * Dados agora vêm do banco via DataService
-   */
-  const investments = useMemo(() => {
-    console.log(
-      'Carregamento de investimentos para IR - localStorage removido, dados agora vêm do banco via DataService'
-    );
-    // TODO: Implementar carregamento via DataService
-    // return DataService.getInvestments();
-    return [];
-  }, []);
-
+  // Extract dividends from transactions
   const dividends = useMemo(() => {
-    console.log(
-      'Carregamento de dividendos para IR - localStorage removido, dados agora vêm do banco via DataService'
-    );
-    // TODO: Implementar carregamento via DataService
-    // return DataService.getDividends();
-    return [];
-  }, []);
+    return (transactions || [])
+      .filter(t => t.category === 'investment_income' && t.metadata?.operationType === 'dividend')
+      .map(t => ({
+        id: t.id,
+        investmentId: t.metadata?.investmentId || '',
+        investmentSymbol: t.metadata?.investmentSymbol || '',
+        dividendType: t.metadata?.dividendType || 'dividend',
+        amount: t.amount,
+        valuePerShare: t.metadata?.valuePerShare || 0,
+        paymentDate: t.date,
+        exDividendDate: t.metadata?.exDividendDate,
+        notes: t.notes
+      }));
+  }, [transactions]);
 
-  const transactions = useMemo(() => {
-    console.log(
-      'Carregamento de transações para IR - localStorage removido, dados agora vêm do banco via DataService'
-    );
-    // TODO: Implementar carregamento via DataService
-    // return DataService.getTransactions();
-    return [];
-  }, []);
-
+  // Extract sales from transactions
   const sales = useMemo(() => {
-    console.log(
-      'Carregamento de vendas para IR - localStorage removido, dados agora vêm do banco via DataService'
-    );
-    // TODO: Implementar carregamento via DataService
-    // return DataService.getSales();
-    return [];
-  }, []);
+    return (transactions || [])
+      .filter(t => t.category === 'investment' && t.type === 'income' && t.metadata?.operationType === 'sell')
+      .map(t => ({
+        id: t.id,
+        investmentId: t.metadata?.investmentId || '',
+        investmentSymbol: t.metadata?.investmentSymbol || '',
+        investmentType: t.metadata?.investmentType || 'stock',
+        quantity: t.metadata?.quantity || 0,
+        salePrice: t.metadata?.unitPrice || 0,
+        grossAmount: t.metadata?.grossAmount || t.amount,
+        netAmount: t.amount,
+        fees: t.metadata?.fees || 0,
+        averagePrice: t.metadata?.averagePrice || 0,
+        costBasis: t.metadata?.costBasis || 0,
+        grossProfit: t.metadata?.grossProfit || 0,
+        netProfit: t.metadata?.netProfit || 0,
+        profitPercentage: t.metadata?.profitPercentage || 0,
+        taxRate: t.metadata?.taxRate || 0,
+        taxDue: t.metadata?.taxDue || 0,
+        exemptionApplies: t.metadata?.exemptionApplies || false,
+        saleDate: t.date,
+        notes: t.notes
+      }));
+  }, [transactions]);
 
   // Definir intervalo de datas baseado no filtro
   const dateInterval = useMemo(() => {
@@ -1427,3 +1411,4 @@ export function InvestmentIRReport({ className }: IRReportProps) {
     </div>
   );
 }
+

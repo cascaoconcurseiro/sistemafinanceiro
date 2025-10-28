@@ -1,0 +1,16 @@
+{
+  "name": "suagrana-security-dependencies",
+  "description": "Dependências de segurança necessárias",
+  "dependencies": {
+    "isomorphic-dompurify": "^2.9.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/dompurify": "^3.0.5"
+  },
+  "scripts": {
+    "security-audit": "npm audit --audit-level moderate",
+    "security-fix": "npm audit fix",
+    "security-check": "npm run security-audit && npm run type-check"
+  }
+}

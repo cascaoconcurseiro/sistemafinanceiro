@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { logComponents } from '../../lib/logger';
 import {
   Command,
   CommandEmpty,
@@ -9,10 +8,10 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from '../ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
-import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
+} from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   Check,
   ChevronsUpDown,
@@ -21,7 +20,7 @@ import {
   Globe,
   TrendingUp,
 } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { cn } from '@/lib/utils';
 import {
   ASSETS_DATABASE,
   searchAssets,
@@ -29,11 +28,11 @@ import {
   type AssetData,
   type AssetType,
   getAssetByTicker,
-} from '../../lib/data/assets-database';
+} from '@/lib/data/assets-database';
 import { toast } from 'sonner';
-import { Card, CardContent } from '../ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { useRef } from 'react';
-import { useSafeTheme } from '../../hooks/use-safe-theme';
+import { useSafeTheme } from '@/hooks/use-safe-theme';
 
 interface AssetAutocompleteProps {
   value?: string;
@@ -461,3 +460,4 @@ export function AssetAutocomplete({
     </div>
   );
 }
+

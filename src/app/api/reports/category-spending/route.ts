@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma';
+import jwt from 'jsonwebtoken';
 
-const prisma = new PrismaClient();
+const JWT_SECRET = process.env.JWT_SECRET || 'sua-grana-secret-key';
 
 // Cores para categorias
 const categoryColors = [
@@ -10,8 +11,33 @@ const categoryColors = [
   '#8B5A2B', '#7C3AED', '#059669', '#DC2626', '#9333EA'
 ];
 
+
+export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
+    // Autenticação obrigatória
+    const accessToken = request.cookies.get('access_token')?.value;
+    if (!accessToken) {
+      return NextResponse.json(
+        { success: false, error: 'Token de acesso requerido' },
+        { status: 401 }
+      );
+    }
+
+    let userId: string;
+    try {
+      const decoded = jwt.verify(accessToken, JWT_SECRET) as any;
+      userId = decoded.userId;
+      if (!userId) {
+        throw new Error('UserId não encontrado no token');
+      }
+    } catch (error) {
+      return NextResponse.json(
+        { success: false, error: 'Token inválido' },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
@@ -49,10 +75,11 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Buscar transações de despesa no período
+    // Buscar transações de despesa do usuário no período
     const expenseTransactions = await prisma.transaction.findMany({
       where: {
-        type: 'debit',
+        userId,
+        type: 'expense',
         date: {
           gte: calculatedStartDate,
           lte: calculatedEndDate,
@@ -60,6 +87,7 @@ export async function GET(request: NextRequest) {
       },
       include: {
         account: true,
+        categoryRef: true,
       },
     });
 
@@ -67,7 +95,7 @@ export async function GET(request: NextRequest) {
     const categorySpending: { [key: string]: { name: string; amount: number; count: number } } = {};
 
     expenseTransactions.forEach((transaction) => {
-      const categoryName = transaction.category || 'Sem Categoria';
+      const categoryName = transaction.categoryRef?.name || 'Sem Categoria';
       
       if (!categorySpending[categoryName]) {
         categorySpending[categoryName] = {
@@ -98,10 +126,11 @@ export async function GET(request: NextRequest) {
       }))
       .sort((a, b) => b.amount - a.amount); // Ordenar por valor decrescente
 
-    // Buscar também receitas para comparação
+    // Buscar também receitas do usuário para comparação
     const incomeTransactions = await prisma.transaction.findMany({
       where: {
-        type: 'credit',
+        userId,
+        type: 'income',
         date: {
           gte: calculatedStartDate,
           lte: calculatedEndDate,

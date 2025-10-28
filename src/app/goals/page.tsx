@@ -3,9 +3,9 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useState, useMemo } from 'react';
-import { type Goal } from '@/lib/data-layer/types';
-import { useGoals, useUnified } from '@/contexts/unified-context-simple';
-import { logError } from '@/lib/logger';
+import { type Goal } from '@/types';
+import { useGoals } from '@/contexts/unified-financial-context';
+import { useUnifiedFinancial } from '@/contexts/unified-financial-context';
 import {
   Card,
   CardContent,
@@ -84,18 +84,9 @@ import { GoalMoneyManager } from '@/components/goal-money-manager';
 
 const GoalsPage = () => {
   // Todos os hooks devem ser chamados no topo do componente, sempre na mesma ordem
-  const {
-    goals = [],
-    isLoading: goalsLoading,
-    refresh: refreshGoals,
-    create: createGoal,
-    update: updateGoal,
-    delete: deleteGoal,
-  } = useGoals();
-  
-  const { dashboardData } = useUnified();
-  
-  const isClient = useClientOnly();
+  const { data, isLoading: goalsLoading, actions } = useUnifiedFinancial();
+  const dashboard = data;
+  const goals = data?.goals || [];
   const [newGoalName, setNewGoalName] = useState('');
   const [newGoalTarget, setNewGoalTarget] = useState('');
   const [newGoalCategory, setNewGoalCategory] = useState('');
@@ -121,7 +112,9 @@ const GoalsPage = () => {
 
   // Funções auxiliares que são usadas nos hooks
   const getGoalStatus = (goal: Goal) => {
-    const progress = goal.target > 0 ? (goal.current / goal.target) * 100 : 0;
+    const targetAmount = Number(goal.targetAmount) || 0;
+    const currentAmount = Number(goal.currentAmount) || 0;
+    const progress = targetAmount > 0 ? (currentAmount / targetAmount) * 100 : 0;
     if (progress >= 100) return 'completed';
     if (progress >= 50) return 'in_progress';
     return 'not_started';
@@ -135,16 +128,17 @@ const GoalsPage = () => {
     if (goals.length > 0) {
       const totalGoals = goals.length;
       const completedGoals = goals.filter((goal) => {
-        const progress =
-          goal.target > 0 ? (goal.current / goal.target) * 100 : 0;
+        const targetAmount = Number(goal.targetAmount) || 0;
+        const currentAmount = Number(goal.currentAmount) || 0;
+        const progress = targetAmount > 0 ? (currentAmount / targetAmount) * 100 : 0;
         return progress >= 100;
       }).length;
       const totalTargetAmount = goals.reduce(
-        (sum, goal) => sum + goal.target,
+        (sum, goal) => sum + (Number(goal.targetAmount) || 0),
         0
       );
       const totalSavedAmount = goals.reduce(
-        (sum, goal) => sum + goal.current,
+        (sum, goal) => sum + (Number(goal.currentAmount) || 0),
         0
       );
       const averageProgress =
@@ -152,8 +146,9 @@ const GoalsPage = () => {
           ? (totalSavedAmount / totalTargetAmount) * 100
           : 0;
       const activeGoals = goals.filter((goal) => {
-        const progress =
-          goal.target > 0 ? (goal.current / goal.target) * 100 : 0;
+        const targetAmount = Number(goal.targetAmount) || 0;
+        const currentAmount = Number(goal.currentAmount) || 0;
+        const progress = targetAmount > 0 ? (currentAmount / targetAmount) * 100 : 0;
         return progress < 100;
       }).length;
 
@@ -170,7 +165,8 @@ const GoalsPage = () => {
 
   const filteredAndSortedGoals = useMemo(() => {
     let filtered = goals.filter((goal) => {
-      const matchesSearch = goal.name && goal.name
+      const goalName = goal.name || goal.title || '';
+      const matchesSearch = !searchTerm || goalName
         .toLowerCase()
         .includes(searchTerm.toLowerCase());
       const matchesCategory =
@@ -183,19 +179,23 @@ const GoalsPage = () => {
     filtered.sort((a, b) => {
       switch (sortBy) {
         case 'name':
-          return (a.name || '').localeCompare(b.name || '');
+          return (a.name || a.title || '').localeCompare(b.name || b.title || '');
         case 'target':
-          return b.target - a.target;
+          return (Number(b.targetAmount) || 0) - (Number(a.targetAmount) || 0);
         case 'progress':
-          const progressA = a.target > 0 ? (a.current / a.target) * 100 : 0;
-          const progressB = b.target > 0 ? (b.current / b.target) * 100 : 0;
+          const targetA = Number(a.targetAmount) || 0;
+          const currentA = Number(a.currentAmount) || 0;
+          const targetB = Number(b.targetAmount) || 0;
+          const currentB = Number(b.currentAmount) || 0;
+          const progressA = targetA > 0 ? (currentA / targetA) * 100 : 0;
+          const progressB = targetB > 0 ? (currentB / targetB) * 100 : 0;
           return progressB - progressA;
         case 'deadline':
-          if (!a.deadline && !b.deadline) return 0;
-          if (!a.deadline) return 1;
-          if (!b.deadline) return -1;
+          if (!a.targetDate && !b.targetDate) return 0;
+          if (!a.targetDate) return 1;
+          if (!b.targetDate) return -1;
           return (
-            new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
+            new Date(a.targetDate).getTime() - new Date(b.targetDate).getTime()
           );
         default:
           return 0;
@@ -207,7 +207,7 @@ const GoalsPage = () => {
 
   const goalStats = useMemo(() => {
     // Dados agora vêm da API via useUnified
-    const goalStatsData = dashboardData?.goalStats;
+    const goalStatsData = dashboard?.summary?.goalStats;
     
     const totalGoals = goals.length;
     const completedGoals = goals.filter(
@@ -228,22 +228,7 @@ const GoalsPage = () => {
     };
   }, [goals]);
 
-  // Early return após todos os hooks serem definidos
-  if (!isClient) {
-    return (
-      <ModernAppLayout
-        title="Metas Financeiras"
-        subtitle="Defina e acompanhe seus objetivos financeiros"
-      >
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p>Carregando dados financeiros...</p>
-          </div>
-        </div>
-      </ModernAppLayout>
-    );
-  }
+
 
   const categories = [
     { value: 'casa', label: 'Casa', icon: Home },
@@ -319,30 +304,64 @@ const GoalsPage = () => {
   };
 
   const handleCreateGoal = async () => {
+    console.log('🎯 [GoalsPage] handleCreateGoal chamado');
+    console.log('🎯 [GoalsPage] Dados:', { newGoalName, newGoalTarget, newGoalCategory });
+    
     if (!newGoalName || !newGoalTarget || !newGoalCategory) {
+      console.log('❌ [GoalsPage] Campos obrigatórios faltando');
       toast.error('Por favor, preencha todos os campos obrigatorios');
       return;
     }
 
     const target = parseFloat(newGoalTarget);
     if (isNaN(target) || target <= 0) {
+      console.log('❌ [GoalsPage] Valor inválido:', target);
       toast.error('O valor da meta deve ser um numero positivo');
       return;
     }
 
     try {
       const newGoalData = {
-        name: newGoalName,
-        target,
-        current: 0,
+        title: newGoalName,
+        targetAmount: target,
+        currentAmount: 0,
         category: newGoalCategory,
         priority: newGoalPriority as 'high' | 'medium' | 'low',
-        deadline: newGoalDeadline || undefined,
+        targetDate: newGoalDeadline || undefined,
         description: newGoalDescription || undefined,
         isCompleted: false,
       };
 
-      await createGoal(newGoalData);
+      console.log('🎯 [GoalsPage] Criando meta:', newGoalData);
+      
+      // Criar meta via API
+      const response = await fetch('/api/goals', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newGoalData.title,
+          description: newGoalData.description,
+          targetAmount: newGoalData.targetAmount,
+          currentAmount: 0,
+          deadline: newGoalData.targetDate,
+          priority: newGoalData.priority,
+          status: 'active',
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao criar meta');
+      }
+
+      console.log('✅ [GoalsPage] Meta criada com sucesso');
+      
+      // Recarregar dados
+      if (actions?.refresh) {
+        await actions.refresh();
+      }
+      
       setNewGoalName('');
       setNewGoalTarget('');
       setNewGoalCategory('');
@@ -352,38 +371,76 @@ const GoalsPage = () => {
       setShowCreateDialog(false);
       toast.success('Meta criada com sucesso!');
     } catch (error) {
-      logError.ui('Erro ao criar meta:', error);
-      toast.error('Erro ao criar meta');
+      console.error('❌ [GoalsPage] Erro ao criar meta:', error);
+      toast.error('Erro ao criar meta: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
     }
   };
 
   const handleDeleteGoal = async (goalId: string) => {
     try {
-      await deleteGoal(goalId);
+      const response = await fetch(`/api/goals/${goalId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao excluir meta');
+      }
+
       toast.success('Meta excluida com sucesso.');
+      
+      // Recarregar dados
+      if (actions?.refresh) {
+        await actions.refresh();
+      }
     } catch (error) {
-      logError.ui('Failed to delete goal:', error);
+      console.error('Failed to delete goal:', error);
       toast.error('Falha ao excluir meta. Tente novamente.');
+    }
+  };
+
+  const updateGoal = async (goalId: string, goalData: Partial<Goal>) => {
+    try {
+      const response = await fetch(`/api/goals/${goalId}`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: goalData.name,
+          description: goalData.description,
+          targetAmount: goalData.targetAmount || goalData.target,
+          currentAmount: goalData.currentAmount || goalData.current,
+          deadline: goalData.deadline,
+          priority: goalData.priority,
+          category: goalData.category,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao atualizar meta');
+      }
+
+      toast.success('Meta atualizada com sucesso!');
+      
+      // Recarregar dados
+      if (actions?.refresh) {
+        await actions.refresh();
+      }
+    } catch (error) {
+      console.error('Failed to update goal:', error);
+      throw error;
     }
   };
 
   return (
     <ModernAppLayout
       title="Metas Financeiras"
-      subtitle="Defina e acompanhe seus objetivos financeiros"
+      subtitle="Defina e acompanhe suas metas financeiras com controle avançado"
     >
       <div className="p-4 md:p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <BackButton />
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">
-                Metas Financeiras
-              </h1>
-              <p className="text-muted-foreground">
-                Defina e acompanhe suas metas financeiras com controle avancado
-              </p>
-            </div>
           </div>
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
@@ -503,8 +560,7 @@ const GoalsPage = () => {
         </div>
 
         {/* Quick Stats */}
-        {isClient ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
@@ -554,10 +610,17 @@ const GoalsPage = () => {
                         minimumFractionDigits: 2,
                       })}
                     </p>
-                    <Progress
-                      value={stats.averageProgress}
-                      className="mt-2 w-20"
-                    />
+                    {stats.averageProgress > 0 && (
+                      <Progress
+                        value={stats.averageProgress}
+                        className="mt-2 w-20"
+                      />
+                    )}
+                    {stats.averageProgress === 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Comece a poupar!
+                      </p>
+                    )}
                   </div>
                   <TrendingUp className="h-8 w-8 text-purple-600" />
                 </div>
@@ -582,39 +645,7 @@ const GoalsPage = () => {
                 </div>
               </CardContent>
             </Card>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-center h-16">
-                  <div className="animate-pulse bg-gray-200 h-4 w-24 rounded"></div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-center h-16">
-                  <div className="animate-pulse bg-gray-200 h-4 w-24 rounded"></div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-center h-16">
-                  <div className="animate-pulse bg-gray-200 h-4 w-24 rounded"></div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-center h-16">
-                  <div className="animate-pulse bg-gray-200 h-4 w-24 rounded"></div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+        </div>
 
         {/* Filtros e Busca */}
         <Card>
@@ -711,8 +742,9 @@ const GoalsPage = () => {
             </Card>
           ) : (
             filteredAndSortedGoals.map((goal) => {
-              const progress =
-                goal.target > 0 ? (goal.current / goal.target) * 100 : 0;
+              const targetAmount = goal.targetAmount || goal.target || 0;
+              const currentAmount = goal.currentAmount || goal.current || 0;
+              const progress = targetAmount > 0 ? (currentAmount / targetAmount) * 100 : 0;
               const status = getGoalStatus(goal);
               const StatusIcon = getStatusIcon(status);
               const CategoryIcon = getCategoryIcon(goal.category || 'outros');
@@ -820,13 +852,13 @@ const GoalsPage = () => {
                       />
                       <div className="flex justify-between text-xs text-muted-foreground">
                         <span>
-                          {goal.current.toLocaleString('pt-BR', {
+                          {(goal.currentAmount || goal.current || 0).toLocaleString('pt-BR', {
                             style: 'currency',
                             currency: 'BRL',
                           })}
                         </span>
                         <span>
-                          {goal.target.toLocaleString('pt-BR', {
+                          {(goal.targetAmount || goal.target || 0).toLocaleString('pt-BR', {
                             style: 'currency',
                             currency: 'BRL',
                           })}
@@ -868,7 +900,7 @@ const GoalsPage = () => {
                         <Calendar className="h-3 w-3" />
                         <span>
                           Prazo:{' '}
-                          {new Date(goal.deadline).toLocaleDateString('pt-BR')}
+                          {new Date(goal.deadline + 'T12:00:00').toLocaleDateString('pt-BR')}
                         </span>
                       </div>
                     )}
@@ -877,12 +909,12 @@ const GoalsPage = () => {
                       <span className="text-muted-foreground">Restante:</span>
                       <span
                         className={`font-medium ${
-                          goal.current >= goal.target
+                          (goal.currentAmount || goal.current || 0) >= (goal.targetAmount || goal.target || 0)
                             ? 'text-green-600'
                             : 'text-orange-600'
                         }`}
                       >
-                        {Math.max(0, goal.target - goal.current).toLocaleString(
+                        {Math.max(0, (goal.targetAmount || goal.target || 0) - (goal.currentAmount || goal.current || 0)).toLocaleString(
                           'pt-BR',
                           {
                             style: 'currency',
@@ -930,7 +962,7 @@ const GoalsPage = () => {
                       id="editGoalTarget"
                       type="number"
                       placeholder="10000"
-                      value={editingGoal.target.toString()}
+                      value={(editingGoal.target || editingGoal.targetAmount || 0).toString()}
                       onChange={(e) =>
                         setEditingGoal({
                           ...editingGoal,
@@ -1034,7 +1066,7 @@ const GoalsPage = () => {
                       await updateGoal(editingGoal.id, editingGoal);
                       setEditingGoal(null);
                     } catch (error) {
-                      logError.ui('Erro ao atualizar meta:', error);
+                      console.error('Erro ao atualizar meta:', error);
                       toast.error('Erro ao atualizar meta');
                     }
                   }}

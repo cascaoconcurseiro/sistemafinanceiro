@@ -1,0 +1,236 @@
+// ============================================
+// SCHEMA COMPLETO DE INVESTIMENTOS
+// Adicionar ao schema.prisma principal
+// ============================================
+
+// ✅ JÁ EXISTE NO SCHEMA - Apenas documentando
+model Investment {
+  id            String    @id @default(cuid())
+  userId        String    @map("user_id")
+  
+  // Dados Básicos
+  ticker        String    // PETR4, HGLG11, Tesouro Selic
+  name          String    // Nome completo
+  symbol        String?   // Símbolo alternativo
+  type          String    // FIXED_INCOME, STOCK, REIT, CRYPTO, INTERNATIONAL, PENSION, OTHER
+  category      String?   // Subcategoria específica
+  
+  // Quantidade e Valores
+  quantity      Decimal   // Ações, cotas, valor aplicado
+  averagePrice  Decimal   @map("average_price")
+  purchasePrice Decimal   @map("purchase_price")
+  currentPrice  Decimal?  @map("current_price")
+  totalInvested Decimal   @map("total_invested")
+  currentValue  Decimal   @default(0) @map("current_value")
+  
+  // Custos
+  brokerageFee  Decimal   @default(0) @map("brokerage_fee")
+  otherFees     Decimal   @default(0) @map("other_fees")
+  fees          Decimal   @default(0)
+  
+  // Rentabilidade
+  profitLoss        Decimal @default(0) @map("profit_loss")
+  profitLossPercent Decimal @default(0) @map("profit_loss_percent")
+  
+  // Renda Fixa Específico
+  interestRate  Decimal?  @map("interest_rate")
+  indexer       String?   // CDI, IPCA, Prefixado
+  maturityDate  DateTime? @map("maturity_date")
+  liquidity     String?   // Diária, No vencimento
+  
+  // Dividendos
+  lastDividend      Decimal?  @map("last_dividend")
+  lastDividendDate  DateTime? @map("last_dividend_date")
+  dividendYield     Decimal?  @map("dividend_yield")
+  
+  // Metadados
+  broker        String?
+  purchaseDate  DateTime  @map("purchase_date")
+  notes         String?
+  status        String    @default("active")
+  
+  // Auditoria
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  // Relacionamentos
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  dividends    Dividend[]
+  priceHistory InvestmentPriceHistory[]
+
+  @@index([userId, status])
+  @@index([type, status])
+  @@map("investments")
+}
+
+// ✅ JÁ EXISTE NO SCHEMA
+model Dividend {
+  id            String    @id @default(cuid())
+  investmentId  String    @map("investment_id")
+  userId        String    @map("user_id")
+  
+  type          String    // DIVIDEND, JCP, INCOME, INTEREST
+  grossAmount   Decimal   @map("gross_amount")
+  taxAmount     Decimal   @default(0) @map("tax_amount")
+  netAmount     Decimal   @map("net_amount")
+  
+  paymentDate   DateTime  @map("payment_date")
+  exDate        DateTime? @map("ex_date")
+  
+  description   String?
+  notes         String?
+  
+  investment    Investment @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  user          User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([userId, paymentDate])
+  @@index([investmentId])
+  @@map("dividends")
+}
+
+// ✅ JÁ EXISTE NO SCHEMA
+model InvestmentPriceHistory {
+  id            String     @id @default(cuid())
+  investmentId  String     @map("investment_id")
+  userId        String     @map("user_id")
+  
+  date          DateTime
+  price         Decimal
+  source        String?    // manual, api, import
+  
+  investment    Investment @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  
+  createdAt     DateTime   @default(now()) @map("created_at")
+
+  @@index([investmentId, date])
+  @@map("investment_price_history")
+}
+
+// ✅ JÁ EXISTE NO SCHEMA
+model InvestmentGoal {
+  id                  String   @id @default(cuid())
+  userId              String   @map("user_id")
+  
+  name                String
+  targetAmount        Decimal  @map("target_amount")
+  currentAmount       Decimal  @default(0) @map("current_amount")
+  deadline            DateTime
+  
+  monthlyContribution Decimal  @map("monthly_contribution")
+  expectedReturn      Decimal  @map("expected_return")
+  riskProfile         String   @map("risk_profile")
+  
+  fixedIncomePercent  Int      @map("fixed_income_percent")
+  stocksPercent       Int      @map("stocks_percent")
+  reitsPercent        Int      @map("reits_percent")
+  cryptoPercent       Int      @default(0) @map("crypto_percent")
+  internationalPercent Int     @default(0) @map("international_percent")
+  
+  status              String   @default("active")
+  priority            Int      @default(0)
+  
+  description         String?
+  notes               String?
+  
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@index([userId, status])
+  @@map("investment_goals")
+}
+
+// ✅ JÁ EXISTE NO SCHEMA
+model InvestmentEvent {
+  id            String    @id @default(cuid())
+  userId        String    @map("user_id")
+  investmentId  String?   @map("investment_id")
+  
+  type          String    // DIVIDEND, MATURITY, TAX_DUE, REBALANCE, PRICE_ALERT
+  title         String
+  description   String?
+  amount        Decimal?
+  date          DateTime
+  
+  status        String    @default("pending")
+  notified      Boolean   @default(false)
+  notifiedAt    DateTime? @map("notified_at")
+  
+  metadata      String?
+  
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([userId, date, status])
+  @@map("investment_events")
+}
+
+// ============================================
+// ENUMS (TypeScript - não no Prisma SQLite)
+// ============================================
+
+/*
+export enum InvestmentType {
+  FIXED_INCOME = 'FIXED_INCOME',      // Renda Fixa
+  STOCK = 'STOCK',                    // Ações
+  REIT = 'REIT',                      // FIIs
+  CRYPTO = 'CRYPTO',                  // Criptomoedas
+  INTERNATIONAL = 'INTERNATIONAL',    // Internacional
+  PENSION = 'PENSION',                // Previdência
+  OTHER = 'OTHER'                     // Outros
+}
+
+export enum InvestmentCategory {
+  // Renda Fixa
+  TESOURO_DIRETO = 'TESOURO_DIRETO',
+  CDB = 'CDB',
+  LCI_LCA = 'LCI_LCA',
+  DEBENTURE = 'DEBENTURE',
+  
+  // Ações
+  STOCK_BR = 'STOCK_BR',
+  STOCK_US = 'STOCK_US',
+  ETF = 'ETF',
+  
+  // FIIs
+  REIT_LOGISTIC = 'REIT_LOGISTIC',
+  REIT_COMMERCIAL = 'REIT_COMMERCIAL',
+  REIT_RESIDENTIAL = 'REIT_RESIDENTIAL',
+  REIT_PAPER = 'REIT_PAPER',
+  
+  // Cripto
+  BITCOIN = 'BITCOIN',
+  ETHEREUM = 'ETHEREUM',
+  OTHER_CRYPTO = 'OTHER_CRYPTO',
+  
+  // Outros
+  PENSION_PGBL = 'PENSION_PGBL',
+  PENSION_VGBL = 'PENSION_VGBL',
+  OTHER = 'OTHER'
+}
+
+export enum DividendType {
+  DIVIDEND = 'DIVIDEND',    // Dividendo
+  JCP = 'JCP',              // Juros sobre Capital Próprio
+  INCOME = 'INCOME',        // Rendimento (FIIs)
+  INTEREST = 'INTEREST'     // Juros (Renda Fixa)
+}
+
+export enum RiskProfile {
+  CONSERVATIVE = 'CONSERVATIVE',  // Conservador
+  MODERATE = 'MODERATE',          // Moderado
+  AGGRESSIVE = 'AGGRESSIVE'       // Arrojado
+}
+
+export enum InvestmentEventType {
+  DIVIDEND = 'DIVIDEND',          // Pagamento de dividendo
+  MATURITY = 'MATURITY',          // Vencimento
+  TAX_DUE = 'TAX_DUE',           // IR a pagar
+  REBALANCE = 'REBALANCE',       // Rebalanceamento
+  PRICE_ALERT = 'PRICE_ALERT'    // Alerta de preço
+}
+*/

@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoalNotificationService } from '@/lib/notifications/goal-notifications';
+import { authenticateRequest } from '@/lib/utils/auth-helpers';
 
 // POST - Check goal deadlines and create notifications
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
-    await GoalNotificationService.checkGoalDeadlines();
+    // ✅ CORREÇÃO CRÍTICA: Adicionar autenticação
+    const auth = await authenticateRequest(request);
+    if (!auth.success || !auth.userId) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    }
+
+    // ✅ CORREÇÃO CRÍTICA: Verificar prazos apenas para o usuário autenticado
+    await GoalNotificationService.checkGoalDeadlines(auth.userId);
 
     return NextResponse.json({ 
       message: 'Verificação de prazos das metas concluída com sucesso' 

@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { logComponents } from '../../lib/logger';
 import { Button } from './button';
 import {
   Card,
@@ -22,9 +21,9 @@ import {
   Calendar,
   DollarSign,
 } from 'lucide-react';
-import { smartSuggestions } from '../../lib/smart-suggestions';
-import { useTransactions } from '../../contexts/unified-context-simple';
-import { toast } from '../../hooks/use-toast';
+import { smartSuggestions } from '@/lib/smart-suggestions';
+import { useTransactions } from '@/contexts/unified-financial-context';
+import { toast } from '@/hooks/use-toast';
 
 interface RecurringPattern {
   pattern: string;

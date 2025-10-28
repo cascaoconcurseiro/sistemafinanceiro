@@ -5,7 +5,6 @@
  * e configure todas as proteções necessárias.
  */
 
-import { auditLogger } from '../audit/audit-logger';
 import { eventBus } from '../events/event-bus';
 import { clientDatabaseAdapter } from '../database/client-database-adapter';
 
@@ -61,13 +60,11 @@ class SystemInitializer {
       this.setupSecurityInterceptors();
       
       // 5. Registrar inicialização no banco
-      await auditLogger.logSystemEvent({
+      console.log('Sistema inicializado:', {
         event: 'system_initialization',
         message: `Sistema inicializado com sucesso. ${clearedItems} itens de cache removidos.`,
-        metadata: {
-          timestamp: new Date().toISOString(),
-          clearedItems
-        }
+        timestamp: new Date().toISOString(),
+        clearedItems
       });
 
       this.isInitialized = true;
@@ -170,13 +167,11 @@ class SystemInitializer {
       if (url.includes('storage') || url.includes('cache')) {
         console.warn('🔍 Tentativa de acesso a storage interceptada:', url);
         
-        await auditLogger.logSystemEvent({
+        console.log('Tentativa de acesso a storage:', {
           event: 'storage_access_attempt',
           message: `Tentativa de acesso a storage: ${url}`,
-          metadata: {
-            url,
-            timestamp: new Date().toISOString()
-          }
+          url,
+          timestamp: new Date().toISOString()
         });
       }
       

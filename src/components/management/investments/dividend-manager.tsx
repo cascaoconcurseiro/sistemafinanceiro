@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import { generateStableId } from '../../../lib/utils/stable-id';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
-import { Label } from '../../ui/label';
-import { Badge } from '../../ui/badge';
-import { DatePicker } from '../../ui/date-picker';
+import { generateStableId } from '@/lib/utils/stable-id';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { DatePicker } from '@/components/ui/date-picker';
 import { Calendar, DollarSign, TrendingUp } from 'lucide-react';
 
 interface Dividend {
@@ -130,7 +130,7 @@ export function DividendManager({
                   <Badge variant="outline">{dividend.symbol}</Badge>
                   <div className="flex items-center gap-1 text-sm text-muted-foreground">
                     <Calendar className="h-3 w-3" />
-                    {new Date(dividend.date).toLocaleDateString('pt-BR')}
+                    {new Date(dividend.date + 'T12:00:00').toLocaleDateString('pt-BR')}
                   </div>
                 </div>
                 <div className="text-right">

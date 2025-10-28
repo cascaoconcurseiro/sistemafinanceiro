@@ -91,7 +91,6 @@ export default function AppearancePage() {
   return (
     <ModernAppLayout
       title="Aparência"
-      subtitle="Personalize a interface e experiência visual do sistema"
     >
       <div className="p-4 md:p-6 max-w-4xl mx-auto">
         <div className="grid gap-6">

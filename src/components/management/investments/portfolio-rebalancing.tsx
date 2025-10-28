@@ -6,15 +6,15 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '../../ui/dialog';
-import { Button } from '../../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
-import { Progress } from '../../ui/progress';
-import { Badge } from '../../ui/badge';
-import { Input } from '../../ui/input';
-import { Label } from '../../ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
-import { Alert, AlertDescription } from '../../ui/alert';
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   TrendingUp,
   TrendingDown,
@@ -24,7 +24,7 @@ import {
   BarChart3,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useUnified } from '../../../contexts/unified-context-simple';
+import { useUnifiedFinancial } from '@/contexts/unified-financial-context';
 
 interface PortfolioRebalancingProps {
   open: boolean;
@@ -72,7 +72,10 @@ export function PortfolioRebalancing({
   open,
   onOpenChange,
 }: PortfolioRebalancingProps) {
-  const { accounts, transactions, balances } = useUnified();
+  const { data, isLoading } = useUnifiedFinancial();
+  const accounts = data?.accounts || [];
+  const transactions = data?.transactions || [];
+  const balances = data?.balances;
   const [targets, setTargets] = useState(DEFAULT_TARGETS);
   const [customTargets, setCustomTargets] = useState<Record<string, number>>(
     {}

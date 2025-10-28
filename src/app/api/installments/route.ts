@@ -1,170 +1,132 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
-import { broadcastEvent } from '@/app/api/events/route'
-import { logTransactionAudit, recalculateAccountBalance } from '@/lib/transaction-audit'
+import { NextRequest, NextResponse } from 'next/server';
+import { FinancialOperationsService } from '@/lib/services/financial-operations-service';
+import { InstallmentSchema, validateOrThrow } from '@/lib/validation/schemas';
+import { authenticateRequest } from '@/lib/utils/auth-helpers';
+import { z } from 'zod';
 
-const prisma = new PrismaClient()
-
-interface CreateInstallmentData {
-  accountId: string
-  amount: number
-  description: string
-  category: string
-  type: 'debit' | 'credit'
-  totalInstallments: number
-  startDate: string
-  status?: 'pending' | 'cleared'
-}
-
-export async function POST(request: NextRequest) {
+/**
+ * GET /api/installments
+ * Lista todas as parcelas do usuário
+ */
+export async function GET(request: NextRequest) {
   try {
-    const installmentData: CreateInstallmentData = await request.json()
-
-    // Validar dados básicos
-    if (!installmentData.accountId || !installmentData.amount || !installmentData.description || 
-        !installmentData.totalInstallments || installmentData.totalInstallments < 2) {
-      return NextResponse.json(
-        { error: 'Dados inválidos para parcelamento' },
-        { status: 400 }
-      )
+    const auth = await authenticateRequest(request);
+    if (!auth.success || !auth.userId) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
     }
 
-    // Calcular valor das parcelas com arredondamento adequado
-    const baseInstallmentAmount = Math.round((installmentData.amount / installmentData.totalInstallments) * 100) / 100
-    const startDate = new Date(installmentData.startDate)
-    const transactions = []
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get('status');
+    const transactionId = searchParams.get('transactionId');
 
-    // Criar transação dentro de uma transação do Prisma
-    const result = await prisma.$transaction(async (tx) => {
-      // Criar transação mãe
-      const parentTransaction = await tx.transaction.create({
-        data: {
-          accountId: installmentData.accountId,
-          amount: installmentData.amount,
-          description: `${installmentData.description} (Parcelado ${installmentData.totalInstallments}x)`,
-          category: installmentData.category,
-          type: installmentData.type,
-          date: startDate,
-          status: 'pending',
-          isRecurring: false,
-          totalInstallments: installmentData.totalInstallments,
-          installmentNumber: 0 // Transação mãe tem número 0
-        }
-      })
+    const { prisma } = await import('@/lib/prisma');
+    
+    const where: any = { userId: auth.userId };
+    if (status) where.status = status;
+    if (transactionId) where.transactionId = transactionId;
 
-      // Criar transações filhas (parcelas)
-      for (let i = 1; i <= installmentData.totalInstallments; i++) {
-        const installmentDate = new Date(startDate)
-        installmentDate.setMonth(installmentDate.getMonth() + (i - 1))
+    const installments = await prisma.installment.findMany({
+      where,
+      orderBy: [{ dueDate: 'asc' }, { installmentNumber: 'asc' }],
+      include: {
+        transaction: {
+          select: {
+            id: true,
+            description: true,
+            type: true,
+            accountId: true,
+            creditCardId: true,
+          },
+        },
+      },
+    });
 
-        // Ajustar a última parcela para compensar diferenças de arredondamento
-        const installmentAmount = i === installmentData.totalInstallments 
-          ? installmentData.amount - (baseInstallmentAmount * (installmentData.totalInstallments - 1))
-          : baseInstallmentAmount
-
-        const childTransaction = await tx.transaction.create({
-          data: {
-            accountId: installmentData.accountId,
-            amount: installmentAmount,
-            description: `${installmentData.description} (${i}/${installmentData.totalInstallments})`,
-            category: installmentData.category,
-            type: installmentData.type,
-            date: installmentDate,
-            status: i === 1 ? (installmentData.status || 'cleared') : 'pending',
-            isRecurring: false,
-            parentTransactionId: parentTransaction.id,
-            installmentNumber: i,
-            totalInstallments: installmentData.totalInstallments
-          }
-        })
-
-        transactions.push(childTransaction)
-
-        // Se é a primeira parcela e está cleared, atualizar saldo
-        if (i === 1 && childTransaction.status === 'cleared') {
-          await recalculateAccountBalance(installmentData.accountId, tx)
-        }
-      }
-
-      // Log de auditoria
-      await logTransactionAudit(parentTransaction.id, 'CREATE', 'system', tx)
-
-      return {
-        parentTransaction,
-        installments: transactions
-      }
-    })
-
-    // Broadcast do evento
-    broadcastEvent('transaction_created', {
-      transaction: result.parentTransaction,
-      installments: result.installments
-    })
-
-    return NextResponse.json(result)
-
+    return NextResponse.json({
+      success: true,
+      installments: installments.map(i => ({
+        ...i,
+        amount: Number(i.amount),
+      })),
+    });
   } catch (error) {
-    console.error('Erro ao criar parcelamento:', error)
+    console.error('❌ [API Installments GET] Erro:', error);
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
+      { error: 'Erro ao buscar parcelas' },
       { status: 500 }
-    )
+    );
   }
 }
 
-export async function GET(request: NextRequest) {
+/**
+ * POST /api/installments
+ * Cria parcelas para uma transação com atomicidade garantida
+ */
+export async function POST(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const accountId = searchParams.get('accountId')
-
-    const where: any = {
-      deletedAt: null,
-      parentTransactionId: null, // Apenas transações mãe
-      totalInstallments: { gt: 1 }
+    const auth = await authenticateRequest(request);
+    if (!auth.success || !auth.userId) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
     }
 
-    if (accountId) {
-      where.accountId = accountId
-    }
+    const body = await request.json();
+    console.log('📦 [API Installments POST] Criando parcelas:', body);
 
-    const installments = await prisma.transaction.findMany({
-      where,
-      include: {
-        account: {
-          select: {
-            name: true,
-            type: true
-          }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
-    })
-
-    // Para cada transação mãe, buscar as parcelas filhas
-    const installmentsWithChildren = await Promise.all(
-      installments.map(async (parent) => {
-        const childTransactions = await prisma.transaction.findMany({
-          where: {
-            parentTransactionId: parent.id,
-            deletedAt: null
+    // ✅ VALIDAÇÃO COM ZOD
+    try {
+      validateOrThrow(InstallmentSchema, body);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return NextResponse.json(
+          {
+            error: 'Dados inválidos',
+            details: error.errors.map(e => `${e.path.join('.')}: ${e.message}`),
           },
-          orderBy: { installmentNumber: 'asc' }
-        })
+          { status: 400 }
+        );
+      }
+      throw error;
+    }
 
-        return {
-          ...parent,
-          childTransactions
-        }
-      })
-    )
+    // ✅ PREPARAR DADOS
+    const installmentData = {
+      ...body,
+      userId: auth.userId,
+      startDate: new Date(body.startDate || body.date),
+      amount: Math.abs(Number(body.amount)),
+    };
 
-    return NextResponse.json(installmentsWithChildren)
+    // ✅ USAR SERVIÇO FINANCEIRO
+    const service = new FinancialOperationsService();
+    const installments = await service.createInstallments(
+      installmentData,
+      auth.userId
+    );
 
+    console.log(`✅ [API Installments POST] ${installments.length} parcelas criadas`);
+
+    return NextResponse.json({
+      success: true,
+      message: `${installments.length} parcelas criadas com sucesso`,
+      installments: installments.map(i => ({
+        ...i,
+        amount: Number(i.amount),
+      })),
+    });
   } catch (error) {
-    console.error('Erro ao buscar parcelamentos:', error)
+    console.error('❌ [API Installments POST] Erro:', error);
+
+    if (error instanceof Error) {
+      if (error.message.includes('não encontrada')) {
+        return NextResponse.json({ error: error.message }, { status: 404 });
+      }
+      if (error.message.includes('Saldo insuficiente')) {
+        return NextResponse.json({ error: error.message }, { status: 400 });
+      }
+    }
+
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
+      { error: 'Erro ao criar parcelas' },
       { status: 500 }
-    )
+    );
   }
 }
