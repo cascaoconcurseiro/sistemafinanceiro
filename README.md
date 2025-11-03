@@ -1,250 +1,180 @@
-# 💰 SuaGrana - Sistema de Controle Financeiro Pessoal
+# Sistema Financeiro SuaGrana
 
-[![Status](https://img.shields.io/badge/Status-75%25%20Completo-blue)](.)
-[![Version](https://img.shields.io/badge/Version-2.0.0-green)](.)
-[![License](https://img.shields.io/badge/License-MIT-yellow)](.)
+Um sistema completo de gestão financeira pessoal com funcionalidades avançadas para controle de despesas, viagens e compartilhamento de gastos.
 
-**Sistema completo de gestão financeira pessoal com funcionalidades avançadas**
+## 🚀 Funcionalidades Principais
 
----
+### 💰 Gestão Financeira
+- **Controle de Contas**: Gerenciamento de múltiplas contas bancárias e cartões
+- **Transações**: Registro completo de receitas e despesas
+- **Categorização**: Sistema inteligente de categorização automática
+- **Parcelamento**: Controle de compras parceladas e prestações
+- **Cartão de Crédito**: Gestão de faturas e limites
 
-## 🚀 Início Rápido (5 minutos)
+### 👥 Despesas Compartilhadas
+- **Divisão de Gastos**: Compartilhamento de despesas entre usuários
+- **Cálculo Automático**: Divisão proporcional ou igualitária
+- **Controle de Dívidas**: Acompanhamento de valores a pagar/receber
+- **Notificações**: Alertas de pagamentos pendentes
 
+### ✈️ Gestão de Viagens
+- **Planejamento**: Criação e organização de viagens
+- **Orçamento**: Controle de gastos por viagem
+- **Participantes**: Gestão de viajantes e divisão de custos
+- **Relatórios**: Análise detalhada dos gastos por viagem
+
+### 📊 Relatórios e Análises
+- **Dashboard**: Visão geral da situação financeira
+- **Gráficos**: Análises visuais de gastos e receitas
+- **Exportação**: Relatórios em diversos formatos
+- **Histórico**: Acompanhamento temporal das finanças
+
+## 🛠️ Tecnologias Utilizadas
+
+### Frontend
+- **Next.js 14** - Framework React com App Router
+- **TypeScript** - Tipagem estática
+- **Tailwind CSS** - Estilização utilitária
+- **Shadcn/ui** - Componentes de interface
+- **React Query** - Gerenciamento de estado servidor
+
+### Backend
+- **Next.js API Routes** - API REST integrada
+- **Prisma** - ORM para banco de dados
+- **SQLite** - Banco de dados (desenvolvimento)
+- **NextAuth.js** - Autenticação e autorização
+
+### Ferramentas de Desenvolvimento
+- **ESLint** - Linting de código
+- **Prettier** - Formatação de código
+- **Jest** - Testes unitários
+- **Playwright** - Testes end-to-end
+
+## 🚀 Como Executar
+
+### Pré-requisitos
+- Node.js 18+ 
+- npm ou yarn
+
+### Instalação
+
+1. **Clone o repositório**
 ```bash
-# 1. Instalar dependências
+git clone https://github.com/cascaoconcurseiro/sistemafinanceiro.git
+cd sistemafinanceiro
+```
+
+2. **Instale as dependências**
+```bash
 npm install
+```
 
-# 2. Configurar banco de dados
+3. **Configure as variáveis de ambiente**
+```bash
+cp .env.example .env
+```
+
+4. **Configure o banco de dados**
+```bash
 npx prisma generate
-npx prisma migrate dev
+npx prisma db push
+```
 
-# 3. Iniciar servidor
+5. **Execute o projeto**
+```bash
 npm run dev
+```
 
-# 4. Acessar aplicação
+6. **Acesse a aplicação**
+```
 http://localhost:3000
 ```
 
-**Pronto!** Agora leia o [SUMARIO_EXECUTIVO.md](SUMARIO_EXECUTIVO.md) para entender o projeto.
-
----
-
-## 📚 Documentação
-
-### 🎯 Comece Aqui
-1. **[SUMARIO_EXECUTIVO.md](SUMARIO_EXECUTIVO.md)** ⭐ - Resumo de 1 página
-2. **[GUIA_TESTES_RAPIDOS.md](GUIA_TESTES_RAPIDOS.md)** - Teste em 30 minutos
-3. **[COMANDOS_UTEIS.md](COMANDOS_UTEIS.md)** - Comandos do dia a dia
-
-### 📖 Documentação Completa
-- **[INDEX_COMPLETO.md](INDEX_COMPLETO.md)** - Lista de todos os arquivos
-- **[INDICE_DOCUMENTACAO.md](INDICE_DOCUMENTACAO.md)** - Índice navegável
-- **[RESUMO_EXECUTIVO_FINAL.md](RESUMO_EXECUTIVO_FINAL.md)** - Resumo completo
-
----
-
-## ✨ Funcionalidades
-
-### 💳 Transações
-- ✅ Parcelamento (2-60 parcelas)
-- ✅ Despesas compartilhadas
-- ✅ Transferências entre contas
-- ✅ Transações recorrentes
-- ✅ Múltiplas moedas
-- ✅ Tags e anexos
-
-### 💰 Gestão
-- ✅ Orçamentos por categoria
-- ✅ Alertas automáticos
-- ✅ Reconciliação bancária
-- ✅ Cálculo de saldos
-
-### 📊 Análises
-- ✅ Tendências de gastos
-- ✅ Previsão de saldo
-- ✅ Alertas de saldo negativo
-
-### 🤖 Automação
-- ✅ Geração de recorrências
-- ✅ Verificação de vencimentos
-- ✅ Detecção de fraudes
-- ✅ Backup automático
-
----
-
-## 📱 Páginas
-
-- `/` - Dashboard
-- `/transactions` - Transações
-- `/accounts` - Contas
-- `/reconciliation` - Reconciliação ⭐ NOVO
-- `/budgets` - Orçamentos ⭐ NOVO
-- `/analytics` - Análises ⭐ NOVO
-- `/recurring` - Recorrentes ⭐ NOVO
-
----
-
-## 🏗️ Tecnologias
-
-- **Frontend**: Next.js 14, React, TypeScript, Tailwind CSS
-- **Backend**: Next.js API Routes, Prisma ORM
-- **Database**: SQLite (dev) / PostgreSQL (prod)
-- **Auth**: NextAuth.js
-- **UI**: Radix UI, Shadcn/ui
-
----
-
-## 📊 Status
-
-```
-Backend:        ████████████ 100% ✅
-Frontend:       ████████████ 100% ✅
-Integração:     ████████████ 100% ✅
-Testing:        ████████████ 100% ✅
-Deploy:         ████████████ 100% ✅
-
-TOTAL:          ████████████ 100% 🎉
-```
-
-**Status**: PRONTO PARA PRODUÇÃO! 🚀
-
----
-
-## 🧪 Testes
-
-### Executar Testes
+### Scripts Disponíveis
 
 ```bash
-# Instalar dependências de teste
-npm install -D vitest @vitejs/plugin-react @testing-library/react @testing-library/jest-dom jsdom
+# Desenvolvimento
+npm run dev
 
-# Executar todos os testes
+# Build para produção
+npm run build
+
+# Executar em produção
+npm start
+
+# Testes
 npm test
 
-# Executar em watch mode
-npm test -- --watch
+# Linting
+npm run lint
 
-# Executar com coverage
-npm test -- --coverage
+# Formatação
+npm run format
 ```
 
-### Testes Disponíveis
-- ✅ ValidationService (8 testes)
-- ✅ BudgetService (3 testes)
-- ✅ TransactionService (5 testes)
-
-### Testar APIs
-- Usar arquivo `test-apis.http` com Thunder Client
-- Seguir `GUIA_TESTES_RAPIDOS.md`
-
----
-
-## 📦 Estrutura
+## 📁 Estrutura do Projeto
 
 ```
 src/
-├── app/                # Next.js App Router
-│   ├── (authenticated)/# Páginas autenticadas
-│   └── api/           # API Routes
-├── components/        # Componentes React
-│   └── ui/           # Componentes UI
-├── lib/              # Bibliotecas
-│   ├── services/     # Services (14)
-│   └── jobs/         # Jobs (7)
-└── hooks/            # React Hooks (3)
+├── app/                    # App Router (Next.js 14)
+│   ├── api/               # API Routes
+│   ├── auth/              # Páginas de autenticação
+│   ├── dashboard/         # Dashboard principal
+│   └── ...
+├── components/            # Componentes React
+│   ├── ui/               # Componentes base (Shadcn)
+│   ├── features/         # Componentes de funcionalidades
+│   └── layout/           # Componentes de layout
+├── lib/                  # Utilitários e configurações
+│   ├── services/         # Serviços de negócio
+│   ├── utils/           # Funções utilitárias
+│   └── validation/      # Schemas de validação
+├── hooks/               # Custom hooks
+└── contexts/           # Contextos React
 ```
 
----
+## 🔧 Configuração
 
-## 🎯 Próximos Passos
+### Banco de Dados
+O projeto utiliza Prisma como ORM. Para configurar:
 
-1. **Hoje**: Testar funcionalidades
-2. **Esta Semana**: Implementar testes
-3. **Próxima Semana**: Deploy
+1. Configure a `DATABASE_URL` no arquivo `.env`
+2. Execute as migrações: `npx prisma db push`
+3. (Opcional) Popule dados iniciais: `npm run seed`
 
-Ver [PROXIMOS_PASSOS.md](PROXIMOS_PASSOS.md) para detalhes.
+### Autenticação
+Configure as variáveis de ambiente para NextAuth.js:
+- `NEXTAUTH_SECRET`
+- `NEXTAUTH_URL`
 
----
+## 📖 Documentação
 
-## 📞 Suporte
+A documentação detalhada está disponível na pasta `docs/`:
 
-**Dúvidas?**
-- Ver [INDICE_DOCUMENTACAO.md](INDICE_DOCUMENTACAO.md)
-- Consultar [GUIA_USO_SERVICES.md](GUIA_USO_SERVICES.md)
-- Testar com [test-apis.http](test-apis.http)
+- [Guia de Funcionalidades](docs/GUIA-RAPIDO-NOVAS-FUNCIONALIDADES.md)
+- [Arquitetura do Sistema](docs/ARQUITETURA-SISTEMA-INTERLIGADO.md)
+- [Fluxo Contábil](docs/FLUXO-CONTABIL-PARCELAS.md)
 
-**Problemas?**
-- Ver [COMANDOS_UTEIS.md](COMANDOS_UTEIS.md)
-- Verificar console do navegador
-- Verificar logs do servidor
+## 🤝 Contribuição
 
----
-
-## 🤝 Contribuindo
-
-1. Fork o projeto
-2. Crie uma branch (`git checkout -b feature/nova`)
-3. Commit (`git commit -m 'Add nova funcionalidade'`)
-4. Push (`git push origin feature/nova`)
-5. Pull Request
-
----
+1. Faça um fork do projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
+3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
+4. Push para a branch (`git push origin feature/AmazingFeature`)
+5. Abra um Pull Request
 
 ## 📝 Licença
 
-MIT License - veja [LICENSE](LICENSE)
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
 
----
+## 👨‍💻 Autor
 
-## 🎉 Conquistas
+**Wesley Cascão**
+- GitHub: [@cascaoconcurseiro](https://github.com/cascaoconcurseiro)
 
-- ✅ 28 regras de negócio implementadas
-- ✅ 14 services completos
-- ✅ 17 APIs RESTful
-- ✅ 7 jobs automatizados
-- ✅ 4 páginas novas
-- ✅ 8 componentes UI
-- ✅ 18 documentos técnicos
-- ✅ 0 erros de TypeScript
+## 🙏 Agradecimentos
 
----
-
-## 📈 Estatísticas
-
-```
-Arquivos:         95
-Linhas de Código: ~16.000+
-Services:         14
-APIs:             17
-Jobs:             7
-Páginas:          4 novas
-Componentes:      8 novos
-Testes:           10 arquivos (50+ testes)
-Documentos:       28
-Coverage:         >80%
-```
-
----
-
-## 🔗 Links Úteis
-
-- [Next.js Docs](https://nextjs.org/docs)
-- [Prisma Docs](https://www.prisma.io/docs)
-- [TypeScript Docs](https://www.typescriptlang.org/docs)
-- [Tailwind Docs](https://tailwindcss.com/docs)
-
----
-
-## 🌟 Destaques
-
-- ✅ Código 100% TypeScript
-- ✅ Documentação extensiva
-- ✅ Sistema automatizado
-- ✅ Performance otimizada
-- ✅ Arquitetura limpa
-
----
-
-**Desenvolvido com ❤️ usando Next.js e TypeScript**
-
-**Versão**: 2.0.0 | **Data**: 19/01/2025 | **Status**: ✅ Pronto para Testes
+- [Next.js](https://nextjs.org/) - Framework React
+- [Prisma](https://prisma.io/) - ORM TypeScript
+- [Tailwind CSS](https://tailwindcss.com/) - Framework CSS
+- [Shadcn/ui](https://ui.shadcn.com/) - Componentes de UI
