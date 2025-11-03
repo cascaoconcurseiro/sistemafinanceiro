@@ -20,7 +20,6 @@ const createAccountSchema = z.object({
 // Tipos válidos de conta para usuários (cartões de crédito têm API própria)
 const VALID_ACCOUNT_TYPES = ['checking', 'savings', 'investment', 'cash'] as const;
 
-export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {

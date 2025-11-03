@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { authenticateRequest } from '@/lib/utils/auth-helpers';
 
-export const dynamic = 'force-dynamic';
 
 // GET - Verificar faturas próximas do vencimento e em atraso
 export async function GET(request: NextRequest) {

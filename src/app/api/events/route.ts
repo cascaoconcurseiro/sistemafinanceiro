@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connections } from '@/lib/events';
 
 // Forçar renderização dinâmica
-export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 // Endpoint para Server-Sent Events

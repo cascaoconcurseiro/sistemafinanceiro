@@ -36,7 +36,6 @@ interface CacheParams {
 
 // GET - Buscar resumo de transações
 
-export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     // ✅ CORREÇÃO CRÍTICA: Adicionar autenticação

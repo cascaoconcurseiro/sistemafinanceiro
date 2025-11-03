@@ -11,7 +11,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/lib/utils/auth-helpers';
 import { doubleEntryService } from '@/lib/services/double-entry-service';
 
-export const dynamic = 'force-dynamic';
 
 // GET - Validar balanceamento geral do sistema
 export async function GET(request: NextRequest) {

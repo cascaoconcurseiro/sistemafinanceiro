@@ -17,7 +17,6 @@ interface RouteParams {
 
 // GET - Buscar transações de uma viagem específica com cálculos automáticos
 
-export const dynamic = 'force-dynamic';
 export async function GET(
   request: NextRequest,
   { params }: RouteParams

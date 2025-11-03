@@ -15,7 +15,6 @@ interface RouteParams {
   }
 }
 
-export const dynamic = 'force-dynamic';
 
 // POST - Vincular transações automaticamente baseado no período da viagem
 export async function POST(

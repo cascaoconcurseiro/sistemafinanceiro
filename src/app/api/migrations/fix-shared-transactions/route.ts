@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/lib/utils/auth-helpers';
 import { prisma } from '@/lib/prisma';
 
-export const dynamic = 'force-dynamic';
 
 /**
  * Script de migração para preencher sharedWith em transações antigas

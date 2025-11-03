@@ -13,7 +13,6 @@ const GoalSchema = z.object({
   priority: z.string().optional(),
 });
 
-export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {

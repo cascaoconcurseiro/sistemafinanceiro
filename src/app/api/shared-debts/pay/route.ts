@@ -3,7 +3,6 @@ import { prisma } from '@/lib/prisma';
 import { authenticateRequest } from '@/lib/utils/auth-helpers';
 import { handleApiError } from '@/lib/utils/error-handler';
 
-export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 /**

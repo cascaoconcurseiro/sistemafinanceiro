@@ -4,10 +4,10 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 });
 
 const nextConfig = {
-  // ✅ Configuração para Netlify
-  output: 'export',
+  // ✅ Configuração para SSR (Server-Side Rendering)
+  // output: 'export', // Removido para permitir API routes dinâmicas
   trailingSlash: true,
-  distDir: 'out',
+  // distDir: 'out', // Removido para SSR - usa build padrão
   
   // ✅ Otimizações de produção
   productionBrowserSourceMaps: false,

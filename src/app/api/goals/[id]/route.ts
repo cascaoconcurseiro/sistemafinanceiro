@@ -13,7 +13,6 @@ const UpdateGoalSchema = z.object({
   priority: z.string().optional(),
 });
 
-export const dynamic = 'force-dynamic';
 
 // GET - Buscar meta específica
 export async function GET(

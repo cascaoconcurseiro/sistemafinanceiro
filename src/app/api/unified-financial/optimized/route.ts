@@ -287,5 +287,4 @@ export async function GET(request: NextRequest) {
 }
 
 // Add dynamic export for Next.js
-export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
