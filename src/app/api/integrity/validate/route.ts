@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { FinancialOperationsService } from '@/lib/services/financial-operations-service';
+export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/integrity/validate

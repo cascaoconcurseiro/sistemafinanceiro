@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { accountService } from '@/lib/services/account-service';
+export const dynamic = 'force-dynamic';
 
 /**
  * DELETE /api/accounts/[id]/delete

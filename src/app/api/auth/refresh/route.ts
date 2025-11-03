@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { rotateTokens } from '@/lib/services/token-service';
 import { cookies } from 'next/headers';
+export const dynamic = 'force-dynamic';
 
 /**
  * API: Refresh Token

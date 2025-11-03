@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/lib/utils/auth-helpers';
 import { prisma } from '@/lib/prisma';
 import { calculateAllBalances } from '@/lib/utils/financial-calculations';
+export const dynamic = 'force-dynamic';
 
 export const runtime = 'nodejs';
 

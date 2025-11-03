@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/prisma';
 import { IntelligentAlertSystem } from '@/core/alerts/intelligent-alerts';
+export const dynamic = 'force-dynamic';
 
 const alertSystem = new IntelligentAlertSystem();
 

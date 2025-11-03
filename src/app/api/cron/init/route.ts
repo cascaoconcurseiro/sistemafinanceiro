@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { initializeCronJobs, getCronJobsInfo, isCronInitialized } from '@/lib/cron';
+export const dynamic = 'force-dynamic';
 
 /**
  * POST /api/cron/init

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { authenticateRequest } from '@/lib/utils/auth-helpers';
+export const dynamic = 'force-dynamic';
 
 
 // GET - Buscar fatura de um cartão específico

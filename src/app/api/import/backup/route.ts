@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { exportService } from '@/lib/services/export-service';
+export const dynamic = 'force-dynamic';
 
 /**
  * POST /api/import/backup

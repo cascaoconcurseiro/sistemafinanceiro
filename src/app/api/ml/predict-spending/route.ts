@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/prisma';
 import { SpendingPredictor } from '@/core/ml/spending-prediction';
+export const dynamic = 'force-dynamic';
 
 const predictor = new SpendingPredictor();
 

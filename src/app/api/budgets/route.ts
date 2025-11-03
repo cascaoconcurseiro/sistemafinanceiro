@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+export const dynamic = 'force-dynamic';
 
 // Schema para validação de budget
 const BudgetSchema = z.object({

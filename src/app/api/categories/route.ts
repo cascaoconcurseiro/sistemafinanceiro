@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { databaseService } from '@/lib/services/database-service';
 import { authenticateRequest } from '@/lib/utils/auth-helpers';
 import { Category } from '@/types';
+export const dynamic = 'force-dynamic';
 
 // GET /api/categories - Buscar todas as categorias
 

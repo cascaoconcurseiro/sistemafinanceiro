@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/lib/utils/auth-helpers';
+export const dynamic = 'force-dynamic';
 
 
 export async function PUT(request: NextRequest) {

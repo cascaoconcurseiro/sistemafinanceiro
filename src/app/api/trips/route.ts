@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { authenticateRequest } from '@/lib/utils/auth-helpers';
+export const dynamic = 'force-dynamic';
 
 // Singleton para evitar múltiplas instâncias do Prisma
 const globalForPrisma = globalThis as unknown as {

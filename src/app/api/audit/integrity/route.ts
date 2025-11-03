@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/lib/utils/auth-helpers';
 import { FinancialAuditService } from '@/lib/services/financial-audit-service';
+export const dynamic = 'force-dynamic';
 
 
 /**

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { authenticateRequest } from '@/lib/utils/auth-helpers';
+export const dynamic = 'force-dynamic';
 
 // Singleton mais robusto
 declare global {

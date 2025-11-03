@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { ValidationService } from '@/lib/services/validation-service';
 import { prisma } from '@/lib/prisma';
+export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/validation/check-consistency

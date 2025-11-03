@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+export const dynamic = 'force-dynamic';
 
 // Função para gerar senha aleatória segura
 function generateSecurePassword(length: number = 12): string {

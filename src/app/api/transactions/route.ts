@@ -3,6 +3,7 @@ import { FinancialOperationsService } from '@/lib/services/financial-operations-
 import { TransactionSchema, validateOrThrow } from '@/lib/validation/schemas';
 import { authenticateRequest } from '@/lib/utils/auth-helpers';
 import { z } from 'zod';
+export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/transactions

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { ValidationService } from '@/lib/services/validation-service';
+export const dynamic = 'force-dynamic';
 
 /**
  * POST /api/validation/validate-transaction

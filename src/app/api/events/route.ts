@@ -3,6 +3,7 @@ import { connections } from '@/lib/events';
 
 // Forçar renderização dinâmica
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 // Endpoint para Server-Sent Events
 export async function GET(request: NextRequest) {

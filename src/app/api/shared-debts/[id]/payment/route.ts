@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { databaseService } from '@/lib/services/database-service'
+export const dynamic = 'force-dynamic';
 
 // POST /api/shared-debts/[id]/payment - Processar pagamento de dívida
 export async function POST(

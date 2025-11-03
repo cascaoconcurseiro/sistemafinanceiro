@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { transactionService } from '@/lib/services/transaction-service';
 import { ValidationError } from '@/lib/services/validation-service';
+export const dynamic = 'force-dynamic';
 
 /**
  * POST /api/transactions/installment

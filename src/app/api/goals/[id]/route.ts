@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { authenticateRequest } from '@/lib/utils/auth-helpers';
+export const dynamic = 'force-dynamic';
 
 const UpdateGoalSchema = z.object({
   name: z.string().min(1).optional(),

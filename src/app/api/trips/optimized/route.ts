@@ -7,6 +7,7 @@ import { NextRequest } from 'next/server';
 import { OptimizedApiBase } from '@/lib/performance/optimized-api-base';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+export const dynamic = 'force-dynamic';
 
 // Validation schema
 const createTripSchema = z.object({

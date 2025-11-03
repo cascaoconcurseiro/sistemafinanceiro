@@ -3,6 +3,7 @@ import { databaseService } from '@/lib/services/database-service';
 import { transactionCache } from '../../../../lib/cache';
 import { Transaction } from '../../../../types';
 import { authenticateRequest } from '@/lib/utils/auth-helpers';
+export const dynamic = 'force-dynamic';
 
 // Tipos para o resumo de transações
 interface CategorySummary {

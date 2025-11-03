@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { authenticateRequest } from '@/lib/utils/auth-helpers';
 import { calculateAllBalances } from '@/lib/utils/financial-calculations';
+export const dynamic = 'force-dynamic';
 
 // Função para normalizar tipos de transação
 function normalizeTransactionType(type: string): string {

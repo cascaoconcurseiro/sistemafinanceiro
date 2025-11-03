@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { databaseService } from '@/lib/services/database-service'
 import { authenticateRequest } from '@/lib/utils/auth-helpers'
+export const dynamic = 'force-dynamic';
 
 // GET /api/shared-debts/[id] - Buscar dívida específica
 export async function GET(

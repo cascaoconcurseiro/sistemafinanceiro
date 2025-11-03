@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { broadcastEvent, EventTypes } from '@/lib/events';
 import { createReversalTransaction, logTransactionAudit, recalculateAccountBalance } from '@/lib/transaction-audit';
+export const dynamic = 'force-dynamic';
 
 // POST - Criar estorno de transação
 export async function POST(

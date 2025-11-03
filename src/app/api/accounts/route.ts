@@ -4,6 +4,7 @@ import { authenticateRequest } from '@/lib/utils/auth-helpers';
 import { calculateAllBalances } from '@/lib/utils/financial-calculations';
 import { handleApiError } from '@/lib/utils/error-handler';
 import { z } from 'zod';
+export const dynamic = 'force-dynamic';
 
 // Schema de validação para criação de conta (permissivo)
 const createAccountSchema = z.object({

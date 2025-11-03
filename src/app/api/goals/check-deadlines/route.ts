@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoalNotificationService } from '@/lib/notifications/goal-notifications';
 import { authenticateRequest } from '@/lib/utils/auth-helpers';
+export const dynamic = 'force-dynamic';
 
 // POST - Check goal deadlines and create notifications
 export async function POST(request: NextRequest) {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { authenticateRequest } from '@/lib/utils/auth-helpers';
 import { z } from 'zod';
+export const dynamic = 'force-dynamic';
 
 // Schema de validação
 const createDebtSchema = z.object({

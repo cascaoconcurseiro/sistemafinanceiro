@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { creditCardService } from '@/lib/services/credit-card-service';
+export const dynamic = 'force-dynamic';
 
 /**
  * POST /api/credit-cards/[id]/invoices/generate

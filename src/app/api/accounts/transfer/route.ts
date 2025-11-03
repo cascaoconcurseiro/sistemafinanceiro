@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { authenticateRequest } from '@/lib/utils/auth-helpers';
 import { doubleEntryService } from '@/lib/services/double-entry-service';
+export const dynamic = 'force-dynamic';
 
 
 // POST - Transferir dinheiro entre contas

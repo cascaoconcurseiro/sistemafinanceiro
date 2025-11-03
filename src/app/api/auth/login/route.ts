@@ -4,6 +4,7 @@ import { BasicAuditService } from '@/lib/services/audit-service-basic';
 import { rateLimit } from '@/lib/rate-limiter';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+export const dynamic = 'force-dynamic';
 
 // Função para obter JWT_SECRET com validação
 function getJWTSecret() {

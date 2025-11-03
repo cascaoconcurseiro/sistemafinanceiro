@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { FinancialOperationsService } from '@/lib/services/financial-operations-service';
 import { authenticateRequest } from '@/lib/utils/auth-helpers';
 import { z } from 'zod';
+export const dynamic = 'force-dynamic';
 
 // Schema de validação para transferência
 const TransferSchema = z.object({

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { transactionService } from '@/lib/services/transaction-service';
+export const dynamic = 'force-dynamic';
 
 /**
  * POST /api/transactions/[id]/attachments

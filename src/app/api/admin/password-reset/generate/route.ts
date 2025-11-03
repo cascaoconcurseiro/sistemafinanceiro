@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/prisma';
 import crypto from 'crypto';
 import { logSecurityEvent } from '@/lib/security-logger';
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
   try {

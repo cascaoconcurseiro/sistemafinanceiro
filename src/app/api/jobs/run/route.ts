@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { runJob, runAllJobs, jobs } from '@/lib/jobs';
+export const dynamic = 'force-dynamic';
 
 /**
  * POST /api/jobs/run

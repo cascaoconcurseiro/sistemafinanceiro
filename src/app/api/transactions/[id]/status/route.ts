@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FinancialOperationsService } from '@/lib/services/financial-operations-service';
 import { authenticateRequest } from '@/lib/utils/auth-helpers';
+export const dynamic = 'force-dynamic';
 
 /**
  * PATCH /api/transactions/[id]/status

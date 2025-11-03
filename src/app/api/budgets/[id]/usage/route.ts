@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { budgetService } from '@/lib/services/budget-service';
+export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/budgets/[id]/usage

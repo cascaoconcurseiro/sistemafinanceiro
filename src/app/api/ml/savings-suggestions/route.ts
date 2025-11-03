@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/prisma';
 import { SavingsSuggestionEngine } from '@/core/ml/savings-suggestions';
+export const dynamic = 'force-dynamic';
 
 const suggestionEngine = new SavingsSuggestionEngine();
 

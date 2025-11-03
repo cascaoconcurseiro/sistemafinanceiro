@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
   try {
