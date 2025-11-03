@@ -4,6 +4,11 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 });
 
 const nextConfig = {
+  // ✅ Configuração para Netlify
+  output: 'export',
+  trailingSlash: true,
+  distDir: 'out',
+  
   // ✅ Otimizações de produção
   productionBrowserSourceMaps: false,
   poweredByHeader: false,
