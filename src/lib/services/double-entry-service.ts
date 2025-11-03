@@ -254,3 +254,6 @@ export class DoubleEntryService {
     return account.id;
   }
 }
+// Export da instância para compatibilidade
+export const doubleEntryService = DoubleEntryService;
+export default DoubleEntryService;

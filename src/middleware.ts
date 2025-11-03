@@ -2,15 +2,13 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import jwt from 'jsonwebtoken';
 
-// 🔒 SEGURANÇA: JWT_SECRET obrigatório em produção
-if (!process.env.JWT_SECRET) {
-  if (process.env.NODE_ENV === 'production') {
+// Função para obter JWT_SECRET com validação
+function getJWTSecret() {
+  if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
     throw new Error('🔴 ERRO CRÍTICO: JWT_SECRET não configurado em produção!');
   }
-  console.warn('⚠️ AVISO: JWT_SECRET não configurado. Usando valor padrão (apenas desenvolvimento)');
+  return process.env.JWT_SECRET || 'sua-grana-secret-key-dev-only';
 }
-
-const JWT_SECRET = process.env.JWT_SECRET || 'sua-grana-secret-key-dev-only';
 
 // Rotas públicas que não precisam de autenticação
 const PUBLIC_ROUTES = [

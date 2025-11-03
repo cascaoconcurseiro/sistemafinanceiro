@@ -6,6 +6,13 @@
 
 import { prisma } from '@/lib/prisma';
 
+export class ValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ValidationError';
+  }
+}
+
 export class ValidationService {
   /**
    * Validar saldo da conta antes de criar despesa
@@ -131,3 +138,7 @@ export class ValidationService {
     console.log(`✅ [Validation] Transação validada com sucesso`);
   }
 }
+
+// Export da instância para compatibilidade
+export const validationService = ValidationService;
+export default ValidationService;

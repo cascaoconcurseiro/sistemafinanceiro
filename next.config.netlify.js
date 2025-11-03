@@ -10,11 +10,6 @@ const nextConfig = {
     unoptimized: true,
   },
   
-  // Desabilitar API routes
-  experimental: {
-    appDir: true,
-  },
-  
   // Configurações de build
   productionBrowserSourceMaps: false,
   poweredByHeader: false,
@@ -29,6 +24,11 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   
+  // Desabilitar API routes para build estático
+  async rewrites() {
+    return [];
+  },
+  
   webpack: (config, { dev, isServer }) => {
     // Fallbacks para cliente
     if (!isServer) {
@@ -41,6 +41,15 @@ const nextConfig = {
         'child_process': false,
         'fs/promises': false,
         'async_hooks': false,
+      };
+    }
+    
+    // Ignorar API routes durante o build estático
+    if (!dev && !isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        '@/lib/prisma': false,
+        '@/lib/db': false,
       };
     }
     

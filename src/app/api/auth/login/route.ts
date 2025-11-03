@@ -5,13 +5,17 @@ import { rateLimit } from '@/lib/rate-limiter';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
-// 🔒 SEGURANÇA: JWT_SECRET obrigatório em produção
-if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
-  throw new Error('🔴 ERRO CRÍTICO: JWT_SECRET não configurado em produção!');
+// Função para obter JWT_SECRET com validação
+function getJWTSecret() {
+  if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
+    throw new Error('🔴 ERRO CRÍTICO: JWT_SECRET não configurado em produção!');
+  }
+  return process.env.JWT_SECRET || 'sua-grana-secret-key-dev-only';
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || 'sua-grana-secret-key-dev-only';
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'sua-grana-refresh-secret-key-dev-only';
+function getJWTRefreshSecret() {
+  return process.env.JWT_REFRESH_SECRET || 'sua-grana-refresh-secret-key-dev-only';
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -91,6 +95,9 @@ export async function POST(request: NextRequest) {
 
     // Gerar tokens JWT
     console.log('🎫 [LOGIN] Gerando tokens JWT...');
+    const JWT_SECRET = getJWTSecret();
+    const JWT_REFRESH_SECRET = getJWTRefreshSecret();
+    
     const accessToken = jwt.sign(
       {
         userId: user.id,
