@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { ModernAppLayout } from '@/components/modern-app-layout';
-import { CreditCardBills } from '@/components/credit-card-bills';
+import { ModernAppLayout } from '@/components/layout/modern-app-layout';
+import { CreditCardBills } from '@/components/features/credit-cards/credit-card-bills';
 
 export default function CreditCardBillsPage() {
   return (

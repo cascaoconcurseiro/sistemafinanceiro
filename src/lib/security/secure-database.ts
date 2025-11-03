@@ -8,14 +8,14 @@ export class SecureDatabase {
   static getInstance(): PrismaClient {
     if (!SecureDatabase.instance) {
       SecureDatabase.instance = new PrismaClient();
-      
+
       // Middleware para sanitizar inputs
       SecureDatabase.instance.$use(async (params, next) => {
         // Sanitizar argumentos de entrada
         if (params.args?.data) {
           params.args.data = SecureDatabase.sanitizeData(params.args.data);
         }
-        
+
         if (params.args?.where) {
           params.args.where = SecureDatabase.sanitizeData(params.args.where);
         }
@@ -29,7 +29,7 @@ export class SecureDatabase {
         return next(params);
       });
     }
-    
+
     return SecureDatabase.instance;
   }
 
@@ -65,7 +65,7 @@ export class SecureDatabase {
       }
 
       // Sanitizar parâmetros
-      const sanitizedParams = params.map(param => 
+      const sanitizedParams = params.map(param =>
         typeof param === 'string' ? InputSanitizer.sanitizeSqlInput(param) : param
       );
 

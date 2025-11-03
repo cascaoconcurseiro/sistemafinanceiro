@@ -23,7 +23,7 @@ export default function NewUserPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (formData.password !== formData.confirmPassword) {
       toast.error('As senhas não coincidem');
       return;

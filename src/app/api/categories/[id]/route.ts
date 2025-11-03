@@ -15,17 +15,17 @@ export async function GET(
     }
 
     const { id } = params;
-    
+
     const categories = await databaseService.getCategories();
     const category = categories.find(cat => cat.id === id);
-    
+
     if (!category) {
       return NextResponse.json(
         { error: 'Categoria não encontrada' },
         { status: 404 }
       );
     }
-    
+
     return NextResponse.json(category);
   } catch (error) {
     console.error('Erro ao buscar categoria:', error);
@@ -50,11 +50,11 @@ export async function PUT(
 
     const { id } = params;
     const body = await request.json();
-    
+
     // Verificar se categoria existe
     const categories = await databaseService.getCategories();
     const existingCategory = categories.find(cat => cat.id === id);
-    
+
     if (!existingCategory) {
       return NextResponse.json(
         { error: 'Categoria não encontrada' },
@@ -66,10 +66,10 @@ export async function PUT(
     if (body.name || body.type) {
       const newName = body.name || existingCategory.name;
       const newType = body.type || existingCategory.type;
-      
+
       const duplicate = categories.find(
         cat => cat.id !== id &&
-               cat.name.toLowerCase() === newName.toLowerCase() && 
+               cat.name.toLowerCase() === newName.toLowerCase() &&
                cat.type === newType &&
                cat.isActive
       );
@@ -83,7 +83,7 @@ export async function PUT(
     }
 
     const updatedCategory = await databaseService.updateCategory(id, body);
-    
+
     return NextResponse.json(updatedCategory);
   } catch (error) {
     console.error('Erro ao atualizar categoria:', error);
@@ -107,11 +107,11 @@ export async function DELETE(
     }
 
     const { id } = params;
-    
+
     // Verificar se categoria existe
     const categories = await databaseService.getCategories();
     const category = categories.find(cat => cat.id === id);
-    
+
     if (!category) {
       return NextResponse.json(
         { error: 'Categoria não encontrada' },
@@ -122,7 +122,7 @@ export async function DELETE(
     // Verificar se categoria está sendo usada em transações
     const transactions = await databaseService.getTransactions();
     const isUsed = transactions.some(transaction => transaction.categoryId === id);
-    
+
     if (isUsed) {
       // Soft delete - apenas desativar
       const updatedCategory = await databaseService.updateCategory(id, { isActive: false });

@@ -3,7 +3,6 @@
 import { ReactNode, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { signOut } from 'next-auth/react';
 import {
   Home,
   ArrowUpDown,
@@ -109,24 +108,6 @@ const menuItems = [
     url: '/family',
     icon: Users,
     color: 'text-indigo-600',
-  },
-  {
-    title: 'Lembretes',
-    url: '/lembretes',
-    icon: Bell,
-    color: 'text-red-600',
-  },
-  {
-    title: 'Relatórios',
-    url: '/reports',
-    icon: BarChart3,
-    color: 'text-violet-600',
-  },
-  {
-    title: 'Investimentos',
-    url: '/investments',
-    icon: TrendingUp,
-    color: 'text-emerald-600',
   },
   {
     title: 'Configurações',
@@ -257,7 +238,18 @@ export function ModernAppLayout({
           <Button
             variant="outline"
             className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
-            onClick={() => signOut({ callbackUrl: '/login' })}
+            onClick={async () => {
+              try {
+                await fetch('/api/auth/logout', {
+                  method: 'POST',
+                  credentials: 'include',
+                });
+                window.location.href = '/login';
+              } catch (error) {
+                console.error('Erro ao fazer logout:', error);
+                window.location.href = '/login';
+              }
+            }}
           >
             <LogOut className="h-4 w-4 mr-2" />
             Sair

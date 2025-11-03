@@ -1,6 +1,6 @@
 /**
  * AGENDADOR CRON - ROTAÇÃO DE LOGS
- * 
+ *
  * Sistema de agendamento automático para rotação de logs
  * usando node-cron para execução em intervalos definidos
  */
@@ -34,13 +34,13 @@ export class LogRotationScheduler {
     try {
       // Obter configuração atual do serviço
       const config = logRotationService.getConfig();
-      
+
       // Agendar rotação automática
       await this.scheduleRotation(config.rotationSchedule);
-      
+
       // Agendar verificação de espaço em disco (a cada hora)
       await this.scheduleDiskSpaceCheck('0 * * * *');
-      
+
       // Agendar limpeza de logs antigos (diariamente às 2h)
       await this.scheduleCleanup('0 2 * * *');
 
@@ -57,7 +57,7 @@ export class LogRotationScheduler {
    */
   public async scheduleRotation(cronExpression: string): Promise<void> {
     const taskName = 'log-rotation';
-    
+
     // Cancelar tarefa existente se houver
     if (this.scheduledTasks.has(taskName)) {
       this.scheduledTasks.get(taskName)?.destroy();
@@ -72,10 +72,10 @@ export class LogRotationScheduler {
     // Criar nova tarefa agendada
     const task = cron.schedule(cronExpression, async () => {
       console.log('Executando rotação automática de logs...');
-      
+
       try {
         const result = await logRotationService.performRotation();
-        
+
         if (result.success) {
           console.log('Rotação automática concluída com sucesso:', {
             rotatedFiles: result.rotatedFiles.length,
@@ -95,7 +95,7 @@ export class LogRotationScheduler {
 
     this.scheduledTasks.set(taskName, task);
     task.start();
-    
+
     console.log(`Rotação de logs agendada: ${cronExpression}`);
   }
 
@@ -104,7 +104,7 @@ export class LogRotationScheduler {
    */
   public async scheduleDiskSpaceCheck(cronExpression: string): Promise<void> {
     const taskName = 'disk-space-check';
-    
+
     // Cancelar tarefa existente se houver
     if (this.scheduledTasks.has(taskName)) {
       this.scheduledTasks.get(taskName)?.destroy();
@@ -121,13 +121,13 @@ export class LogRotationScheduler {
       try {
         const stats = await logRotationService.getLogStats();
         const config = logRotationService.getConfig();
-        
+
         // Verificar se o espaço usado pelos logs excede o limite
         const maxDiskUsage = 1024 * 1024 * 1024; // 1GB por padrão
-        
+
         if (stats.totalSize > maxDiskUsage) {
           console.warn(`Uso de disco pelos logs excede o limite: ${(stats.totalSize / 1024 / 1024).toFixed(2)}MB`);
-          
+
           // Executar rotação forçada para liberar espaço
           console.log('Executando rotação forçada para liberar espaço...');
           await logRotationService.performRotation();
@@ -142,7 +142,7 @@ export class LogRotationScheduler {
 
     this.scheduledTasks.set(taskName, task);
     task.start();
-    
+
     console.log(`Verificação de espaço em disco agendada: ${cronExpression}`);
   }
 
@@ -151,7 +151,7 @@ export class LogRotationScheduler {
    */
   public async scheduleCleanup(cronExpression: string): Promise<void> {
     const taskName = 'log-cleanup';
-    
+
     // Cancelar tarefa existente se houver
     if (this.scheduledTasks.has(taskName)) {
       this.scheduledTasks.get(taskName)?.destroy();
@@ -166,10 +166,10 @@ export class LogRotationScheduler {
     // Criar nova tarefa agendada
     const task = cron.schedule(cronExpression, async () => {
       console.log('Executando limpeza automática de logs antigos...');
-      
+
       try {
         const result = await logRotationService.performRotation();
-        
+
         if (result.deletedFiles.length > 0) {
           console.log(`Limpeza automática concluída: ${result.deletedFiles.length} arquivos removidos`);
         } else {
@@ -185,7 +185,7 @@ export class LogRotationScheduler {
 
     this.scheduledTasks.set(taskName, task);
     task.start();
-    
+
     console.log(`Limpeza de logs agendada: ${cronExpression}`);
   }
 
@@ -274,14 +274,14 @@ export class LogRotationScheduler {
    */
   public getTasksStatus(): Record<string, { running: boolean; scheduled: boolean }> {
     const status: Record<string, { running: boolean; scheduled: boolean }> = {};
-    
+
     this.scheduledTasks.forEach((task, name) => {
       status[name] = {
         running: task.getStatus() === 'scheduled',
         scheduled: true
       };
     });
-    
+
     return status;
   }
 
@@ -290,10 +290,10 @@ export class LogRotationScheduler {
    */
   public async executeManualRotation(): Promise<void> {
     console.log('Executando rotação manual de logs...');
-    
+
     try {
       const result = await logRotationService.performRotation();
-      
+
       if (result.success) {
         console.log('Rotação manual concluída com sucesso:', {
           rotatedFiles: result.rotatedFiles.length,

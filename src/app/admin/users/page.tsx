@@ -15,11 +15,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { 
-  ArrowLeft, 
-  Search, 
-  UserPlus, 
-  Trash2, 
+import {
+  ArrowLeft,
+  Search,
+  UserPlus,
+  Trash2,
   Edit,
   CheckCircle,
   XCircle,
@@ -355,7 +355,7 @@ export default function UsersManagement() {
             </div>
             <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 p-4 rounded-lg">
               <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                ⚠️ <strong>Importante:</strong> Esta senha só será exibida uma vez. 
+                ⚠️ <strong>Importante:</strong> Esta senha só será exibida uma vez.
                 Certifique-se de copiá-la e enviá-la ao usuário de forma segura.
               </p>
             </div>

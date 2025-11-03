@@ -3,7 +3,7 @@
  * Cria dados sintéticos para testes de isolamento e integridade
  */
 
-import { AuditLogger } from './audit-logger';
+import { AuditLogger } from '@/lib/logging/audit-logger';
 
 export interface TestUser {
   id: string;

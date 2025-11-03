@@ -33,12 +33,12 @@ class RealTimeDataStore {
   private batchQueue: BatchUpdate[] = [];
   private batchTimeout: NodeJS.Timeout | null = null;
   private subscriptionCounter = 0;
-  
+
   // Configuration
   private readonly BATCH_DELAY = 50; // ms
   private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
   private readonly MAX_CACHE_SIZE = 100;
-  
+
   // Statistics
   private stats = {
     reads: 0,
@@ -52,18 +52,18 @@ class RealTimeDataStore {
   constructor() {
     // Clean up cache periodically
     setInterval(() => this.cleanupCache(), 60000); // Every minute
-    
+
     // Listen for cache invalidation events
     if (typeof window !== 'undefined') {
       window.addEventListener('invalidate-cache', (event: CustomEvent) => {
         const { entity } = event.detail;
         console.log(`🗑️ [RealTimeStore] Invalidating cache for: ${entity}`);
-        
+
         if (entity) {
           // Remove specific entity from cache
           this.data.delete(entity);
           this.cache.delete(entity);
-          
+
           // Notify subscribers that data was invalidated
           this.notifySubscribers(entity, null);
         } else {
@@ -78,12 +78,12 @@ class RealTimeDataStore {
    * Subscribe to data changes with optional selector
    */
   subscribe(
-    key: string, 
+    key: string,
     callback: (data: any) => void,
     selector?: (data: any) => any
   ): () => void {
     const subscriptionId = `sub_${++this.subscriptionCounter}`;
-    
+
     const subscription: StoreSubscription = {
       id: subscriptionId,
       callback,
@@ -93,7 +93,7 @@ class RealTimeDataStore {
     if (!this.subscriptions.has(key)) {
       this.subscriptions.set(key, new Set());
     }
-    
+
     this.subscriptions.get(key)!.add(subscription);
     this.stats.subscriptions++;
 
@@ -134,7 +134,7 @@ class RealTimeDataStore {
    */
   getData(key: string): any {
     this.stats.reads++;
-    
+
     // Check cache first
     const cached = this.cache.get(key);
     if (cached && Date.now() < cached.expiresAt) {
@@ -146,7 +146,7 @@ class RealTimeDataStore {
 
     // Get from main store
     const data = this.data.get(key);
-    
+
     if (data !== undefined) {
       // Cache the data
       this.setCacheEntry(key, data);
@@ -171,7 +171,7 @@ class RealTimeDataStore {
    */
   batchUpdate(updates: Record<string, any>): void {
     const timestamp = Date.now();
-    
+
     Object.entries(updates).forEach(([key, data]) => {
       this.batchQueue.push({ key, data, timestamp });
     });
@@ -245,7 +245,7 @@ class RealTimeDataStore {
     const strategy = prefetchStrategies[currentKey];
     if (strategy && currentData) {
       const relatedKeys = strategy(currentData);
-      
+
       relatedKeys.forEach(key => {
         // Only prefetch if not already cached
         if (!this.cache.has(key) || this.isCacheExpired(key)) {
@@ -277,7 +277,7 @@ class RealTimeDataStore {
     this.cache.clear();
     this.subscriptions.clear();
     this.batchQueue = [];
-    
+
     if (this.batchTimeout) {
       clearTimeout(this.batchTimeout);
       this.batchTimeout = null;
@@ -289,8 +289,8 @@ class RealTimeDataStore {
    */
   getStats(): typeof this.stats & { cacheHitRate: number } {
     const totalCacheRequests = this.stats.cacheHits + this.stats.cacheMisses;
-    const cacheHitRate = totalCacheRequests > 0 
-      ? (this.stats.cacheHits / totalCacheRequests) * 100 
+    const cacheHitRate = totalCacheRequests > 0
+      ? (this.stats.cacheHits / totalCacheRequests) * 100
       : 0;
 
     return {
@@ -325,7 +325,7 @@ class RealTimeDataStore {
 
     // Group updates by key
     const groupedUpdates = new Map<string, any>();
-    
+
     this.batchQueue.forEach(update => {
       groupedUpdates.set(update.key, update.data);
     });
@@ -355,8 +355,8 @@ class RealTimeDataStore {
 
     keySubscriptions.forEach(subscription => {
       try {
-        const selectedData = subscription.selector 
-          ? subscription.selector(data) 
+        const selectedData = subscription.selector
+          ? subscription.selector(data)
           : data;
 
         // Only notify if data actually changed
@@ -396,7 +396,7 @@ class RealTimeDataStore {
     let oldestAccess = Infinity;
 
     this.cache.forEach((entry, key) => {
-      if (entry.accessCount < leastUsedCount || 
+      if (entry.accessCount < leastUsedCount ||
           (entry.accessCount === leastUsedCount && entry.lastAccessed < oldestAccess)) {
         leastUsedKey = key;
         leastUsedCount = entry.accessCount;
@@ -429,7 +429,7 @@ class RealTimeDataStore {
     originalData?: any
   ): void {
     const currentData = this.getData(key) || [];
-    
+
     switch (type) {
       case 'CREATE':
         if (Array.isArray(currentData)) {
@@ -438,10 +438,10 @@ class RealTimeDataStore {
           this.updateData(key, data, true);
         }
         break;
-        
+
       case 'UPDATE':
         if (Array.isArray(currentData)) {
-          const updated = currentData.map(item => 
+          const updated = currentData.map(item =>
             item.id === data.id ? { ...item, ...data } : item
           );
           this.updateData(key, updated, true);
@@ -449,7 +449,7 @@ class RealTimeDataStore {
           this.updateData(key, { ...currentData, ...data }, true);
         }
         break;
-        
+
       case 'DELETE':
         if (Array.isArray(currentData)) {
           const filtered = currentData.filter(item => item.id !== data.id);
@@ -472,7 +472,7 @@ class RealTimeDataStore {
     // This would typically make an API call to prefetch data
     // For now, we'll just log the prefetch attempt
     console.log(`🔄 Prefetching data for: ${key}`);
-    
+
     // Emit prefetch event for external handling
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('store:prefetch', {
@@ -486,8 +486,7 @@ class RealTimeDataStore {
    */
   printStats(): void {
     const stats = this.getStats();
-    console.log('📊 Real-time Store Statistics:');
-    console.log(`   Reads: ${stats.reads}`);
+        console.log(`   Reads: ${stats.reads}`);
     console.log(`   Writes: ${stats.writes}`);
     console.log(`   Cache Hits: ${stats.cacheHits}`);
     console.log(`   Cache Misses: ${stats.cacheMisses}`);

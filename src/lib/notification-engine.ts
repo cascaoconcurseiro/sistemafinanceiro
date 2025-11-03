@@ -100,7 +100,7 @@ export async function checkBillingNotifications(userId: string) {
 
   for (const bill of overdueBills) {
     const daysOverdue = Math.ceil((now.getTime() - new Date(bill.date).getTime()) / (1000 * 60 * 60 * 24));
-    
+
     // Notificar apenas se venceu recentemente (últimos 3 dias)
     if (daysOverdue <= 3) {
       const existing = await prisma.notification.findFirst({
@@ -138,7 +138,7 @@ export async function checkBillingNotifications(userId: string) {
     const today = now.getDate();
     const dueDay = card.dueDay;
     let daysUntilDue = dueDay - today;
-    
+
     if (daysUntilDue < 0) {
       daysUntilDue += 30;
     }
@@ -193,7 +193,7 @@ export async function checkGoalNotifications(userId: string) {
   for (const goal of upcomingGoals) {
     const daysUntil = Math.ceil((new Date(goal.targetDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
     const progress = (Number(goal.currentAmount) / Number(goal.targetAmount)) * 100;
-    
+
     if (progress < 80) {
       const existing = await prisma.notification.findFirst({
         where: {
@@ -380,7 +380,7 @@ export async function checkInvestmentNotifications(userId: string) {
     for (const investment of investments) {
       const currentValue = Number(investment.currentValue || 0);
       const investedAmount = Number(investment.investedAmount || 0);
-      
+
       if (investedAmount > 0) {
         const returnPercentage = ((currentValue - investedAmount) / investedAmount) * 100;
 
@@ -535,7 +535,7 @@ export async function checkReminderNotifications(userId: string) {
 // Função principal que verifica todas as notificações
 export async function generateAllNotifications(userId: string) {
   console.log(`🔔 Gerando notificações para usuário: ${userId}`);
-  
+
   await Promise.all([
     checkBillingNotifications(userId),
     checkGoalNotifications(userId),
@@ -544,5 +544,4 @@ export async function generateAllNotifications(userId: string) {
     checkReminderNotifications(userId),
   ]);
 
-  console.log('✅ Notificações geradas com sucesso');
-}
+  }

@@ -22,16 +22,16 @@ export function useReminders(status?: string) {
   return useQuery({
     queryKey: ['reminders', status],
     queryFn: async (): Promise<{ data: Reminder[] }> => {
-      const url = status && status !== 'all' 
+      const url = status && status !== 'all'
         ? `/api/reminders?status=${status}`
         : '/api/reminders';
-      
+
       const response = await fetch(url, { credentials: 'include' });
-      
+
       if (!response.ok) {
         throw new Error('Erro ao buscar lembretes');
       }
-      
+
       const result = await response.json();
       return { data: result.data || [] };
     },

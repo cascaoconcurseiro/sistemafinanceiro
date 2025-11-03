@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { AdvancedPWASettings } from '@/components/advanced-pwa-settings';
+import { AdvancedPWASettings } from '@/components/features/settings/advanced-pwa-settings';
 import {
   Card,
   CardContent,

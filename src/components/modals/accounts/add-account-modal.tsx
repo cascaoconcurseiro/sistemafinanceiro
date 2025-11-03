@@ -50,7 +50,7 @@ const INITIAL_FORM_DATA: AccountFormData = {
 export function AddAccountModal({ open, onOpenChange }: AddAccountModalProps) {
   const unifiedContext = useUnifiedFinancial();
   const { accounts = [], actions, isLoading: contextLoading } = unifiedContext;
-  
+
   console.log('🔍 Modal - Contexto unificado:', {
     accountsCount: accounts?.length || 0,
     hasActions: !!actions,
@@ -97,20 +97,17 @@ export function AddAccountModal({ open, onOpenChange }: AddAccountModalProps) {
     }
 
     const safeAccounts = Array.isArray(accounts) ? accounts : [];
-    console.log('🔍 Modal - Contas existentes:', safeAccounts.map(acc => acc.name));
-    
+
     const existingAccount = safeAccounts.find(
       account => account.name?.toLowerCase() === sanitizedName.toLowerCase()
     );
-    
+
     if (existingAccount) {
-      console.log('❌ Modal - Conta já existe localmente:', existingAccount.name);
-      toast.error('Já existe uma conta com este nome.');
+            toast.error('Já existe uma conta com este nome.');
       return;
     }
-    
-    console.log('✅ Modal - Nome disponível localmente');
 
+    
     setFormLoading(true);
 
     try {
@@ -127,8 +124,7 @@ export function AddAccountModal({ open, onOpenChange }: AddAccountModalProps) {
         type: formData.type, // Manter lowercase conforme schema
         currency: formData.currency,
       };
-      
-      console.log('🔍 Modal - Enviando dados:', accountData);
+
       
       const response = await fetch('/api/accounts', {
         method: 'POST',
@@ -146,29 +142,26 @@ export function AddAccountModal({ open, onOpenChange }: AddAccountModalProps) {
           statusText: response.statusText,
           body: errorText
         });
-        
+
         let errorData;
         try {
           errorData = JSON.parse(errorText);
         } catch {
           errorData = { error: errorText };
         }
-        
+
         throw new Error(errorData.error || errorData.message || `Erro ${response.status}: ${response.statusText}`);
       }
 
       const createdAccount = await response.json();
-      console.log('✅ [Modal] Conta criada:', createdAccount);
       
       toast.success('Conta criada com sucesso!');
-      
+
       // Forçar atualização da lista ANTES de fechar o modal
       if (actions?.refresh) {
-        console.log('🔄 [Modal] Chamando actions.refresh()...');
         await actions.refresh();
-        console.log('✅ [Modal] Refresh concluído!');
       }
-      
+
       setFormData(INITIAL_FORM_DATA);
       onOpenChange(false);
 

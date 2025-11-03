@@ -33,12 +33,12 @@ export const useAuth = () => {
   // 🔒 CARREGAR AUTENTICAÇÃO OTIMIZADA - Evita conflitos com AuthGuard
   useEffect(() => {
     let isMounted = true;
-    
+
     const initAuth = async () => {
       try {
         // Verificar se tem token antes de fazer requisição
         const hasToken = typeof document !== 'undefined' && document.cookie.includes('access_token');
-        
+
         if (!hasToken) {
           if (isMounted) {
             setAuthState({
@@ -49,16 +49,16 @@ export const useAuth = () => {
           }
           return;
         }
-        
+
         const response = await fetch('/api/auth/me', {
           credentials: 'include',
           cache: 'no-cache'
         });
-        
+
         if (!isMounted) return;
-        
+
         const result = await response.json();
-        
+
         if (result.success && result.user) {
           setAuthState({
             user: result.user,
@@ -87,7 +87,7 @@ export const useAuth = () => {
 
     // Pequeno delay para evitar conflito com AuthGuard
     const timeoutId = setTimeout(initAuth, 200);
-    
+
     return () => {
       isMounted = false;
       clearTimeout(timeoutId);
@@ -180,13 +180,13 @@ export const useAuth = () => {
     try {
       // TODO: Implementar atualização de usuário via banco de dados
       console.log('Atualização de usuário deve ser implementada via banco de dados');
-      
+
       setAuthState(prev => ({
         ...prev,
         user: prev.user ? { ...prev.user, ...updates } : null,
         isLoading: false
       }));
-      
+
       return { success: true };
     } catch (error) {
       setAuthState(prev => ({
@@ -206,7 +206,7 @@ export const useAuth = () => {
     try {
       // TODO: Implementar refresh de usuário via banco de dados
       console.log('Refresh de usuário deve ser implementado via banco de dados');
-      
+
       setAuthState(prev => ({ ...prev, isLoading: false }));
     } catch (error) {
       setAuthState(prev => ({

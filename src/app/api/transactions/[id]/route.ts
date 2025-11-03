@@ -71,8 +71,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    console.log('📝 [API Transaction PUT] Atualizando:', params.id);
-
+    
     // ✅ VALIDAÇÃO PARCIAL COM ZOD
     try {
       TransactionSchema.partial().parse(body);
@@ -102,8 +101,7 @@ export async function PUT(
       auth.userId
     );
 
-    console.log('✅ [API Transaction PUT] Atualizada:', transaction.id);
-
+    
     // ✅ EMITIR EVENTOS
     const { broadcastEvent } = await import('../../events/route');
     broadcastEvent('TRANSACTION_UPDATED', {
@@ -159,12 +157,10 @@ export async function DELETE(
 
     console.log('🗑️ [API Transaction DELETE] Deletando:', params.id);
 
-    // ✅ USAR SERVIÇO FINANCEIRO
-    const service = new FinancialOperationsService();
-    await service.deleteTransaction(params.id, auth.userId);
+    // ✅ USAR SERVIÇO FINANCEIRO (métodos estáticos)
+    await FinancialOperationsService.deleteTransaction(params.id, auth.userId);
 
-    console.log('✅ [API Transaction DELETE] Deletada:', params.id);
-
+    
     // ✅ EMITIR EVENTOS
     const { broadcastEvent } = await import('../../events/route');
     broadcastEvent('TRANSACTION_DELETED', {

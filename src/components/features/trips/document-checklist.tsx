@@ -115,7 +115,7 @@ function DocumentChecklist({ trip }: DocumentChecklistProps) {
           createdAt: new Date().toISOString(),
         },
       ];
-      
+
       setDocuments(defaultDocuments);
       saveDocuments(defaultDocuments);
     // }
@@ -168,7 +168,7 @@ function DocumentChecklist({ trip }: DocumentChecklistProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name.trim()) {
       toast.error('Nome do documento é obrigatório');
       return;
@@ -193,7 +193,7 @@ function DocumentChecklist({ trip }: DocumentChecklistProps) {
 
     let updatedDocuments;
     if (editingDocument) {
-      updatedDocuments = documents.map(doc => 
+      updatedDocuments = documents.map(doc =>
         doc.id === editingDocument.id ? newDocument : doc
       );
     } else {
@@ -202,9 +202,9 @@ function DocumentChecklist({ trip }: DocumentChecklistProps) {
 
     setDocuments(updatedDocuments);
     saveDocuments(updatedDocuments);
-    
+
     toast.success(editingDocument ? 'Documento atualizado!' : 'Documento adicionado!');
-    
+
     // Reset form
     setFormData({
       name: '',
@@ -233,7 +233,7 @@ function DocumentChecklist({ trip }: DocumentChecklistProps) {
 
   const handleDelete = (id: string) => {
     if (!confirm('Tem certeza que deseja excluir este documento?')) return;
-    
+
     const updatedDocuments = documents.filter(doc => doc.id !== id);
     setDocuments(updatedDocuments);
     saveDocuments(updatedDocuments);
@@ -250,7 +250,7 @@ function DocumentChecklist({ trip }: DocumentChecklistProps) {
     const obtained = documents.filter(doc => doc.status === 'obtained').length;
     const pending = documents.filter(doc => doc.status === 'pending').length;
     const expired = documents.filter(doc => doc.status === 'expired').length;
-    
+
     return { total, obtained, pending, expired };
   };
 
@@ -282,7 +282,7 @@ function DocumentChecklist({ trip }: DocumentChecklistProps) {
         <div className="text-sm text-blue-800">
           <p className="font-medium mb-1">Dica:</p>
           <p>
-            Use o <strong>checkbox (✓)</strong> ao lado de cada documento para marcar rapidamente como obtido/pendente. 
+            Use o <strong>checkbox (✓)</strong> ao lado de cada documento para marcar rapidamente como obtido/pendente.
             Para editar detalhes completos (data de expiração, observações, etc.), clique no botão de editar.
           </p>
         </div>
@@ -301,7 +301,7 @@ function DocumentChecklist({ trip }: DocumentChecklistProps) {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
@@ -313,7 +313,7 @@ function DocumentChecklist({ trip }: DocumentChecklistProps) {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
@@ -325,7 +325,7 @@ function DocumentChecklist({ trip }: DocumentChecklistProps) {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
@@ -369,7 +369,7 @@ function DocumentChecklist({ trip }: DocumentChecklistProps) {
                         </Badge>
                       )}
                     </div>
-                  
+
                   <div className="flex items-center space-x-2 mb-2">
                     <Badge variant="outline">
                       {getTypeLabel(document.type)}
@@ -377,14 +377,14 @@ function DocumentChecklist({ trip }: DocumentChecklistProps) {
                     <Badge className={getStatusColor(document.status)}>
                       {getStatusLabel(document.status)}
                     </Badge>
-                    
+
                     {document.expiryDate && (
                       <Badge variant="outline">
                         Expira: {document.expiryDate}
                       </Badge>
                     )}
                   </div>
-                  
+
                     {document.notes && (
                       <p className="text-sm text-muted-foreground">
                         {document.notes}
@@ -392,7 +392,7 @@ function DocumentChecklist({ trip }: DocumentChecklistProps) {
                     )}
                   </div>
                 </div>
-                
+
                 <div className="flex items-center space-x-1 ml-2">
                   <Button
                     variant="ghost"
@@ -440,7 +440,7 @@ function DocumentChecklist({ trip }: DocumentChecklistProps) {
                 {editingDocument ? 'Editar Documento' : 'Adicionar Documento'}
               </DialogTitle>
             </DialogHeader>
-            
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <Label htmlFor="name">Nome do Documento *</Label>
@@ -539,5 +539,4 @@ function DocumentChecklist({ trip }: DocumentChecklistProps) {
 }
 
 export default DocumentChecklist;
-
 

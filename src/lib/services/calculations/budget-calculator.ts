@@ -297,7 +297,7 @@ export class BudgetCalculator {
     // Adicionar total cumulativo
     const dailyExpenses = Object.values(byDay);
     let cumulativeTotal = 0;
-    
+
     return dailyExpenses.map((day: any) => {
       cumulativeTotal += day.total;
       return {

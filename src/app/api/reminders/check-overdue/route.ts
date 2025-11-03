@@ -1,70 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server';
+import jwt from 'jsonwebtoken';
 import { prisma } from '@/lib/prisma';
-import { authenticateRequest } from '@/lib/utils/auth-helpers';
 
-export const dynamic = 'force-dynamic';
+const JWT_SECRET = process.env.JWT_SECRET || 'sua-grana-secret-key-dev-only';
 
-/**
- * Verifica lembretes vencidos e cria notificações
- */
 export async function GET(request: NextRequest) {
   try {
-    const auth = await authenticateRequest(request);
-    if (!auth.success || !auth.userId) {
-      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    // Buscar token do cookie
+    const accessToken = request.cookies.get('access_token')?.value;
+
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: 'Não autenticado' },
+        { status: 401 }
+      );
     }
 
+    // Verificar e decodificar token JWT
+    const decoded = jwt.verify(accessToken, JWT_SECRET) as {
+      userId: string;
+    };
+
+    // Buscar lembretes vencidos
     const now = new Date();
-    
-    // Buscar lembretes pendentes que já venceram ou estão vencendo hoje
     const overdueReminders = await prisma.reminder.findMany({
       where: {
-        userId: auth.userId,
-        status: 'pending',
+        userId: decoded.userId,
         dueDate: {
-          lte: now
-        }
-      }
+          lte: now,
+        },
+        status: {
+          in: ['pending', 'active'],
+        },
+      },
+      orderBy: {
+        dueDate: 'asc',
+      },
     });
-
-    console.log(`📅 [Check Overdue] Encontrados ${overdueReminders.length} lembretes vencidos`);
-
-    // Criar notificações para lembretes vencidos
-    for (const reminder of overdueReminders) {
-      // Verificar se já existe notificação para este lembrete
-      const existingNotification = await prisma.notification.findFirst({
-        where: {
-          userId: auth.userId,
-          type: 'reminder',
-          relatedId: reminder.id
-        }
-      });
-
-      if (!existingNotification) {
-        await prisma.notification.create({
-          data: {
-            userId: auth.userId,
-            title: `Lembrete: ${reminder.title}`,
-            message: reminder.description || 'Você tem um lembrete pendente',
-            type: 'reminder',
-            priority: reminder.priority || 'medium',
-            isRead: false,
-            relatedId: reminder.id,
-            metadata: JSON.stringify({ reminderId: reminder.id })
-          }
-        });
-        
-        console.log(`✅ [Check Overdue] Notificação criada para: ${reminder.title}`);
-      }
-    }
 
     return NextResponse.json({
       success: true,
-      overdueCount: overdueReminders.length,
-      message: `${overdueReminders.length} lembretes vencidos verificados`
+      count: overdueReminders.length,
+      reminders: overdueReminders,
     });
   } catch (error) {
-    console.error('❌ [Check Overdue] Erro:', error);
+    console.error('❌ Erro ao verificar lembretes vencidos:', error);
     return NextResponse.json(
       { error: 'Erro ao verificar lembretes' },
       { status: 500 }

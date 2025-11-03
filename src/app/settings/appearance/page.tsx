@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSafeTheme } from '@/hooks/use-safe-theme';
-import { ModernAppLayout } from '@/components/modern-app-layout';
+import { ModernAppLayout } from '@/components/layout/modern-app-layout';
 import {
   Card,
   CardContent,

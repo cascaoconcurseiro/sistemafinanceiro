@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ModernAppLayout } from '@/components/modern-app-layout'
+import { ModernAppLayout } from '@/components/layout/modern-app-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,7 +20,7 @@ function FamilyManagement() {
 
   const { data: familyMembersData, isLoading: loading, refetch } = useFamilyMembers()
   const deleteMutation = useDeleteFamilyMember()
-  
+
   // ✅ CORREÇÃO: Hook agora retorna array direto
   const members = familyMembersData || []
 

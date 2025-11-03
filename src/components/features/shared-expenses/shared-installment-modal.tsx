@@ -101,7 +101,7 @@ export function SharedInstallmentModal({
 
   const removeParticipant = (contactId: string) => {
     const updatedParticipants = formData.participants.filter(p => p.id !== contactId);
-    
+
     // Redistribuir percentuais
     if (updatedParticipants.length > 0) {
       const totalParticipants = updatedParticipants.length + 1; // +1 para o usuário
@@ -122,7 +122,7 @@ export function SharedInstallmentModal({
   const updateParticipantPercentage = (contactId: string, percentage: number) => {
     setFormData(prev => ({
       ...prev,
-      participants: prev.participants.map(p => 
+      participants: prev.participants.map(p =>
         p.id === contactId ? { ...p, percentage } : p
       )
     }));
@@ -353,7 +353,7 @@ export function SharedInstallmentModal({
               {formData.participants.length > 0 && (
                 <div className="space-y-3">
                   <Label>Divisão dos Custos</Label>
-                  
+
                   {/* Usuário */}
                   <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
                     <span className="font-medium">Você</span>
@@ -490,7 +490,7 @@ export function SharedInstallmentModal({
                     <span className="font-medium ml-2 text-blue-600">R$ {preview.userAmountPerInstallment.toFixed(2)}</span>
                   </div>
                 </div>
-                
+
                 {Math.abs(total - 100) > 0.01 && (
                   <div className="flex items-center gap-2 text-amber-600 text-sm">
                     <AlertCircle className="w-4 h-4" />

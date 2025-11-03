@@ -10,15 +10,23 @@ export function ReminderChecker() {
     // Verificar lembretes ao carregar
     const checkReminders = async () => {
       try {
-        await fetch('/api/reminders/check-overdue', {
+        const response = await fetch('/api/reminders/check-overdue', {
           credentials: 'include'
         });
-        
-        // Invalidar queries para atualizar dados
-        queryClient.invalidateQueries({ queryKey: ['reminders'] });
-        queryClient.invalidateQueries({ queryKey: ['notifications'] });
+
+        // ✅ Ignorar silenciosamente erros 401 (não autenticado)
+        if (response.status === 401) {
+          return;
+        }
+
+        if (response.ok) {
+          // Invalidar queries para atualizar dados
+          queryClient.invalidateQueries({ queryKey: ['reminders'] });
+          queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        }
       } catch (error) {
-        console.error('Erro ao verificar lembretes:', error);
+        // Ignorar erros de rede silenciosamente
+        // console.error('Erro ao verificar lembretes:', error);
       }
     };
 

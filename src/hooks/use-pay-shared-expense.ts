@@ -25,7 +25,7 @@ export function usePaySharedExpense() {
   return useMutation({
     mutationFn: async (params: PaySharedExpenseParams): Promise<PaySharedExpenseResponse> => {
       console.log('💳 [usePaySharedExpense] Enviando pagamento:', params);
-      
+
       const response = await fetch('/api/shared-expenses/pay', {
         method: 'POST',
         headers: {
@@ -35,7 +35,7 @@ export function usePaySharedExpense() {
       });
 
       const data = await response.json();
-      
+
       console.log('📥 [usePaySharedExpense] Resposta recebida:', {
         status: response.status,
         ok: response.ok,

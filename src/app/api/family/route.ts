@@ -20,7 +20,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
     }
 
-    console.log('📊 [API Family] Buscando família do usuário:', auth.userId);
     
     // Buscar família do usuário
     // Nota: Assumindo que o usuário pode ter apenas uma família
@@ -37,11 +36,11 @@ export async function GET(request: NextRequest) {
         },
       },
     });
-    
+
     if (!family) {
       return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
     }
-    
+
     // Retornar dados da "família" (usuário + membros)
     const familyData = {
       id: family.id,
@@ -54,12 +53,12 @@ export async function GET(request: NextRequest) {
       members: family.familyMembers,
       totalMembers: family.familyMembers.length,
     };
-    
+
     console.log('✅ [API Family] Família encontrada:', {
       id: familyData.id,
       members: familyData.totalMembers,
     });
-    
+
     return NextResponse.json(familyData);
   } catch (error) {
     console.error('❌ [API Family] Erro ao buscar família:', error);
@@ -84,16 +83,15 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     console.log('📦 [API Family] Dados recebidos:', body);
-    
+
     // Validar dados
     try {
       createFamilySchema.parse(body);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        console.log('❌ [API Family] Erro de validação:', error.errors);
-        return NextResponse.json(
-          { 
-            error: 'Dados inválidos', 
+                return NextResponse.json(
+          {
+            error: 'Dados inválidos',
             details: error.errors.map(e => `${e.path.join('.')}: ${e.message}`)
           },
           { status: 400 }
@@ -132,7 +130,6 @@ export async function POST(request: NextRequest) {
       totalMembers: updatedUser.familyMembers.length,
     };
 
-    console.log('✅ [API Family] Família criada/atualizada:', familyData.id);
     
     return NextResponse.json(familyData, { status: 201 });
   } catch (error) {
@@ -157,15 +154,15 @@ export async function PUT(request: NextRequest) {
 
     const body = await request.json();
     console.log('📦 [API Family] Atualizando família:', body);
-    
+
     // Validar dados
     try {
       createFamilySchema.parse(body);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return NextResponse.json(
-          { 
-            error: 'Dados inválidos', 
+          {
+            error: 'Dados inválidos',
             details: error.errors.map(e => `${e.path.join('.')}: ${e.message}`)
           },
           { status: 400 }
@@ -203,7 +200,6 @@ export async function PUT(request: NextRequest) {
       totalMembers: updatedUser.familyMembers.length,
     };
 
-    console.log('✅ [API Family] Família atualizada:', familyData.id);
     
     return NextResponse.json(familyData);
   } catch (error) {

@@ -38,7 +38,7 @@ import {
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ModernAppLayout } from '@/components/modern-app-layout';
+import { ModernAppLayout } from '@/components/layout/modern-app-layout';
 import {
   Select,
   SelectContent,
@@ -78,9 +78,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { useClientOnly } from '@/hooks/use-client-only';
-import { BackButton } from '@/components/back-button';
 
-import { GoalMoneyManager } from '@/components/goal-money-manager';
+import { GoalMoneyManager } from '@/components/features/goals/goal-money-manager';
 
 const GoalsPage = () => {
   // Todos os hooks devem ser chamados no topo do componente, sempre na mesma ordem
@@ -208,12 +207,12 @@ const GoalsPage = () => {
   const goalStats = useMemo(() => {
     // Dados agora vêm da API via useUnified
     const goalStatsData = dashboard?.summary?.goalStats;
-    
+
     const totalGoals = goals.length;
     const completedGoals = goals.filter(
       (goal) => getGoalStatus(goal) === 'completed'
     ).length;
-    
+
     // Usar dados da API em vez de calcular no frontend
     const totalTarget = goalStatsData?.totalTarget || 0;
     const totalCurrent = goalStatsData?.totalCurrent || 0;
@@ -227,8 +226,6 @@ const GoalsPage = () => {
       averageProgress: Math.min(averageProgress, 100),
     };
   }, [goals]);
-
-
 
   const categories = [
     { value: 'casa', label: 'Casa', icon: Home },
@@ -304,19 +301,15 @@ const GoalsPage = () => {
   };
 
   const handleCreateGoal = async () => {
-    console.log('🎯 [GoalsPage] handleCreateGoal chamado');
-    console.log('🎯 [GoalsPage] Dados:', { newGoalName, newGoalTarget, newGoalCategory });
-    
+        
     if (!newGoalName || !newGoalTarget || !newGoalCategory) {
-      console.log('❌ [GoalsPage] Campos obrigatórios faltando');
-      toast.error('Por favor, preencha todos os campos obrigatorios');
+            toast.error('Por favor, preencha todos os campos obrigatorios');
       return;
     }
 
     const target = parseFloat(newGoalTarget);
     if (isNaN(target) || target <= 0) {
-      console.log('❌ [GoalsPage] Valor inválido:', target);
-      toast.error('O valor da meta deve ser um numero positivo');
+            toast.error('O valor da meta deve ser um numero positivo');
       return;
     }
 
@@ -332,7 +325,6 @@ const GoalsPage = () => {
         isCompleted: false,
       };
 
-      console.log('🎯 [GoalsPage] Criando meta:', newGoalData);
       
       // Criar meta via API
       const response = await fetch('/api/goals', {
@@ -355,13 +347,12 @@ const GoalsPage = () => {
         throw new Error(errorData.error || 'Erro ao criar meta');
       }
 
-      console.log('✅ [GoalsPage] Meta criada com sucesso');
       
       // Recarregar dados
       if (actions?.refresh) {
         await actions.refresh();
       }
-      
+
       setNewGoalName('');
       setNewGoalTarget('');
       setNewGoalCategory('');
@@ -388,7 +379,7 @@ const GoalsPage = () => {
       }
 
       toast.success('Meta excluida com sucesso.');
-      
+
       // Recarregar dados
       if (actions?.refresh) {
         await actions.refresh();
@@ -421,7 +412,7 @@ const GoalsPage = () => {
       }
 
       toast.success('Meta atualizada com sucesso!');
-      
+
       // Recarregar dados
       if (actions?.refresh) {
         await actions.refresh();
@@ -440,7 +431,6 @@ const GoalsPage = () => {
       <div className="p-4 md:p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <BackButton />
           </div>
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
@@ -1098,5 +1088,4 @@ const GoalsPage = () => {
 };
 
 export default GoalsPage;
-
 

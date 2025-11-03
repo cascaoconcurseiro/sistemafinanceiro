@@ -1,8 +1,8 @@
 'use client';
 
-import { BackupManager } from '@/components/backup-manager';
-import { PWAManager } from '@/components/pwa-manager';
-import { BackButton } from '@/components/back-button';
+import { BackupManager } from '@/components/features/backup/backup-manager';
+import { PWAManager } from '@/components/features/pwa/pwa-manager';
+import { BackButton } from '@/components/shared/back-button';
 
 export default function BackupPage() {
   return (

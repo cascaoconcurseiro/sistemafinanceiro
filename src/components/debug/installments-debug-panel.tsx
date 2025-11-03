@@ -13,11 +13,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { 
-  RefreshCw, 
-  Trash2, 
-  AlertTriangle, 
-  CheckCircle, 
+import {
+  RefreshCw,
+  Trash2,
+  AlertTriangle,
+  CheckCircle,
   Database,
   Eye,
   Loader2
@@ -61,11 +61,11 @@ export function InstallmentsDebugPanel() {
       const response = await fetch('/api/debug/installments', {
         credentials: 'include'
       });
-      
+
       if (!response.ok) {
         throw new Error('Erro ao carregar dados');
       }
-      
+
       const result = await response.json();
       setData(result);
       toast.success('Dados carregados com sucesso');
@@ -89,21 +89,21 @@ export function InstallmentsDebugPanel() {
           groupKey
         })
       });
-      
+
       if (!response.ok) {
         throw new Error('Erro ao deletar grupo');
       }
-      
+
       const result = await response.json();
       toast.success(`${result.count} parcelas marcadas como deletadas`);
-      
+
       // Forçar refresh do contexto
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('cache-invalidation', { 
-          detail: { entity: 'unified-financial-data' } 
+        window.dispatchEvent(new CustomEvent('cache-invalidation', {
+          detail: { entity: 'unified-financial-data' }
         }));
       }
-      
+
       // Recarregar dados
       setTimeout(() => loadData(), 1000);
     } catch (error) {
@@ -125,21 +125,21 @@ export function InstallmentsDebugPanel() {
           action: 'cleanup-orphans'
         })
       });
-      
+
       if (!response.ok) {
         throw new Error('Erro ao limpar órfãs');
       }
-      
+
       const result = await response.json();
       toast.success(result.message);
-      
+
       // Forçar refresh do contexto
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('cache-invalidation', { 
-          detail: { entity: 'unified-financial-data' } 
+        window.dispatchEvent(new CustomEvent('cache-invalidation', {
+          detail: { entity: 'unified-financial-data' }
         }));
       }
-      
+
       // Recarregar dados
       setTimeout(() => loadData(), 1000);
     } catch (error) {
@@ -155,7 +155,7 @@ export function InstallmentsDebugPanel() {
   }, []);
 
   const activeGroups = data?.groups.filter(g => g.status === 'ATIVO') || [];
-  const partialGroups = data?.groups.filter(g => 
+  const partialGroups = data?.groups.filter(g =>
     g.activeTransactions > 0 && g.deletedTransactions > 0
   ) || [];
 
@@ -224,7 +224,7 @@ export function InstallmentsDebugPanel() {
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            <strong>Atenção!</strong> Encontrados {partialGroups.length} grupo(s) com parcelas 
+            <strong>Atenção!</strong> Encontrados {partialGroups.length} grupo(s) com parcelas
             parcialmente deletadas. Isso pode causar inconsistências nos relatórios.
           </AlertDescription>
         </Alert>
@@ -294,7 +294,7 @@ export function InstallmentsDebugPanel() {
                       </TableHeader>
                       <TableBody>
                         {group.transactions.map((t) => (
-                          <TableRow 
+                          <TableRow
                             key={t.id}
                             className={t.deletedAt ? 'opacity-50 bg-red-50' : ''}
                           >

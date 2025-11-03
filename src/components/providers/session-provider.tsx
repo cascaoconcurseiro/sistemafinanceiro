@@ -53,7 +53,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       //   setUser(authenticatedUser);
       //   return true;
       // }
-      
+
       console.warn('session signIn - Implementar autenticação real via databaseService');
       setUser(null);
       return false;

@@ -36,7 +36,7 @@ export function DeleteAccountModal({
   const [deleteTransactions, setDeleteTransactions] = useState(false);
 
   // Contar transações associadas à conta
-  const transactionCount = account ? transactions.filter(t => 
+  const transactionCount = account ? transactions.filter(t =>
     t.accountId === account.id || t.toAccountId === account.id
   ).length : 0;
 
@@ -119,8 +119,8 @@ export function DeleteAccountModal({
                       </Label>
                     </div>
                     <p className="text-xs text-amber-600 ml-6">
-                      {deleteTransactions 
-                        ? 'As transações serão permanentemente excluídas.' 
+                      {deleteTransactions
+                        ? 'As transações serão permanentemente excluídas.'
                         : 'As transações serão mantidas como "órfãs" no sistema.'
                       }
                     </p>
@@ -142,8 +142,8 @@ export function DeleteAccountModal({
               value={confirmationText}
               onChange={(e) => setConfirmationText(e.target.value)}
               className={`${
-                confirmationText && !isConfirmationValid 
-                  ? 'border-red-300 focus:border-red-500' 
+                confirmationText && !isConfirmationValid
+                  ? 'border-red-300 focus:border-red-500'
                   : ''
               }`}
             />

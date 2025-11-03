@@ -19,14 +19,14 @@ interface UsePaginationResult<T> {
 
 /**
  * Hook para gerenciar paginação de dados
- * 
+ *
  * @template T - Tipo dos itens
  * @param data - Array de dados para paginar
  * @param options - Opções de paginação
  * @returns Objeto com dados paginados e controles
- * 
+ *
  * @example
- * const { paginatedData, currentPage, totalPages, nextPage, previousPage } = 
+ * const { paginatedData, currentPage, totalPages, nextPage, previousPage } =
  *   usePagination(transactions, { pageSize: 10 });
  */
 export function usePagination<T>(

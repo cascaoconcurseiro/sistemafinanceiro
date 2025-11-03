@@ -11,6 +11,12 @@ import {
   type TransactionInput,
 } from '@/lib/validation/schemas';
 import { ValidationService } from './validation-service';
+import { DoubleEntryService } from './double-entry-service';
+import { DuplicateDetector } from './duplicate-detector';
+import { SecurityLogger } from './security-logger';
+import { IdempotencyService } from './idempotency-service';
+import { TemporalValidationService } from './temporal-validation-service';
+import { any } from 'zod';
 
 // ============================================
 // TIPOS
@@ -20,6 +26,8 @@ interface CreateTransactionOptions {
   transaction: TransactionInput;
   createJournalEntries?: boolean;
   linkToInvoice?: boolean;
+  operationUuid?: string; // ✅ NOVO: UUID para idempotência
+  createdBy?: string; // ✅ NOVO: Quem criou
 }
 
 interface CreateInstallmentsOptions {
@@ -55,17 +63,60 @@ export class FinancialOperationsService {
    * Garante que todas as operações relacionadas sejam criadas ou nenhuma
    */
   static async createTransaction(options: CreateTransactionOptions) {
-    const { transaction, createJournalEntries = true, linkToInvoice = true } = options;
+    const { transaction, createJournalEntries = true, linkToInvoice = true, operationUuid, createdBy } = options;
+
+    // ✅ IDEMPOTÊNCIA: Validar ou gerar UUID
+    const finalOperationUuid = IdempotencyService.validateOrGenerate(operationUuid);
+    
+    // ✅ IDEMPOTÊNCIA: Verificar se operação já foi executada
+    if (await IdempotencyService.checkDuplicate(finalOperationUuid)) {
+      const existing = await IdempotencyService.getByOperationUuid(finalOperationUuid);
+      console.log(`⚠️ Operação duplicada detectada: ${finalOperationUuid}`);
+      return existing; // Retorna transação existente (idempotente)
+    }
 
     // Validar dados
     const validatedTransaction = validateOrThrow(TransactionSchema, transaction);
 
-    // ✅ VALIDAÇÃO COMPLETA DE CONSISTÊNCIA
-    await ValidationService.validateTransaction(validatedTransaction);
+    // ✅ VALIDAÇÃO TEMPORAL: Verificar data e período fechado
+    await TemporalValidationService.validateTransactionDate(
+      validatedTransaction.userId,
+      validatedTransaction.date,
+      validatedTransaction.accountId,
+      validatedTransaction.creditCardId
+    );
 
-    // ✅ VALIDAR LIMITE DE CARTÃO (se for despesa de cartão)
-    if (validatedTransaction.type === 'DESPESA' && validatedTransaction.creditCardId) {
-      await this.validateCreditCardLimit(validatedTransaction.creditCardId, Math.abs(Number(validatedTransaction.amount)));
+    // ✅ DETECTAR DUPLICATAS (por conteúdo)
+    const duplicate = await DuplicateDetector.detectDuplicate(
+      validatedTransaction.userId,
+      Math.abs(Number(validatedTransaction.amount)),
+      validatedTransaction.description,
+      validatedTransaction.date
+    );
+
+    if (duplicate.isDuplicate) {
+      await SecurityLogger.logDuplicateDetected(
+        validatedTransaction.userId,
+        validatedTransaction,
+        duplicate.existingId!
+      );
+      
+      throw new Error(
+        `Transação duplicada detectada! ` +
+        `Uma transação similar foi criada recentemente (ID: ${duplicate.existingId}).`
+      );
+    }
+
+    // ✅ VALIDAÇÃO COMPLETA DE CONSISTÊNCIA
+    try {
+      await ValidationService.validateTransaction(validatedTransaction);
+    } catch (error) {
+      await SecurityLogger.logFailedValidation(
+        validatedTransaction.userId,
+        error instanceof Error ? error.message : 'Erro de validação',
+        validatedTransaction
+      );
+      throw error;
     }
 
     return await prisma.$transaction(async (tx) => {
@@ -77,6 +128,8 @@ export class FinancialOperationsService {
           sharedWith: Array.isArray(validatedTransaction.sharedWith)
             ? JSON.stringify(validatedTransaction.sharedWith)
             : validatedTransaction.sharedWith,
+          operationUuid: finalOperationUuid, // ✅ IDEMPOTÊNCIA
+          createdBy, // ✅ AUDITORIA
         },
       });
 
@@ -86,9 +139,10 @@ export class FinancialOperationsService {
       }
 
       // 3. Vincular a fatura de cartão (se aplicável)
-      if (linkToInvoice && createdTransaction.creditCardId) {
-        await this.linkTransactionToInvoice(tx, createdTransaction);
-      }
+      // TODO: Implementar quando tabela Invoice existir
+      // if (linkToInvoice && createdTransaction.creditCardId) {
+      //   await this.linkTransactionToInvoice(tx, createdTransaction);
+      // }
 
       // 4. Atualizar saldo da conta
       if (createdTransaction.accountId) {
@@ -106,68 +160,90 @@ export class FinancialOperationsService {
 
   /**
    * CRIAR PARCELAMENTO COM INTEGRIDADE
-   * Garante que todas as parcelas sejam criadas atomicamente
+   * Funciona como cartão de crédito real:
+   * - Cria apenas as PARCELAS mensais (ex: Parcela 1/5 - R$ 20)
+   * - Cada parcela tem nota com valor total (ex: "Total da compra: R$ 100")
+   * - Parcelas aparecem nas faturas dos meses corretos
    */
   static async createInstallments(options: CreateInstallmentsOptions) {
     const { baseTransaction, totalInstallments, firstDueDate, frequency } = options;
 
-    // Validar transação base
-    const validatedTransaction = validateOrThrow(TransactionSchema, {
-      ...baseTransaction,
-      isInstallment: true,
-      totalInstallments,
-    });
+    const installmentGroupId = `inst_${Date.now()}`;
+    const totalAmount = Math.abs(Number(baseTransaction.amount));
+    const amountPerInstallment = totalAmount / totalInstallments;
 
     return await prisma.$transaction(async (tx) => {
-      // 1. Criar transação pai
-      const parentTransaction = await tx.transaction.create({
-        data: {
-          ...validatedTransaction,
-          date: validatedTransaction.date,
-          installmentNumber: 1,
-          totalInstallments,
-          installmentGroupId: `inst_${Date.now()}`,
-          sharedWith: Array.isArray(validatedTransaction.sharedWith)
-            ? JSON.stringify(validatedTransaction.sharedWith)
-            : validatedTransaction.sharedWith,
-        },
-      });
-
-      // 2. Criar parcelas na tabela Installment
       const installments = [];
-      const amountPerInstallment = Number(validatedTransaction.amount) / totalInstallments;
+      const installmentTransactions = [];
 
+      // ✅ CRIAR APENAS AS PARCELAS (não cria transação mãe)
       for (let i = 1; i <= totalInstallments; i++) {
         const dueDate = this.calculateDueDate(firstDueDate, i - 1, frequency);
+        const isPaid = i === 1; // Primeira parcela já venceu
 
+        // Transação da parcela (aparece na fatura do mês)
+        const validatedInstallment = validateOrThrow(TransactionSchema, {
+          ...baseTransaction,
+          amount: -amountPerInstallment, // Valor da parcela
+          date: dueDate,
+          description: baseTransaction.description, // Nome original (ex: "Bolsa")
+          notes: `Parcela ${i}/${totalInstallments} • Total da compra: R$ ${totalAmount.toFixed(2)}`, // ✅ Nota com valor total
+          isInstallment: true,
+          installmentNumber: i,
+          totalInstallments,
+          status: isPaid ? 'cleared' : 'pending',
+        });
+
+        const installmentTransaction = await tx.transaction.create({
+          data: {
+            ...validatedInstallment,
+            date: dueDate,
+            installmentNumber: i,
+            totalInstallments,
+            installmentGroupId,
+            sharedWith: Array.isArray(validatedInstallment.sharedWith)
+              ? JSON.stringify(validatedInstallment.sharedWith)
+              : validatedInstallment.sharedWith,
+          },
+        });
+
+        installmentTransactions.push(installmentTransaction);
+
+        // Registro na tabela Installment
         const installment = await tx.installment.create({
           data: {
-            transactionId: parentTransaction.id,
-            userId: validatedTransaction.userId,
+            transactionId: installmentTransaction.id,
+            userId: validatedInstallment.userId,
             installmentNumber: i,
             totalInstallments,
             amount: amountPerInstallment,
             dueDate,
-            status: i === 1 ? 'paid' : 'pending',
-            paidAt: i === 1 ? new Date() : null,
-            description: `${validatedTransaction.description} - Parcela ${i}/${totalInstallments}`,
+            status: isPaid ? 'paid' : 'pending',
+            paidAt: isPaid ? new Date() : null,
+            description: `${baseTransaction.description} - Parcela ${i}/${totalInstallments}`,
           },
         });
 
         installments.push(installment);
+
+        // Criar lançamentos contábeis apenas para parcelas pagas
+        if (isPaid) {
+          await this.createJournalEntriesForTransaction(tx, installmentTransaction);
+        }
       }
 
-      // 3. Criar lançamentos contábeis para a primeira parcela
-      await this.createJournalEntriesForTransaction(tx, parentTransaction);
-
-      // 4. Atualizar saldo
-      if (parentTransaction.accountId) {
-        await this.updateAccountBalance(tx, parentTransaction.accountId);
+      // ✅ ATUALIZAR SALDO
+      // Se for cartão de crédito: não afeta saldo agora (vai na fatura)
+      // Se for conta: debita apenas a primeira parcela
+      if (!baseTransaction.creditCardId && installmentTransactions[0]?.accountId) {
+        await this.updateAccountBalance(tx, installmentTransactions[0].accountId);
       }
 
       return {
-        parentTransaction,
-        installments,
+        parentTransaction: installmentTransactions[0], // Primeira parcela como referência
+        installmentTransactions, // Todas as parcelas
+        installments, // Registros de controle
+        totalAmount, // Valor total da compra
       };
     });
   }
@@ -301,72 +377,8 @@ export class FinancialOperationsService {
     });
   }
 
-  /**
-   * DELETAR TRANSAÇÃO COM CASCATA
-   * Garante que todas as entidades relacionadas sejam deletadas
-   */
-  static async deleteTransaction(transactionId: string, userId: string) {
-    return await prisma.$transaction(async (tx) => {
-      // 1. Buscar transação
-      const transaction = await tx.transaction.findFirst({
-        where: { id: transactionId, userId },
-        include: {
-          journalEntries: true,
-        },
-      });
-
-      if (!transaction) {
-        throw new Error('Transação não encontrada');
-      }
-
-      // 2. Verificar se é parcelamento
-      if (transaction.isInstallment && transaction.installmentGroupId) {
-        // Deletar todas as parcelas do grupo
-        await tx.installment.deleteMany({
-          where: { transactionId: transaction.id },
-        });
-      }
-
-      // 3. Verificar se é transferência
-      if (transaction.isTransfer && transaction.transferId) {
-        // Deletar transação vinculada
-        await tx.transaction.updateMany({
-          where: {
-            transferId: transaction.transferId,
-            id: { not: transactionId },
-          },
-          data: { deletedAt: new Date() },
-        });
-      }
-
-      // 4. Deletar lançamentos contábeis
-      await tx.journalEntry.deleteMany({
-        where: { transactionId },
-      });
-
-      // 5. Deletar dívidas compartilhadas
-      await tx.sharedDebt.deleteMany({
-        where: { transactionId },
-      });
-
-      // 6. Soft delete da transação
-      await tx.transaction.update({
-        where: { id: transactionId },
-        data: { deletedAt: new Date() },
-      });
-
-      // 7. Atualizar saldos
-      if (transaction.accountId) {
-        await this.updateAccountBalance(tx, transaction.accountId);
-      }
-
-      if (transaction.creditCardId) {
-        await this.updateCreditCardBalance(tx, transaction.creditCardId);
-      }
-
-      return { success: true };
-    });
-  }
+  // ✅ MÉTODO deleteTransaction MOVIDO PARA O FINAL DO ARQUIVO (linha ~1321)
+  // Para evitar duplicação e manter a versão mais completa
 
   // ============================================
   // MÉTODOS AUXILIARES
@@ -380,14 +392,32 @@ export class FinancialOperationsService {
     tx: Prisma.TransactionClient,
     transaction: any
   ) {
-    const amount = Math.abs(Number(transaction.amount));
-    const accountId = transaction.accountId || transaction.creditCardId;
-
-    if (!accountId) {
-      throw new Error('Transação deve ter accountId ou creditCardId');
+    // ✅ CORREÇÃO: Não criar lançamentos contábeis para cartões de crédito
+    // Cartões têm sistema de faturamento próprio
+    if (transaction.creditCardId) {
+      console.log('ℹ️ [FinancialOperations] Pulando lançamentos contábeis para cartão de crédito');
+      return;
     }
 
-    // Buscar conta para determinar o tipo
+    // ✅ NOVO: Se é compartilhada, usar myShare em vez do valor total
+    const amount = transaction.isShared && transaction.myShare
+      ? Math.abs(Number(transaction.myShare))
+      : Math.abs(Number(transaction.amount));
+    
+    const accountId = transaction.accountId;
+    
+    console.log(`💰 [FinancialOperations] Criando lançamentos:`, {
+      isShared: transaction.isShared,
+      totalAmount: transaction.amount,
+      myShare: transaction.myShare,
+      amountUsed: amount
+    });
+
+    if (!accountId) {
+      throw new Error('Transação deve ter accountId');
+    }
+
+    // Buscar conta
     const account = await tx.account.findUnique({
       where: { id: accountId },
     });
@@ -592,7 +622,7 @@ export class FinancialOperationsService {
   ) {
     // ✅ Buscar apenas entradas de transações não deletadas
     const entries = await tx.journalEntry.findMany({
-      where: { 
+      where: {
         accountId,
         transaction: {
           deletedAt: null,
@@ -855,6 +885,15 @@ export class FinancialOperationsService {
   }
 
   /**
+   * VINCULAR TRANSAÇÃO À FATURA DO CARTÃO
+
+  /**
+   * ATUALIZAR SALDO DO CARTÃO DE CRÉDITO
+
+  /**
+   * VALIDAR LIMITE DO CARTÃO
+
+  /**
    * PAGAR PARCELA
    * Marca parcela como paga e cria transação
    */
@@ -1072,4 +1111,282 @@ export class FinancialOperationsService {
       issues: unbalanced,
     };
   }
+
+  /**
+   * ATUALIZAR TRANSAÇÃO
+   * Atualiza uma transação existente com validação
+   */
+  async updateTransaction(transactionId: string, updates: Partial<TransactionInput>, userId: string) {
+    return await prisma.$transaction(async (tx) => {
+      // 1. Buscar transação
+      const transaction = await tx.transaction.findFirst({
+        where: { id: transactionId, userId, deletedAt: null },
+      });
+
+      if (!transaction) {
+        throw new Error('Transação não encontrada');
+      }
+
+      // 2. ✅ DELETAR LANÇAMENTOS CONTÁBEIS ANTIGOS
+      await tx.journalEntry.deleteMany({
+        where: { transactionId },
+      });
+      console.log('✅ [updateTransaction] Lançamentos antigos deletados');
+
+      // 3. Preparar dados para atualização
+      const updateData: any = { ...updates };
+      
+      // Converter arrays para JSON string
+      if (updateData.sharedWith && Array.isArray(updateData.sharedWith)) {
+        updateData.sharedWith = JSON.stringify(updateData.sharedWith);
+      }
+      
+      // Converter metadata para JSON string
+      if (updateData.metadata && typeof updateData.metadata === 'object') {
+        updateData.metadata = JSON.stringify(updateData.metadata);
+      }
+
+      // 4. Atualizar transação
+      const updatedTransaction = await tx.transaction.update({
+        where: { id: transactionId },
+        data: updateData,
+      });
+
+      // 5. ✅ CRIAR NOVOS LANÇAMENTOS CONTÁBEIS
+      await DoubleEntryService.createJournalEntries(tx, updatedTransaction);
+      console.log('✅ [updateTransaction] Novos lançamentos criados');
+
+      // 4. Se mudou o status para 'cleared', atualizar saldos
+      if (updates.status === 'cleared' && transaction.status !== 'cleared') {
+        if (updatedTransaction.accountId) {
+          await FinancialOperationsService.updateAccountBalance(tx, updatedTransaction.accountId);
+        }
+        if (updatedTransaction.creditCardId) {
+          await FinancialOperationsService.updateCreditCardBalance(tx, updatedTransaction.creditCardId);
+        }
+      }
+
+      // 5. Se mudou de 'cleared' para outro status, recalcular saldos
+      if (transaction.status === 'cleared' && updates.status && updates.status !== 'cleared') {
+        if (updatedTransaction.accountId) {
+          await FinancialOperationsService.updateAccountBalance(tx, updatedTransaction.accountId);
+        }
+        if (updatedTransaction.creditCardId) {
+          await FinancialOperationsService.updateCreditCardBalance(tx, updatedTransaction.creditCardId);
+        }
+      }
+
+      return updatedTransaction;
+    });
+  }
+
+  /**
+   * DELETAR TRANSAÇÃO COM SOFT DELETE E ATUALIZAÇÃO DE SALDO
+   * ✅ CORREÇÃO: Usa soft delete (deletedAt) em vez de delete físico
+   * ✅ CORREÇÃO: Atualiza saldo da conta após deleção
+   */
+  static async deleteTransaction(transactionId: string, userId: string) {
+    return await prisma.$transaction(async (tx) => {
+      // 1. Buscar transação
+      const transaction = await tx.transaction.findFirst({
+        where: { id: transactionId, userId, deletedAt: null },
+      });
+
+      if (!transaction) {
+        throw new Error('Transação não encontrada');
+      }
+
+      console.log('🗑️ [deleteTransaction] Deletando transação:', {
+        id: transaction.id,
+        description: transaction.description,
+        amount: transaction.amount,
+        accountId: transaction.accountId,
+        creditCardId: transaction.creditCardId,
+        isInstallment: transaction.isInstallment,
+        installmentGroupId: transaction.installmentGroupId,
+      });
+
+      // 2. Se for parcela, buscar todas as parcelas do grupo
+      let transactionsToDelete = [transaction];
+      
+      if (transaction.isInstallment && transaction.installmentGroupId) {
+        const allInstallments = await tx.transaction.findMany({
+          where: {
+            installmentGroupId: transaction.installmentGroupId,
+            userId,
+            deletedAt: null,
+          },
+        });
+        
+        console.log(`🗑️ [deleteTransaction] Encontradas ${allInstallments.length} parcelas no grupo`);
+        transactionsToDelete = allInstallments;
+      }
+
+      // 2.5. ✅ NOVO: Verificar se é pagamento de fatura compartilhada e reverter status
+      const metadata = transaction.metadata ? JSON.parse(transaction.metadata as string) : null;
+      const isSharedExpensePayment = metadata?.type === 'shared_expense_payment';
+      
+      if (isSharedExpensePayment) {
+        console.log('💰 [deleteTransaction] É pagamento de fatura compartilhada - revertendo status');
+        
+        const originalTransactionId = metadata.originalTransactionId;
+        const billingItemId = metadata.billingItemId;
+        
+        // Se é uma dívida (ID começa com 'debt-')
+        if (billingItemId?.startsWith('debt-')) {
+          const debtId = billingItemId.replace('debt-', '');
+          
+          // Reativar a dívida
+          await tx.sharedDebt.update({
+            where: { id: debtId },
+            data: {
+              status: 'active',
+              paidAt: null,
+            },
+          });
+          
+          console.log(`✅ [deleteTransaction] Dívida ${debtId} reativada - volta a aparecer na fatura`);
+        }
+        // Se é uma transação compartilhada
+        else if (originalTransactionId) {
+          // A transação original já existe e não foi marcada como paga
+          // Ela automaticamente volta a aparecer na fatura como pendente
+          console.log(`✅ [deleteTransaction] Transação compartilhada ${originalTransactionId} volta a ficar pendente na fatura`);
+        }
+      }
+
+      // 3. ✅ SOFT DELETE de todas as transações (não deleta fisicamente)
+      for (const txToDelete of transactionsToDelete) {
+        await tx.transaction.update({
+          where: { id: txToDelete.id },
+          data: {
+            deletedAt: new Date(),
+            status: 'cancelled',
+          },
+        });
+        
+        console.log(`✅ [deleteTransaction] Transação marcada como deletada: ${txToDelete.id}`);
+      }
+
+      // 4. ✅ CRÍTICO: Atualizar saldo da conta
+      if (transaction.accountId) {
+        console.log(`💰 [deleteTransaction] Atualizando saldo da conta: ${transaction.accountId}`);
+        await this.updateAccountBalance(tx, transaction.accountId);
+      }
+
+      // 5. ✅ CRÍTICO: Atualizar saldo do cartão de crédito
+      if (transaction.creditCardId) {
+        console.log(`💳 [deleteTransaction] Atualizando saldo do cartão: ${transaction.creditCardId}`);
+        await this.updateCreditCardBalance(tx, transaction.creditCardId);
+      }
+
+      // 6. Deletar lançamentos contábeis (journal entries)
+      for (const txToDelete of transactionsToDelete) {
+        await tx.journalEntry.deleteMany({
+          where: { transactionId: txToDelete.id },
+        });
+      }
+
+      // 7. Criar registro de auditoria
+      await tx.transactionAudit.create({
+        data: {
+          transactionId: transaction.id,
+          action: 'DELETE',
+          oldValue: JSON.stringify(transaction),
+          newValue: null,
+          userId,
+          timestamp: new Date(),
+        },
+      });
+
+      console.log(`✅ [deleteTransaction] Deleção concluída. ${transactionsToDelete.length} transação(ões) deletada(s)`);
+
+      return {
+        success: true,
+        deletedCount: transactionsToDelete.length,
+        transactionIds: transactionsToDelete.map(t => t.id),
+        revertedSharedExpense: isSharedExpensePayment, // ✅ Indica se reverteu pagamento de fatura
+      };
+    });
+  }
+
+  /**
+   * ATUALIZAR STATUS DA TRANSAÇÃO
+   * Marca transação como paga ou pendente, atualizando lançamentos contábeis
+   */
+  static async updateTransactionStatus(
+    transactionId: string, 
+    userId: string, 
+    newStatus: 'pending' | 'cleared' | 'reconciled'
+  ) {
+    return await prisma.$transaction(async (tx) => {
+      // 1. Buscar transação
+      const transaction = await tx.transaction.findFirst({
+        where: { id: transactionId, userId, deletedAt: null },
+      });
+
+      if (!transaction) {
+        throw new Error('Transação não encontrada');
+      }
+
+      const oldStatus = transaction.status;
+
+      console.log('🔄 [FinancialOperations] Atualizando status:', {
+        id: transactionId,
+        description: transaction.description,
+        oldStatus,
+        newStatus
+      });
+
+      // 2. Atualizar status
+      const updated = await tx.transaction.update({
+        where: { id: transactionId },
+        data: { status: newStatus },
+      });
+
+      // 3. Se mudou de pending → cleared, criar lançamentos contábeis
+      if (oldStatus === 'pending' && newStatus === 'cleared') {
+        console.log('✅ [FinancialOperations] Criando lançamentos contábeis (transação foi paga)');
+        await this.createJournalEntriesForTransaction(tx, updated);
+      }
+
+      // 4. Se mudou de cleared → pending, deletar lançamentos contábeis
+      if (oldStatus === 'cleared' && newStatus === 'pending') {
+        console.log('🗑️ [FinancialOperations] Deletando lançamentos contábeis (transação voltou para pendente)');
+        const deletedEntries = await tx.journalEntry.deleteMany({
+          where: { transactionId },
+        });
+        console.log(`✅ [FinancialOperations] ${deletedEntries.count} lançamentos deletados`);
+      }
+
+      // 5. Atualizar saldos
+      if (updated.accountId) {
+        await this.updateAccountBalance(tx, updated.accountId);
+        console.log('✅ [FinancialOperations] Saldo da conta atualizado');
+      }
+
+      if (updated.creditCardId) {
+        await this.updateCreditCardBalance(tx, updated.creditCardId);
+        console.log('✅ [FinancialOperations] Saldo do cartão atualizado');
+      }
+
+      // 6. Se for parcela, atualizar registro de Installment
+      if (updated.isInstallment) {
+        const installmentStatus = newStatus === 'cleared' ? 'paid' : 'pending';
+        await tx.installment.updateMany({
+          where: { transactionId },
+          data: { 
+            status: installmentStatus,
+            paidAt: newStatus === 'cleared' ? new Date() : null
+          }
+        });
+        console.log(`✅ [FinancialOperations] Parcela marcada como ${installmentStatus}`);
+      }
+
+      console.log('🎉 [FinancialOperations] Status atualizado com sucesso');
+
+      return updated;
+    });
+  }
+
 }

@@ -14,9 +14,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { 
-  ArrowLeft, 
-  Shield, 
+import {
+  ArrowLeft,
+  Shield,
   AlertTriangle,
   Lock,
   Unlock,

@@ -1,6 +1,6 @@
 /**
  * SISTEMA DE AUDITORIA E LOGS
- * 
+ *
  * Detecta, registra e bloqueia qualquer tentativa de uso de storage local
  * Mantém logs detalhados de todas as operações do sistema
  */
@@ -49,8 +49,7 @@ class AuditLogger {
     if (this.isInitialized) return;
 
     try {
-      console.log('🔍 Inicializando sistema de auditoria...');
-
+      
       // Configura interceptadores globais
       this.setupGlobalInterceptors();
 
@@ -73,8 +72,7 @@ class AuditLogger {
         }
       });
 
-      console.log('✅ Sistema de auditoria inicializado');
-
+      
     } catch (error) {
       console.error('❌ Erro ao inicializar auditoria:', error);
       throw error;
@@ -208,7 +206,7 @@ class AuditLogger {
     const originalFetch = window.fetch;
     window.fetch = async (...args) => {
       const url = args[0]?.toString() || '';
-      
+
       // Detecta tentativas suspeitas (localStorage removido do sistema)
       if (url.includes('sessionStorage')) {
         await this.logSecurityViolation({
@@ -226,7 +224,7 @@ class AuditLogger {
     const originalXHROpen = XMLHttpRequest.prototype.open;
     XMLHttpRequest.prototype.open = function(...args) {
       const url = args[1]?.toString() || '';
-      
+
       if (url.includes('sessionStorage')) {
         auditLogger.logSecurityViolation({
           type: 'sessionStorage',
@@ -250,7 +248,7 @@ class AuditLogger {
     window.addEventListener('load', () => {
       setTimeout(() => {
         const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
-        
+
         this.logSystemEvent({
           type: 'system_event',
           level: 'info',
@@ -314,7 +312,7 @@ class AuditLogger {
   private showSecurityAlert(violation: SecurityViolation): void {
     // Em produção, isso seria um toast ou modal discreto
     console.warn(`🚨 Tentativa de acesso bloqueada: ${violation.type}.${violation.operation}`);
-    
+
     // Poderia disparar um evento para a UI mostrar um alerta
     if (typeof window !== 'undefined' && window.dispatchEvent) {
       window.dispatchEvent(new CustomEvent('security-violation', {
@@ -329,7 +327,7 @@ class AuditLogger {
   private consoleLog(log: AuditLog): void {
     const severity = log.severity || 'low';
     const message = `[${severity.toUpperCase()}] ${log.action}: ${log.details}`;
-    
+
     switch (severity) {
       case 'critical':
         console.error(message, log.metadata);
@@ -439,17 +437,17 @@ class AuditLogger {
     violationsInLastHour: number;
   } {
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-    const recentViolations = this.violations.filter(v => 
+    const recentViolations = this.violations.filter(v =>
       new Date(v.timestamp) > oneHourAgo
     );
 
     const reasons: string[] = [];
-    
+
     if (recentViolations.length > 10) {
       reasons.push(`Muitas violações de segurança (${recentViolations.length}) na última hora`);
     }
 
-    const errorLogs = this.logs.filter(log => 
+    const errorLogs = this.logs.filter(log =>
       log.severity === 'critical' && new Date(log.timestamp) > oneHourAgo
     );
 

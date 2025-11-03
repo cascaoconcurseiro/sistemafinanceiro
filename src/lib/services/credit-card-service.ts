@@ -1,6 +1,6 @@
 /**
  * CreditCardService - Serviço de gerenciamento de cartões de crédito
- * 
+ *
  * Responsável por gerenciar faturas, limites, juros e pagamentos de cartões.
  */
 
@@ -290,8 +290,7 @@ export class CreditCardService {
         userId: string,
         paymentTransactionId?: string
     ): Promise<void> {
-        console.log('🔄 [CreditCard] Revertendo pagamento de fatura:', invoiceId);
-
+        
         // Buscar fatura
         const invoice = await prisma.invoice.findFirst({
             where: { id: invoiceId, userId },
@@ -328,8 +327,7 @@ export class CreditCardService {
             },
         });
 
-        console.log('✅ [CreditCard] Fatura revertida para não paga');
-
+        
         // Deletar transação de pagamento e restaurar saldo da conta
         if (paymentTransaction) {
             const accountId = paymentTransaction.accountId;
@@ -340,8 +338,7 @@ export class CreditCardService {
                 await prisma.transaction.delete({
                     where: { id: paymentTransaction.id },
                 });
-                console.log('✅ [CreditCard] Transação de pagamento deletada:', paymentTransaction.id);
-
+                
                 // Restaurar saldo da conta (adicionar de volta o valor que foi debitado)
                 if (accountId) {
                     const account = await prisma.account.findUnique({
@@ -392,7 +389,7 @@ export class CreditCardService {
             entityType: 'Invoice',
             entityId: invoiceId,
             action: 'REVERT_PAYMENT',
-            newValue: JSON.stringify({ 
+            newValue: JSON.stringify({
                 paymentTransactionId: paymentTransaction?.id,
                 accountId: paymentTransaction?.accountId,
                 restoredAmount: paymentTransaction ? Math.abs(Number(paymentTransaction.amount)) : 0,

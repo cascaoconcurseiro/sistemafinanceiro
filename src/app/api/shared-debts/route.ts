@@ -153,7 +153,7 @@ export async function PATCH(request: NextRequest) {
 
     // ✅ CORREÇÃO CRÍTICA: Verificar se a dívida pertence ao usuário
     const debt = await prisma.sharedDebt.findFirst({
-      where: { 
+      where: {
         id: debtId,
         OR: [
           { creditor: auth.userId },
@@ -164,7 +164,7 @@ export async function PATCH(request: NextRequest) {
 
     if (!debt) {
       return NextResponse.json(
-        { error: 'Dívida não encontrada ou não pertence ao usuário' }, 
+        { error: 'Dívida não encontrada ou não pertence ao usuário' },
         { status: 403 }
       );
     }

@@ -75,12 +75,12 @@ export async function GET(
     for (const transaction of rawTransactions) {
       // Adicionar a transação original
       transactions.push(transaction);
-      
+
       // Se for compartilhada, adicionar as partes individuais
       if (transaction.isShared && transaction.sharedWith) {
         try {
           const sharedData = JSON.parse(transaction.sharedWith as string);
-          
+
           // Adicionar entrada para cada pessoa que compartilha
           if (Array.isArray(sharedData)) {
             for (const share of sharedData) {
@@ -108,11 +108,11 @@ export async function GET(
     const originalTransactions = transactions.filter((t: any) => !t._isIndividualShare);
     const expenses = originalTransactions.filter((t: any) => t.type === 'expense');
     const income = originalTransactions.filter((t: any) => t.type === 'income');
-    
+
     const totalExpenses = expenses.reduce((sum: number, t: any) => sum + Math.abs(Number(t.amount)), 0);
     const totalIncome = income.reduce((sum: number, t: any) => sum + Number(t.amount), 0);
     const netSpending = totalExpenses - totalIncome;
-    
+
     const remainingBudget = Number(trip.budget) - totalExpenses;
     const budgetUtilization = Number(trip.budget) > 0 ? (totalExpenses / Number(trip.budget)) * 100 : 0;
 
@@ -158,12 +158,12 @@ export async function GET(
     const today = new Date();
     const tripStart = new Date(trip.startDate);
     const tripEnd = new Date(trip.endDate);
-    
+
     let projectedTotal = totalExpenses;
     if (today >= tripStart && today <= tripEnd) {
       const daysElapsed = Math.ceil((today.getTime() - tripStart.getTime()) / (1000 * 60 * 60 * 24));
       const remainingDays = Math.ceil((tripEnd.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-      
+
       if (daysElapsed > 0) {
         const currentDailyAverage = totalExpenses / daysElapsed;
         projectedTotal = totalExpenses + (currentDailyAverage * remainingDays);
@@ -221,7 +221,7 @@ export async function GET(
     console.error('Erro ao buscar transações da viagem:', error);
     return NextResponse.json(
       { error: 'Erro interno do servidor' },
-      { 
+      {
         status: 500,
         headers: {
           'Access-Control-Allow-Origin': '*',

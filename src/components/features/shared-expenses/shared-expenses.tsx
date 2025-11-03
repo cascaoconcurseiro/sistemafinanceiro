@@ -4,35 +4,39 @@ import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { SharedExpensesBilling } from './shared-expenses-billing';
+import { AddTransactionModal } from '@/components/modals/transactions/add-transaction-modal';
 import { Plane, Receipt, DollarSign, Users } from 'lucide-react';
 import { useUnifiedFinancial } from '@/contexts/unified-financial-context';
 import { usePeriod } from '@/contexts/period-context';
 
 export function SharedExpenses() {
-  const { data, isLoading } = useUnifiedFinancial();
+  const { data } = useUnifiedFinancial();
   const { transactions = [] } = data || {};
-  
+
   // ✅ NOVO: Buscar dívidas da API
   const [debts, setDebts] = useState<any[]>([]);
   
+  // ✅ NOVO: Estado do modal de edição
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<any>(null);
+
   useEffect(() => {
     const loadDebts = async () => {
       try {
-        console.log('🔍 [SharedExpenses] Buscando dívidas...');
-        const response = await fetch('/api/debts', { credentials: 'include' });
+                const response = await fetch('/api/debts', { credentials: 'include' });
         if (response.ok) {
           const data = await response.json();
-          const activeDebts = (data.debts || []).filter((d: any) => d.status === 'active');
+          const activeDebts = (data.debts || [])
+            .filter((d: any) => d.status === 'active')
+            .map((d: any) => ({
+              id: d.id,
+              description: d.description,
+              amount: d.currentAmount,
+              creditor: d.creditorId,
+              debtor: d.debtorId,
+              status: d.status
+            }));
           setDebts(activeDebts);
-          console.log('💰 [SharedExpenses] Dívidas ativas carregadas:', activeDebts.length);
-          console.log('💰 [SharedExpenses] Dívidas:', activeDebts.map((d: any) => ({
-            id: d.id,
-            description: d.description,
-            amount: d.currentAmount,
-            creditor: d.creditorId,
-            debtor: d.debtorId,
-            status: d.status
-          })));
         } else {
           console.error('❌ [SharedExpenses] Erro ao buscar dívidas:', response.status);
         }
@@ -42,13 +46,28 @@ export function SharedExpenses() {
     };
     loadDebts();
   }, []);
-  
+
+  // ✅ NOVO: Listener para evento de edição
+  useEffect(() => {
+    const handleEditTransaction = (event: any) => {
+      console.log('📝 Evento edit-transaction recebido:', event.detail);
+      const { transaction } = event.detail;
+      setEditingTransaction(transaction);
+      setEditModalOpen(true);
+    };
+
+    window.addEventListener('edit-transaction', handleEditTransaction);
+    return () => {
+      window.removeEventListener('edit-transaction', handleEditTransaction);
+    };
+  }, []);
+
   // ✅ CORREÇÃO: Combinar transações compartilhadas COM dívidas
   const sharedTransactions = [
     // Transações compartilhadas (EU paguei)
     ...transactions.filter((t: any) => {
-      const hasSharedWith = t.sharedWith && 
-        (Array.isArray(t.sharedWith) ? t.sharedWith.length > 0 : 
+      const hasSharedWith = t.sharedWith &&
+        (Array.isArray(t.sharedWith) ? t.sharedWith.length > 0 :
          typeof t.sharedWith === 'string' && t.sharedWith.length > 0 && t.sharedWith !== '[]');
       return t.isShared || hasSharedWith;
     }),
@@ -58,14 +77,14 @@ export function SharedExpenses() {
       .filter((d: any) => {
         const isActive = d.status === 'active';
         const noTransaction = !d.transactionId;
-        
+
         if (!isActive) {
           console.log('⏭️ [SharedExpenses] Pulando dívida inativa:', d.id);
         }
         if (!noTransaction) {
           console.log('⏭️ [SharedExpenses] Pulando dívida com transação:', d.id, d.transactionId);
         }
-        
+
         return isActive && noTransaction;
       })
       .map((debt: any) => {
@@ -74,7 +93,7 @@ export function SharedExpenses() {
           description: debt.description,
           amount: debt.currentAmount
         });
-        
+
         return {
           id: `debt-${debt.id}`,
           description: debt.description,
@@ -90,7 +109,7 @@ export function SharedExpenses() {
         };
       })
   ];
-  
+
   const { getPeriodDates, selectedMonth, selectedYear } = usePeriod();
   const [activeTab, setActiveTab] = useState('regular');
   const [totals, setTotals] = useState({
@@ -126,7 +145,7 @@ export function SharedExpenses() {
         myShare: transaction.myShare,
         sharedWith: transaction.sharedWith
       });
-      
+
       // ✅ CASO 1: Outra pessoa pagou (EU DEVO) → Valor NEGATIVO
       if (transaction.paidBy) {
         // Usar myShare se disponível, senão calcular
@@ -135,46 +154,46 @@ export function SharedExpenses() {
           console.log('🔴 [calculateSharedAmount] EU DEVO (myShare):', result);
           return result; // Negativo porque EU DEVO
         }
-        
+
         // Calcular divisão
         let sharedWith: string[] = [];
         if (transaction.sharedWith) {
           try {
-            const parsed = typeof transaction.sharedWith === 'string' 
-              ? JSON.parse(transaction.sharedWith) 
+            const parsed = typeof transaction.sharedWith === 'string'
+              ? JSON.parse(transaction.sharedWith)
               : transaction.sharedWith;
             sharedWith = Array.isArray(parsed) ? parsed : [];
           } catch (e) {
             sharedWith = [];
           }
         }
-        
+
         const totalParticipants = sharedWith.length + 1;
         const amountPerPerson = Math.abs(transaction.amount) / totalParticipants;
         const result = -amountPerPerson;
         console.log('🔴 [calculateSharedAmount] EU DEVO (calculado):', result);
         return result; // Negativo porque EU DEVO
       }
-      
+
       // ✅ CASO 2: EU paguei (OUTROS ME DEVEM) → Valor POSITIVO
       let sharedWith: string[] = [];
       if (transaction.sharedWith) {
         try {
-          const parsed = typeof transaction.sharedWith === 'string' 
-            ? JSON.parse(transaction.sharedWith) 
+          const parsed = typeof transaction.sharedWith === 'string'
+            ? JSON.parse(transaction.sharedWith)
             : transaction.sharedWith;
           sharedWith = Array.isArray(parsed) ? parsed : [];
         } catch (e) {
           sharedWith = [];
         }
       }
-      
+
       // Se não tem compartilhamento, retorna 0
       if (sharedWith.length === 0) {
         console.log('⚪ [calculateSharedAmount] Sem compartilhamento, retornando 0');
         return 0;
       }
-      
+
       // Calcula apenas a parte que outras pessoas devem (positivo)
       const totalParticipants = sharedWith.length + 1; // +1 para você
       const amountPerPerson = Math.abs(transaction.amount) / totalParticipants;
@@ -214,28 +233,18 @@ export function SharedExpenses() {
 
   // Recalcular totais quando o período ou transações mudarem
   useEffect(() => {
-    console.log('🔄 [SharedExpenses] Recalculando totais...', { 
-      mes: selectedMonth, 
+    console.log('🔄 [SharedExpenses] Recalculando totais...', {
+      mes: selectedMonth,
       ano: selectedYear,
       totalTransacoes: transactions.length,
-      transacoesCompartilhadas: sharedTransactions.length 
+      transacoesCompartilhadas: sharedTransactions.length
     });
-    
+
     // DEBUG: Mostrar todas as transações compartilhadas
-    console.log('📋 [SharedExpenses] Transações compartilhadas:', sharedTransactions.map((t: any) => ({
-      desc: t.description,
-      amount: t.amount,
-      date: t.date,
-      tripId: t.tripId,
-      sharedWith: t.sharedWith,
-      paidBy: t.paidBy,
-      myShare: t.myShare,
-      isShared: t.isShared
-    })));
-    
+    console.log('📊 Transações compartilhadas:', sharedTransactions.length);
+
     const newTotals = calculateTotals();
-    console.log('📊 [SharedExpenses] Novos totais:', newTotals);
-    setTotals(newTotals);
+        setTotals(newTotals);
   }, [sharedTransactions.length, selectedMonth, selectedYear, transactions.length]);
 
   return (
@@ -243,7 +252,7 @@ export function SharedExpenses() {
       {/* Cards de Resumo */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className={`bg-gradient-to-br ${
-          totals.total >= 0 
+          totals.total >= 0
             ? 'from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800'
             : 'from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800'
         }`}>
@@ -259,7 +268,7 @@ export function SharedExpenses() {
             <p className={`text-2xl font-bold ${
               totals.total >= 0 ? 'text-green-900 dark:text-green-100' : 'text-red-900 dark:text-red-100'
             }`}>
-              {totals.total >= 0 ? '+' : ''}R$ {totals.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              {totals.total >= 0 ? '+' : ''}R$ {totals.total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
             <p className={`text-xs mt-1 ${
               totals.total >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
@@ -270,7 +279,7 @@ export function SharedExpenses() {
         </Card>
 
         <Card className={`bg-gradient-to-br ${
-          totals.regular >= 0 
+          totals.regular >= 0
             ? 'from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800'
             : 'from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800'
         }`}>
@@ -286,7 +295,7 @@ export function SharedExpenses() {
             <p className={`text-2xl font-bold ${
               totals.regular >= 0 ? 'text-green-900 dark:text-green-100' : 'text-red-900 dark:text-red-100'
             }`}>
-              {totals.regular >= 0 ? '+' : ''}R$ {totals.regular.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              {totals.regular >= 0 ? '+' : ''}R$ {totals.regular.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
             <p className={`text-xs mt-1 ${
               totals.regular >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
@@ -297,7 +306,7 @@ export function SharedExpenses() {
         </Card>
 
         <Card className={`bg-gradient-to-br ${
-          totals.trip >= 0 
+          totals.trip >= 0
             ? 'from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 border-purple-200 dark:border-purple-800'
             : 'from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800'
         }`}>
@@ -313,7 +322,7 @@ export function SharedExpenses() {
             <p className={`text-2xl font-bold ${
               totals.trip >= 0 ? 'text-purple-900 dark:text-purple-100' : 'text-red-900 dark:text-red-100'
             }`}>
-              {totals.trip >= 0 ? '+' : ''}R$ {totals.trip.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              {totals.trip >= 0 ? '+' : ''}R$ {totals.trip.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
             <p className={`text-xs mt-1 ${
               totals.trip >= 0 ? 'text-purple-600 dark:text-purple-400' : 'text-red-600 dark:text-red-400'
@@ -366,6 +375,19 @@ export function SharedExpenses() {
           <SharedExpensesBilling mode="trip" />
         </TabsContent>
       </Tabs>
+
+      {/* Modal de Edição */}
+      <AddTransactionModal
+        open={editModalOpen}
+        onOpenChange={setEditModalOpen}
+        editingTransaction={editingTransaction}
+        onSave={() => {
+          setEditModalOpen(false);
+          setEditingTransaction(null);
+          // Recarregar dados
+          window.location.reload();
+        }}
+      />
     </div>
   );
 }

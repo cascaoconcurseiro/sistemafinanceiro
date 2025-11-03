@@ -62,7 +62,7 @@ export function createLazyComponent<T extends ComponentType<any>>(
   // Create lazy component with retry logic
   const LazyComponent = lazy(() => {
     let retryCount = 0;
-    
+
     const loadWithRetry = async (): Promise<{ default: T }> => {
       try {
         if (delay > 0) {
@@ -102,9 +102,9 @@ export function createLazyComponent<T extends ComponentType<any>>(
       <ErrorBoundary
         key={retryKey}
         fallbackRender={({ error }) => (
-          <ErrorFallback 
-            error={error} 
-            retry={() => setRetryKey(prev => prev + 1)} 
+          <ErrorFallback
+            error={error}
+            retry={() => setRetryKey(prev => prev + 1)}
           />
         )}
       >
@@ -130,7 +130,7 @@ export function useIntelligentPreload() {
     const handleMouseEnter = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
       const preloadAttr = target.getAttribute('data-preload');
-      
+
       if (preloadAttr) {
         // Dynamically import the component
         import(preloadAttr).catch(error => {
@@ -158,7 +158,7 @@ export function useIntelligentPreload() {
 
     // Add event listeners
     document.addEventListener('mouseenter', handleMouseEnter, true);
-    
+
     // Observe elements with preload attribute
     document.querySelectorAll('[data-preload]').forEach(el => {
       observer.observe(el);

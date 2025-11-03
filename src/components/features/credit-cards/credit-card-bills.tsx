@@ -44,6 +44,7 @@ import {
 } from 'lucide-react';
 import { CreditCardNotifications } from './credit-card-notifications';
 import { usePeriod } from '@/contexts/period-context';
+import { useUnifiedFinancial } from '@/contexts/unified-financial-context';
 import { toast } from 'sonner';
 
 interface CreditCardData {
@@ -79,11 +80,12 @@ interface Invoice {
 
 export function CreditCardBills() {
   const { selectedMonth, selectedYear } = usePeriod();
+  const { actions } = useUnifiedFinancial();
   const [creditCards, setCreditCards] = useState<CreditCardData[]>([]);
   const [selectedCardId, setSelectedCardId] = useState<string>('');
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(false);
-  
+
   // Estados para funcionalidades
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
@@ -100,6 +102,7 @@ export function CreditCardBills() {
   const [newCardLimit, setNewCardLimit] = useState('');
   const [newCardDueDay, setNewCardDueDay] = useState('');
   const [newCardClosingDay, setNewCardClosingDay] = useState('');
+  const [newCardPaymentAccountId, setNewCardPaymentAccountId] = useState('');
 
   // Estados para edição de cartão
   const [showEditCardDialog, setShowEditCardDialog] = useState(false);
@@ -108,6 +111,7 @@ export function CreditCardBills() {
   const [editCardLimit, setEditCardLimit] = useState('');
   const [editCardDueDay, setEditCardDueDay] = useState('');
   const [editCardClosingDay, setEditCardClosingDay] = useState('');
+  const [editCardPaymentAccountId, setEditCardPaymentAccountId] = useState('');
 
   // Carregar cartões disponíveis e contas
   useEffect(() => {
@@ -126,7 +130,7 @@ export function CreditCardBills() {
     try {
       const response = await fetch('/api/credit-cards', { credentials: 'include' });
       const result = await response.json();
-      
+
       if (result.success && result.data) {
         setCreditCards(result.data);
       }
@@ -140,9 +144,15 @@ export function CreditCardBills() {
     try {
       const response = await fetch('/api/accounts', { credentials: 'include' });
       const result = await response.json();
-      
+
       if (Array.isArray(result)) {
-        setAccounts(result.filter(acc => acc.isActive));
+        // ✅ Filtrar apenas contas ativas E com saldo > 0
+        const activeAccountsWithBalance = result.filter(acc => acc.isActive && Number(acc.balance) > 0);
+        setAccounts(activeAccountsWithBalance);
+        
+        if (activeAccountsWithBalance.length === 0) {
+          console.warn('⚠️ Nenhuma conta com saldo disponível para pagamento');
+        }
       }
     } catch (error) {
       console.error('Erro ao carregar contas:', error);
@@ -211,10 +221,11 @@ export function CreditCardBills() {
           name: newCardName.trim(),
           limit: limit,
           dueDay: dueDay,
-          closingDay: closingDay
+          closingDay: closingDay,
+          paymentAccountId: newCardPaymentAccountId || null
         })
       });
-      
+
       if (response.ok) {
         toast.success('Cartão criado com sucesso!');
         setShowCreateCardDialog(false);
@@ -222,6 +233,7 @@ export function CreditCardBills() {
         setNewCardLimit('');
         setNewCardDueDay('');
         setNewCardClosingDay('');
+        setNewCardPaymentAccountId('');
         loadCreditCards();
       } else {
         const error = await response.json();
@@ -240,6 +252,7 @@ export function CreditCardBills() {
     setEditCardLimit(card.limit.toString());
     setEditCardDueDay(card.dueDay.toString());
     setEditCardClosingDay(card.closingDay.toString());
+    setEditCardPaymentAccountId((card as any).paymentAccountId || '');
     setShowEditCardDialog(true);
   };
 
@@ -281,10 +294,11 @@ export function CreditCardBills() {
           name: editCardName.trim(),
           limit: limit,
           dueDay: dueDay,
-          closingDay: closingDay
+          closingDay: closingDay,
+          paymentAccountId: editCardPaymentAccountId || null
         })
       });
-      
+
       if (response.ok) {
         toast.success('Cartão atualizado com sucesso!');
         setShowEditCardDialog(false);
@@ -293,6 +307,7 @@ export function CreditCardBills() {
         setEditCardLimit('');
         setEditCardDueDay('');
         setEditCardClosingDay('');
+        setEditCardPaymentAccountId('');
         loadCreditCards();
       } else {
         const error = await response.json();
@@ -338,7 +353,7 @@ export function CreditCardBills() {
 
           {/* Notificações de Faturas */}
           <CreditCardNotifications />
-          
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -448,7 +463,7 @@ export function CreditCardBills() {
                                     method: 'DELETE',
                                     credentials: 'include'
                                   });
-                                  
+
                                   if (response.ok) {
                                     toast.success('Cartão excluído!');
                                     loadCreditCards();
@@ -483,7 +498,7 @@ export function CreditCardBills() {
                 Crie um novo cartão de crédito para gerenciar suas faturas.
               </DialogDescription>
             </DialogHeader>
-            
+
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="card-name">Nome do Cartão</Label>
@@ -534,12 +549,12 @@ export function CreditCardBills() {
                 </div>
               </div>
             </div>
-            
+
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowCreateCardDialog(false)}>
                 Cancelar
               </Button>
-              <Button 
+              <Button
                 onClick={handleCreateCard}
                 disabled={!newCardName.trim() || !newCardLimit || !newCardDueDay || !newCardClosingDay}
               >
@@ -557,7 +572,7 @@ export function CreditCardBills() {
                 Edite as informações do seu cartão de crédito.
               </DialogDescription>
             </DialogHeader>
-            
+
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-card-name">Nome do Cartão</Label>
@@ -607,13 +622,36 @@ export function CreditCardBills() {
                   />
                 </div>
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-card-payment-account">Conta para Pagamento (opcional)</Label>
+                <Select
+                  value={editCardPaymentAccountId}
+                  onValueChange={setEditCardPaymentAccountId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a conta" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhuma</SelectItem>
+                    {accounts.map((account) => (
+                      <SelectItem key={account.id} value={account.id}>
+                        {account.name} - {formatCurrency(account.balance)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Conta bancária que será usada para pagar a fatura deste cartão
+                </p>
+              </div>
             </div>
-            
+
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowEditCardDialog(false)}>
                 Cancelar
               </Button>
-              <Button 
+              <Button
                 onClick={handleEditCard}
                 disabled={!editCardName.trim() || !editCardLimit || !editCardDueDay || !editCardClosingDay}
               >
@@ -654,7 +692,7 @@ export function CreditCardBills() {
       {(() => {
         const selectedCard = creditCards.find(c => c.id === selectedCardId);
         if (!selectedCard) return null;
-        
+
         return (
           <Card>
             <CardHeader>
@@ -744,29 +782,79 @@ export function CreditCardBills() {
               </div>
 
               {/* Ações da Fatura */}
-              {!invoice.isPaid && invoice.totalAmount > 0 && (
+              {invoice.totalAmount > 0 && (
                 <div className="flex gap-2">
-                  <Button
-                    onClick={() => {
-                      setPaymentAmount(invoice.totalAmount.toString());
-                      setShowPaymentDialog(true);
-                    }}
-                    className="gap-2"
-                  >
-                    <Check className="w-4 h-4" />
-                    Pagar Fatura Total
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setPaymentAmount('');
-                      setShowPaymentDialog(true);
-                    }}
-                    className="gap-2"
-                  >
-                    <Check className="w-4 h-4" />
-                    Pagamento Parcial
-                  </Button>
+                  {!invoice.isPaid ? (
+                    <>
+                      <Button
+                        onClick={() => {
+                          setPaymentAmount(invoice.totalAmount.toString());
+                          setShowPaymentDialog(true);
+                        }}
+                        className="gap-2"
+                      >
+                        <Check className="w-4 h-4" />
+                        Pagar Fatura Total
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setPaymentAmount('');
+                          setShowPaymentDialog(true);
+                        }}
+                        className="gap-2"
+                      >
+                        <Check className="w-4 h-4" />
+                        Pagamento Parcial
+                      </Button>
+                    </>
+                  ) : invoice.isPaid ? (
+                    <div className="flex items-center gap-2 text-green-600">
+                      <CheckCircle className="w-5 h-5" />
+                      <span className="font-medium">Fatura Paga</span>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      onClick={async () => {
+                        if (!confirm('Deseja realmente desmarcar esta fatura como paga? Isso reverterá o pagamento e restaurará o limite do cartão.')) {
+                          return;
+                        }
+
+                        try {
+                          const response = await fetch(
+                            `/api/credit-cards/${selectedCardId}/invoices/${invoice.id}/unpay`,
+                            {
+                              method: 'POST',
+                              credentials: 'include',
+                            }
+                          );
+
+                          if (response.ok) {
+                            const result = await response.json();
+                            toast.success(result.message || 'Pagamento revertido com sucesso!');
+                            
+                            // ✅ Forçar atualização completa de todos os dados
+                            await actions.refresh();
+                            
+                            // Recarregar dados locais
+                            loadInvoice(); // Recarregar fatura
+                            loadCreditCards(); // Recarregar cartões para atualizar limite
+                          } else {
+                            const error = await response.json();
+                            toast.error(error.error || 'Erro ao reverter pagamento');
+                          }
+                        } catch (error) {
+                          console.error('Erro ao reverter pagamento:', error);
+                          toast.error('Erro ao reverter pagamento');
+                        }
+                      }}
+                      className="gap-2"
+                    >
+                      <X className="w-4 h-4" />
+                      Desmarcar como Paga
+                    </Button>
+                  )}
                   <Button variant="outline" className="gap-2">
                     <Download className="w-4 h-4" />
                     Baixar PDF
@@ -818,7 +906,7 @@ export function CreditCardBills() {
               Registre o pagamento da fatura do cartão de crédito
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="payment-amount">Valor do Pagamento</Label>
@@ -849,37 +937,59 @@ export function CreditCardBills() {
 
             <div className="space-y-2">
               <Label htmlFor="payment-account">Conta para Débito</Label>
-              <Select value={selectedPaymentAccount} onValueChange={setSelectedPaymentAccount}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a conta" />
-                </SelectTrigger>
-                <SelectContent>
-                  {accounts.map((account) => (
-                    <SelectItem key={account.id} value={account.id}>
-                      {account.name} - {formatCurrency(account.balance)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {accounts.length === 0 ? (
+                <div className="p-3 border rounded-md bg-yellow-50 border-yellow-200">
+                  <p className="text-sm text-yellow-800">
+                    ⚠️ Nenhuma conta com saldo disponível para pagamento
+                  </p>
+                </div>
+              ) : (
+                <Select value={selectedPaymentAccount} onValueChange={setSelectedPaymentAccount}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a conta" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accounts.map((account) => (
+                      <SelectItem key={account.id} value={account.id}>
+                        {account.name} - {formatCurrency(Number(account.balance))}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowPaymentDialog(false)}>
               Cancelar
             </Button>
-            <Button 
+            <Button
               onClick={async () => {
                 if (!paymentAmount || !selectedPaymentAccount) {
                   toast.error('Preencha todos os campos');
                   return;
                 }
-                
+
                 if (!invoice) {
                   toast.error('Fatura não encontrada');
                   return;
                 }
-                
+
+                // ✅ Validar saldo da conta
+                const selectedAccount = accounts.find(a => a.id === selectedPaymentAccount);
+                const paymentValue = parseFloat(paymentAmount);
+
+                if (!selectedAccount) {
+                  toast.error('Conta não encontrada');
+                  return;
+                }
+
+                if (Number(selectedAccount.balance) < paymentValue) {
+                  toast.error(`Saldo insuficiente. Disponível: ${formatCurrency(Number(selectedAccount.balance))}`);
+                  return;
+                }
+
                 try {
                   const response = await fetch(`/api/credit-cards/${selectedCardId}/invoices/${invoice.id}/pay`, {
                     method: 'POST',
@@ -892,13 +1002,17 @@ export function CreditCardBills() {
                       fullPayment: parseFloat(paymentAmount) >= invoice.totalAmount
                     })
                   });
-                  
+
                   if (response.ok) {
                     const result = await response.json();
                     toast.success(result.message || 'Pagamento registrado com sucesso!');
                     setShowPaymentDialog(false);
                     setPaymentAmount('');
                     setSelectedPaymentAccount('');
+                    
+                    // ✅ Forçar atualização completa de todos os dados
+                    await actions.refresh();
+                    
                     loadInvoice(); // Recarregar fatura
                   } else {
                     const error = await response.json();
@@ -919,3 +1033,4 @@ export function CreditCardBills() {
     </div>
   );
 }
+

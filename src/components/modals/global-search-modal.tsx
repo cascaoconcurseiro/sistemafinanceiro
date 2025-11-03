@@ -1,470 +1,257 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTransactions, useAccounts } from '@/contexts/unified-financial-context';
-import {
-  Search,
-  ArrowUpRight,
-  ArrowDownRight,
-  Target,
-  TrendingUp,
-  Plane,
-  Users,
-  Clock,
-  Command,
-} from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Search, TrendingUp, Target, Plane, Receipt, CreditCard, Wallet } from 'lucide-react';
+import { useGlobalModal } from '@/contexts/ui/global-modal-context';
 
 interface SearchResult {
   id: string;
-  type: 'transaction' | 'goal' | 'investment' | 'trip' | 'account';
+  type: 'transaction' | 'goal' | 'trip' | 'account' | 'card';
   title: string;
   subtitle?: string;
-  url: string;
-  relevance: number;
   amount?: number;
   date?: string;
+  icon: React.ReactNode;
+  path: string;
 }
 
-interface GlobalSearchModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
-  const [query, setQuery] = useState('');
+export function GlobalSearchModal() {
+  const { globalSearchModalOpen, closeAllModals } = useGlobalModal();
+  const [searchTerm, setSearchTerm] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
-  const [selectedIndex, setSelectedIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-
-  const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  // Usar os hooks
-  const transactions = useTransactions();
-  const accountsArray = useAccounts();
-  
-  const goals = useMemo(() => [], []); // TODO: Implementar hook para goals
-  const investments = useMemo(() => [], []); // TODO: Implementar hook para investments
-
-  // Load recent searches from database
-  useEffect(() => {
-    const loadRecentSearches = async () => {
-      try {
-        // TODO: Implementar API route para recent searches
-        setRecentSearches([]);
-      } catch (error) {
-        console.error('Error loading recent searches:', error);
-        setRecentSearches([]);
-      }
-    };
-    
-    loadRecentSearches();
-  }, []);
-
-  // Focus input when modal opens
-  useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [isOpen]);
-
-  // Perform search when query changes
-  const performSearch = useCallback((searchQuery: string) => {
-    // This function is no longer needed as the search logic is now inline
-    // Keeping it for potential future use
-  }, []);
-
-  const fuzzyMatch = useCallback((text: string, query: string): boolean => {
-    let textIndex = 0;
-    let queryIndex = 0;
-
-    while (textIndex < text.length && queryIndex < query.length) {
-      if (text[textIndex] === query[queryIndex]) {
-        queryIndex++;
-      }
-      textIndex++;
-    }
-
-    return queryIndex === query.length;
-  }, []);
-
-  const calculateRelevance = useCallback((query: string, fields: string[]): number => {
-    let relevance = 0;
-
-    fields.forEach((field) => {
-      const fieldLower = field.toLowerCase();
-
-      // Exact match gets highest score
-      if (fieldLower === query) {
-        relevance += 100;
-      }
-      // Starts with query gets high score
-      else if (fieldLower.startsWith(query)) {
-        relevance += 80;
-      }
-      // Contains query gets medium score
-      else if (fieldLower.includes(query)) {
-        relevance += 50;
-      }
-      // Fuzzy match gets low score
-      else if (fuzzyMatch(fieldLower, query)) {
-        relevance += 20;
-      }
-    });
-
-    return relevance;
-  }, [fuzzyMatch]); // Include fuzzyMatch in dependencies
-
-  // Search effect with debounce
-  useEffect(() => {
-    if (query.trim().length < 2) {
+  // Buscar resultados
+  const performSearch = useCallback(async (term: string) => {
+    if (!term || term.length < 2) {
       setResults([]);
-      setIsLoading(false);
       return;
     }
 
     setIsLoading(true);
-    const searchTimeout = setTimeout(() => {
-      const searchResults: SearchResult[] = [];
-      const lowerQuery = query.toLowerCase();
 
-      // Search transactions
-      transactions.forEach((transaction) => {
-        if (!transaction) return;
-        
-        const relevance = calculateRelevance(lowerQuery, [
-          transaction.description || '',
-          transaction.category || '',
-          (transaction.amount || 0).toString(),
-        ]);
+    try {
+      // Buscar transações
+      const transactionsRes = await fetch(`/api/transactions?search=${encodeURIComponent(term)}`, {
+        credentials: 'include'
+      });
+      
+      const mockResults: SearchResult[] = [];
 
-        if (relevance > 0) {
-          searchResults.push({
-            id: transaction.id || '',
+      // Se a API retornar dados, processar
+      if (transactionsRes.ok) {
+        const data = await transactionsRes.json();
+        if (data.success && data.transactions) {
+          data.transactions.slice(0, 5).forEach((t: any) => {
+            mockResults.push({
+              id: t.id,
+              type: 'transaction',
+              title: t.description,
+              subtitle: new Date(t.date).toLocaleDateString('pt-BR'),
+              amount: t.amount,
+              icon: <Receipt className="w-4 h-4" />,
+              path: `/transactions?id=${t.id}`
+            });
+          });
+        }
+      }
+
+      // Adicionar atalhos rápidos se não houver resultados
+      if (mockResults.length === 0) {
+        mockResults.push(
+          {
+            id: 'new-transaction',
             type: 'transaction',
-            title: transaction.description || 'Transação sem descrição',
-            subtitle: `${transaction.category || 'Sem categoria'} • ${transaction.type === 'income' ? '+' : '-'}R$ ${Math.abs(transaction.amount || 0).toFixed(2)}`,
-            url: `/transactions?id=${transaction.id}`,
-            relevance,
-            amount: transaction.amount || 0,
-            date: transaction.date || '',
-          });
-        }
-      });
-
-      // Search goals
-      goals.forEach((goal) => {
-        if (!goal) return;
-        
-        const relevance = calculateRelevance(lowerQuery, [
-          goal.name || '',
-          goal.description || '',
-          goal.category || '',
-        ]);
-
-        if (relevance > 0) {
-          const current = goal.current || 0;
-          const target = goal.target || 1;
-          const progress = (current / target) * 100;
-          searchResults.push({
-            id: goal.id || '',
-            type: 'goal',
-            title: goal.name || 'Meta sem nome',
-            subtitle: `${progress.toFixed(1)}% concluído • R$ ${current.toFixed(2)} de R$ ${target.toFixed(2)}`,
-            url: `/goals?id=${goal.id}`,
-            relevance,
-            amount: target,
-          });
-        }
-      });
-
-      // Search investments
-      investments.forEach((investment) => {
-        if (!investment) return;
-        
-        const relevance = calculateRelevance(lowerQuery, [
-          investment.name || '',
-          investment.type || '',
-          investment.broker || '',
-        ]);
-
-        if (relevance > 0) {
-          const currentValue = investment.currentValue || 0;
-          searchResults.push({
-            id: investment.id || '',
-            type: 'investment',
-            title: investment.name || 'Investimento sem nome',
-            subtitle: `${investment.type || 'Tipo não definido'} • R$ ${currentValue.toFixed(2)}`,
-            url: `/investments?id=${investment.id}`,
-            relevance,
-            amount: currentValue,
-          });
-        }
-      });
-
-      // Search accounts
-      accountsArray.forEach((account) => {
-        if (!account) return;
-        
-        const relevance = calculateRelevance(lowerQuery, [
-          account.name || '',
-          account.bank || '',
-          account.type || '',
-        ]);
-
-        if (relevance > 0) {
-          const balance = account.balance || 0;
-          searchResults.push({
-            id: account.id || '',
+            title: 'Nova Transação',
+            subtitle: 'Criar nova transação',
+            icon: <Receipt className="w-4 h-4" />,
+            path: '/transactions'
+          },
+          {
+            id: 'accounts',
             type: 'account',
-            title: account.name || 'Conta sem nome',
-            subtitle: `${account.bank || 'Banco não definido'} • R$ ${balance.toFixed(2)}`,
-            url: `/accounts?id=${account.id}`,
-            relevance,
-            amount: balance,
-          });
-        }
-      });
+            title: 'Contas',
+            subtitle: 'Gerenciar contas bancárias',
+            icon: <Wallet className="w-4 h-4" />,
+            path: '/accounts'
+          },
+          {
+            id: 'cards',
+            type: 'card',
+            title: 'Cartões de Crédito',
+            subtitle: 'Ver faturas e limites',
+            icon: <CreditCard className="w-4 h-4" />,
+            path: '/credit-cards'
+          },
+          {
+            id: 'goals',
+            type: 'goal',
+            title: 'Metas',
+            subtitle: 'Acompanhar objetivos financeiros',
+            icon: <Target className="w-4 h-4" />,
+            path: '/goals'
+          },
+          {
+            id: 'trips',
+            type: 'trip',
+            title: 'Viagens',
+            subtitle: 'Planejar e controlar viagens',
+            icon: <Plane className="w-4 h-4" />,
+            path: '/trips'
+          }
+        );
+      }
 
-      // Sort by relevance and limit results
-      const sortedResults = searchResults
-        .sort((a, b) => b.relevance - a.relevance)
-        .slice(0, 10);
-
-      setResults(sortedResults);
-      setSelectedIndex(0);
+      setResults(mockResults);
+    } catch (error) {
+      console.error('Erro na busca:', error);
+      setResults([]);
+    } finally {
       setIsLoading(false);
-    }, 300); // Debounce search
-
-    return () => clearTimeout(searchTimeout);
-  }, [query, transactions, accountsArray, goals, investments]);
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        setSelectedIndex((prev) => Math.min(prev + 1, results.length - 1));
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        setSelectedIndex((prev) => Math.max(prev - 1, 0));
-        break;
-      case 'Enter':
-        e.preventDefault();
-        if (results[selectedIndex]) {
-          handleResultClick(results[selectedIndex]);
-        }
-        break;
-      case 'Escape':
-        onClose();
-        break;
     }
+  }, []);
+
+  // Debounce da busca
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      performSearch(searchTerm);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, performSearch]);
+
+  // Limpar ao fechar
+  useEffect(() => {
+    if (!globalSearchModalOpen) {
+      setSearchTerm('');
+      setResults([]);
+    }
+  }, [globalSearchModalOpen]);
+
+  const handleSelectResult = (result: SearchResult) => {
+    closeAllModals();
+    router.push(result.path);
   };
 
-  const handleResultClick = async (result: SearchResult) => {
-    // Add to recent searches
-    const newRecentSearches = [
-      query,
-      ...recentSearches.filter((s) => s !== query),
-    ].slice(0, 5);
-    setRecentSearches(newRecentSearches);
-
-    // Navigate to result
-    router.push(result.url);
-    onClose();
+  const formatCurrency = (value: number) => {
+    return value.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    });
   };
 
-  const handleRecentSearchClick = (search: string) => {
-    setQuery(search);
-  };
-
-  const getResultIcon = (type: string) => {
+  const getTypeColor = (type: string) => {
     switch (type) {
-      case 'transaction':
-        return <ArrowUpRight className="w-4 h-4 text-green-600" />;
-      case 'goal':
-        return <Target className="w-4 h-4 text-orange-600" />;
-      case 'investment':
-        return <TrendingUp className="w-4 h-4 text-blue-600" />;
-      case 'trip':
-        return <Plane className="w-4 h-4 text-purple-600" />;
-      case 'account':
-        return <Users className="w-4 h-4 text-gray-600" />;
-      default:
-        return <Search className="w-4 h-4 text-gray-400" />;
+      case 'transaction': return 'bg-blue-100 text-blue-800';
+      case 'goal': return 'bg-green-100 text-green-800';
+      case 'trip': return 'bg-purple-100 text-purple-800';
+      case 'account': return 'bg-yellow-100 text-yellow-800';
+      case 'card': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
   const getTypeLabel = (type: string) => {
     switch (type) {
-      case 'transaction':
-        return 'Transação';
-      case 'goal':
-        return 'Meta';
-      case 'investment':
-        return 'Investimento';
-      case 'trip':
-        return 'Viagem';
-      case 'account':
-        return 'Conta';
-      default:
-        return type;
+      case 'transaction': return 'Transação';
+      case 'goal': return 'Meta';
+      case 'trip': return 'Viagem';
+      case 'account': return 'Conta';
+      case 'card': return 'Cartão';
+      default: return type;
     }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] p-0">
-        <div className="flex flex-col max-h-[80vh]">
-          {/* Search Input */}
-          <div className="flex items-center gap-3 p-4 border-b">
-            <Search className="w-5 h-5 text-gray-400" />
+    <Dialog open={globalSearchModalOpen} onOpenChange={closeAllModals}>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Search className="w-5 h-5" />
+            Busca Global
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
+          {/* Campo de busca */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              ref={inputRef}
-              placeholder="Buscar transações, metas, investimentos..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={handleKeyDown}
-              className="border-0 focus-visible:ring-0 text-lg"
+              placeholder="Buscar transações, metas, viagens..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+              autoFocus
             />
-            <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100">
-              <Command className="w-3 h-3" />K
-            </kbd>
           </div>
 
-          {/* Search Results */}
-          <div className="flex-1 overflow-y-auto">
-            {query.trim().length < 2 ? (
-              // Recent Searches
-              <div className="p-4">
-                {recentSearches.length > 0 && (
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-3 flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
-                      Buscas Recentes
-                    </h3>
-                    <div className="space-y-1">
-                      {recentSearches.map((search, index) => (
-                        <button
-                          key={index}
-                          onClick={() => handleRecentSearchClick(search)}
-                          className="w-full text-left p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-sm"
-                        >
-                          {search}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="mt-6">
-                  <h3 className="text-sm font-medium text-gray-500 mb-3">
-                    Dicas de Busca
-                  </h3>
-                  <div className="space-y-2 text-sm text-gray-600">
-                    <p>
-                      • Digite o nome de uma transação, meta ou investimento
-                    </p>
-                    <p>• Busque por categoria: "alimentação", "transporte"</p>
-                    <p>• Procure por valores: "150", "1000"</p>
-                    <p>
-                      • Use as setas ↑↓ para navegar e Enter para selecionar
-                    </p>
-                  </div>
-                </div>
+          {/* Resultados */}
+          <div className="flex-1 overflow-y-auto space-y-2">
+            {isLoading ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                Buscando...
+              </div>
+            ) : results.length === 0 && searchTerm.length >= 2 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Search className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p>Nenhum resultado encontrado</p>
+                <p className="text-sm">Tente buscar por outro termo</p>
+              </div>
+            ) : results.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Search className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p>Digite para buscar</p>
+                <p className="text-sm">Transações, metas, viagens e mais...</p>
               </div>
             ) : (
-              // Search Results
-              <div className="p-2">
-                {isLoading ? (
-                  <div className="p-8 text-center text-gray-500">
-                    <Search className="w-8 h-8 mx-auto mb-2 animate-pulse" />
-                    <p>Buscando...</p>
+              results.map((result) => (
+                <button
+                  key={result.id}
+                  onClick={() => handleSelectResult(result)}
+                  className="w-full p-3 rounded-lg border hover:bg-accent hover:border-primary transition-colors text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                      {result.icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-medium truncate">{result.title}</p>
+                        <Badge variant="outline" className={`text-xs ${getTypeColor(result.type)}`}>
+                          {getTypeLabel(result.type)}
+                        </Badge>
+                      </div>
+                      {result.subtitle && (
+                        <p className="text-sm text-muted-foreground truncate">
+                          {result.subtitle}
+                        </p>
+                      )}
+                    </div>
+                    {result.amount !== undefined && (
+                      <div className="flex-shrink-0 text-right">
+                        <p className={`font-semibold ${result.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {formatCurrency(result.amount)}
+                        </p>
+                      </div>
+                    )}
                   </div>
-                ) : results.length === 0 ? (
-                  <div className="p-8 text-center text-gray-500">
-                    <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p>Nenhum resultado encontrado</p>
-                    <p className="text-sm mt-1">Tente usar termos diferentes</p>
-                  </div>
-                ) : (
-                  <div className="space-y-1">
-                    {results.map((result, index) => (
-                      <button
-                        key={result.id}
-                        onClick={() => handleResultClick(result)}
-                        className={`w-full text-left p-3 rounded-md transition-colors ${
-                          index === selectedIndex
-                            ? 'bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800'
-                            : 'hover:bg-gray-50 dark:hover:bg-gray-800'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          {getResultIcon(result.type)}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <p className="font-medium text-sm truncate">
-                                {result.title}
-                              </p>
-                              <Badge variant="secondary" className="text-xs">
-                                {getTypeLabel(result.type)}
-                              </Badge>
-                            </div>
-                            {result.subtitle && (
-                              <p className="text-xs text-gray-500 truncate">
-                                {result.subtitle}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+                </button>
+              ))
             )}
           </div>
 
-          {/* Footer */}
-          <div className="p-3 border-t bg-gray-50 dark:bg-gray-900">
-            <div className="flex items-center justify-between text-xs text-gray-500">
-              <div className="flex items-center gap-4">
-                <span className="flex items-center gap-1">
-                  <kbd className="px-1.5 py-0.5 bg-white dark:bg-gray-800 border rounded">
-                    ↑↓
-                  </kbd>
-                  navegar
-                </span>
-                <span className="flex items-center gap-1">
-                  <kbd className="px-1.5 py-0.5 bg-white dark:bg-gray-800 border rounded">
-                    ↵
-                  </kbd>
-                  selecionar
-                </span>
-                <span className="flex items-center gap-1">
-                  <kbd className="px-1.5 py-0.5 bg-white dark:bg-gray-800 border rounded">
-                    esc
-                  </kbd>
-                  fechar
-                </span>
-              </div>
-              {results.length > 0 && (
-                <span>
-                  {results.length} resultado{results.length !== 1 ? 's' : ''}
-                </span>
-              )}
-            </div>
+          {/* Dica de atalho */}
+          <div className="text-xs text-muted-foreground text-center pt-2 border-t">
+            Pressione <kbd className="px-2 py-1 bg-muted rounded">Esc</kbd> para fechar
           </div>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
-
-

@@ -52,10 +52,10 @@ export function useTransactionServices() {
             toast.success('Transação criada com sucesso!');
             return result.transaction;
         } catch (err) {
-            const errorMessage = err instanceof Error 
-                ? err.message 
+            const errorMessage = err instanceof Error
+                ? err.message
                 : 'Erro ao criar transação';
-            
+
             setError(errorMessage);
             toast.error(errorMessage);
             throw err;
@@ -75,8 +75,8 @@ export function useTransactionServices() {
             const response = await fetch('/api/transactions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    type: 'installment', 
+                body: JSON.stringify({
+                    type: 'installment',
                     data: { ...data, isInstallment: true }
                 }),
             });
@@ -90,10 +90,10 @@ export function useTransactionServices() {
             toast.success(`${transactions.length} parcelas criadas com sucesso!`);
             return transactions;
         } catch (err) {
-            const errorMessage = err instanceof Error 
-                ? err.message 
+            const errorMessage = err instanceof Error
+                ? err.message
                 : 'Erro ao criar transação parcelada';
-            
+
             setError(errorMessage);
             toast.error(errorMessage);
             throw err;
@@ -113,8 +113,8 @@ export function useTransactionServices() {
             const response = await fetch('/api/transactions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    type: 'shared', 
+                body: JSON.stringify({
+                    type: 'shared',
                     data: { ...data, isShared: true }
                 }),
             });
@@ -128,10 +128,10 @@ export function useTransactionServices() {
             toast.success('Despesa compartilhada criada com sucesso!');
             return transaction;
         } catch (err) {
-            const errorMessage = err instanceof Error 
-                ? err.message 
+            const errorMessage = err instanceof Error
+                ? err.message
                 : 'Erro ao criar despesa compartilhada';
-            
+
             setError(errorMessage);
             toast.error(errorMessage);
             throw err;
@@ -170,10 +170,10 @@ export function useTransactionServices() {
             toast.success('Transferência realizada com sucesso!');
             return transactions;
         } catch (err) {
-            const errorMessage = err instanceof Error 
-                ? err.message 
+            const errorMessage = err instanceof Error
+                ? err.message
                 : 'Erro ao criar transferência';
-            
+
             setError(errorMessage);
             toast.error(errorMessage);
             throw err;
@@ -214,10 +214,10 @@ export function useTransactionServices() {
             toast.success('Anexo adicionado com sucesso!');
             return attachment;
         } catch (err) {
-            const errorMessage = err instanceof Error 
-                ? err.message 
+            const errorMessage = err instanceof Error
+                ? err.message
                 : 'Erro ao adicionar anexo';
-            
+
             setError(errorMessage);
             toast.error(errorMessage);
             throw err;
@@ -252,10 +252,10 @@ export function useTransactionServices() {
 
             toast.success('Tag adicionada com sucesso!');
         } catch (err) {
-            const errorMessage = err instanceof Error 
-                ? err.message 
+            const errorMessage = err instanceof Error
+                ? err.message
                 : 'Erro ao adicionar tag';
-            
+
             setError(errorMessage);
             toast.error(errorMessage);
             throw err;
@@ -286,10 +286,10 @@ export function useTransactionServices() {
             toast.success('Transação reconciliada com sucesso!');
             return transaction;
         } catch (err) {
-            const errorMessage = err instanceof Error 
-                ? err.message 
+            const errorMessage = err instanceof Error
+                ? err.message
                 : 'Erro ao reconciliar transação';
-            
+
             setError(errorMessage);
             toast.error(errorMessage);
             throw err;
@@ -323,10 +323,10 @@ export function useTransactionServices() {
 
             toast.success('Transação excluída com sucesso!');
         } catch (err) {
-            const errorMessage = err instanceof Error 
-                ? err.message 
+            const errorMessage = err instanceof Error
+                ? err.message
                 : 'Erro ao excluir transação';
-            
+
             setError(errorMessage);
             toast.error(errorMessage);
             throw err;

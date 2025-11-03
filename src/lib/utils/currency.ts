@@ -69,12 +69,12 @@ export function formatCurrency(
   if (typeof amount === 'string') {
     // Remove caracteres não numéricos exceto vírgula, ponto e sinal negativo
     const cleanAmount = amount.replace(/[^\d.,-]/g, '');
-    
+
     // Converte vírgula para ponto se for formato brasileiro
     const normalizedAmount = cleanAmount.replace(',', '.');
-    
+
     numericAmount = parseFloat(normalizedAmount);
-    
+
     // Se não conseguir converter, retorna valor padrão
     if (isNaN(numericAmount)) {
       return 'R$ 0,00';
@@ -167,7 +167,7 @@ export function formatCompactCurrency(
     const cleanAmount = amount.replace(/[^\d.,-]/g, '');
     const normalizedAmount = cleanAmount.replace(',', '.');
     numericAmount = parseFloat(normalizedAmount);
-    
+
     if (isNaN(numericAmount)) {
       return 'R$ 0,00';
     }
@@ -243,9 +243,9 @@ export function formatPercentage(value: number, decimals: number = 2): string {
  */
 export function isValidCurrency(value: string | number): boolean {
   if (typeof value === 'number') return !isNaN(value) && isFinite(value);
-  
+
   if (!value || typeof value !== 'string') return false;
-  
+
   const parsed = parseCurrency(value);
   return !isNaN(parsed) && isFinite(parsed);
 }

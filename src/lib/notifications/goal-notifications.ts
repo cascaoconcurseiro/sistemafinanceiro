@@ -78,7 +78,7 @@ export class GoalNotificationService {
   private static async createMilestoneNotification(goal: any, milestone: number) {
     try {
       const emoji = milestone === 90 ? '🔥' : milestone >= 75 ? '🚀' : milestone >= 50 ? '💪' : '🎯';
-      
+
       await prisma.notification.create({
         data: {
           title: `${emoji} ${milestone}% da Meta Atingida!`,
@@ -122,9 +122,9 @@ export class GoalNotificationService {
         const daysUntilDeadline = Math.ceil(
           (goal.targetDate!.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
         );
-        
+
         const progress = (goal.current / goal.target) * 100;
-        
+
         // Only notify if progress is less than 90% and deadline is within 30 days
         if (progress < 90) {
           await this.createDeadlineNotification(goal, daysUntilDeadline, progress);
@@ -142,7 +142,7 @@ export class GoalNotificationService {
     try {
       const urgencyLevel = daysUntilDeadline <= 7 ? 'warning' : 'info';
       const emoji = daysUntilDeadline <= 7 ? '⚠️' : '📅';
-      
+
       await prisma.notification.create({
         data: {
           title: `${emoji} Meta Próxima do Prazo`,

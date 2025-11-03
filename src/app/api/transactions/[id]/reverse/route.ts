@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { broadcastEvent, EventTypes } from '../../../events/route';
+import { broadcastEvent, EventTypes } from '@/lib/events';
 import { createReversalTransaction, logTransactionAudit, recalculateAccountBalance } from '@/lib/transaction-audit';
 
 // POST - Criar estorno de transação

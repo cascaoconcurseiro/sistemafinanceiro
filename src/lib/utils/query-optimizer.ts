@@ -20,7 +20,7 @@ export const transactionIncludes = {
     budget: true,
     invoice: true,
   },
-  
+
   basic: {
     account: {
       select: {
@@ -38,7 +38,7 @@ export const transactionIncludes = {
       }
     },
   },
-  
+
   minimal: {
     account: {
       select: {
@@ -62,7 +62,7 @@ export const tripIncludes = {
     shoppingItems: true,
     currencyExchanges: true,
   },
-  
+
   basic: {
     transactions: {
       select: {
@@ -93,7 +93,7 @@ export const creditCardIncludes = {
       }
     },
   },
-  
+
   basic: {
     invoices: {
       where: {
@@ -124,7 +124,7 @@ export async function getOptimizedTransactions(
   }
 ) {
   const includeLevel = options?.include || 'basic';
-  
+
   return await prisma.transaction.findMany({
     where,
     include: transactionIncludes[includeLevel],
@@ -145,7 +145,7 @@ export async function getOptimizedTrips(
   }
 ) {
   const includeLevel = options?.include || 'basic';
-  
+
   return await prisma.trip.findMany({
     where,
     include: tripIncludes[includeLevel],
@@ -164,7 +164,7 @@ export async function getOptimizedCreditCards(
   }
 ) {
   const includeLevel = options?.include || 'basic';
-  
+
   return await prisma.creditCard.findMany({
     where,
     include: creditCardIncludes[includeLevel],

@@ -45,9 +45,9 @@ export async function GET(request: NextRequest) {
       userSettings = null;
     }
 
-    const themeSettings = userSettings?.themeSettings 
-      ? (typeof userSettings.themeSettings === 'string' 
-          ? JSON.parse(userSettings.themeSettings) 
+    const themeSettings = userSettings?.themeSettings
+      ? (typeof userSettings.themeSettings === 'string'
+          ? JSON.parse(userSettings.themeSettings)
           : userSettings.themeSettings)
       : defaultThemeSettings;
 
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
     console.error('Erro ao buscar configurações de tema:', error);
     return NextResponse.json(
       { success: false, error: 'Erro interno do servidor' },
-      { 
+      {
         status: 500,
         headers: {
           'Access-Control-Allow-Origin': '*',
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    
+
     // Validar configurações recebidas
     const updatedSettings = {
       ...defaultThemeSettings,
@@ -98,8 +98,8 @@ export async function POST(request: NextRequest) {
       await prisma.userSettings.upsert({
         where: { userId: auth.userId },
         update: { themeSettings: JSON.stringify(updatedSettings) },
-        create: { 
-          userId: auth.userId, 
+        create: {
+          userId: auth.userId,
           themeSettings: JSON.stringify(updatedSettings)
         }
       });
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
     console.error('Erro ao atualizar configurações de tema:', error);
     return NextResponse.json(
       { success: false, error: 'Erro interno do servidor' },
-      { 
+      {
         status: 500,
         headers: {
           'Access-Control-Allow-Origin': '*',

@@ -23,9 +23,17 @@ export async function GET(
       );
     }
 
+    // ✅ BLOQUEIO: Não permitir acesso a cartões de crédito por esta API
+    if (id.startsWith('card-')) {
+      return NextResponse.json(
+        { error: 'Use a API de cartões de crédito para gerenciar cartões' },
+        { status: 403 }
+      );
+    }
+
     // ✅ CORREÇÃO CRÍTICA: Buscar apenas contas do usuário autenticado
     const account = await prisma.account.findFirst({
-      where: { 
+      where: {
         id,
         userId: auth.userId // ✅ Isolamento de dados
       },
@@ -77,6 +85,14 @@ export async function PUT(
       return NextResponse.json(
         { error: 'ID da conta é obrigatório' },
         { status: 400 }
+      );
+    }
+
+    // ✅ BLOQUEIO: Não permitir acesso a cartões de crédito por esta API
+    if (id.startsWith('card-')) {
+      return NextResponse.json(
+        { error: 'Use a API de cartões de crédito para gerenciar cartões' },
+        { status: 403 }
       );
     }
 
@@ -139,6 +155,14 @@ export async function DELETE(
       );
     }
 
+    // ✅ BLOQUEIO: Não permitir acesso a cartões de crédito por esta API
+    if (id.startsWith('card-')) {
+      return NextResponse.json(
+        { error: 'Use a API de cartões de crédito para gerenciar cartões' },
+        { status: 403 }
+      );
+    }
+
     // ✅ CORREÇÃO CRÍTICA: Verificar se a conta pertence ao usuário
     const existingAccount = await prisma.account.findFirst({
       where: {
@@ -156,7 +180,7 @@ export async function DELETE(
 
     // ✅ CORREÇÃO CRÍTICA: Verificar transações apenas do usuário
     const transactionCount = await prisma.transaction.count({
-      where: { 
+      where: {
         accountId: id,
         userId: auth.userId // ✅ Isolamento de dados
       }

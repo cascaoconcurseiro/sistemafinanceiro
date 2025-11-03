@@ -17,12 +17,12 @@ interface UseDeleteResult {
 
 /**
  * Hook customizado para deletar itens
- * 
+ *
  * @param endpoint - Endpoint da API (ex: 'transactions', 'categories')
  * @param entityName - Nome da entidade para mensagens (ex: 'Transaction', 'Category')
  * @param options - Opções adicionais
  * @returns Objeto com deleteItem, loading e error
- * 
+ *
  * @example
  * const { deleteItem, loading } = useDelete('transactions', 'Transaction');
  * await deleteItem('123');

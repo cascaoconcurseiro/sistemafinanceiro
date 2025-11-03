@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/db';
 
 export async function POST(request: Request) {
@@ -29,9 +29,9 @@ export async function POST(request: Request) {
     // TODO: Implementar envio de email real
     console.log(`Email de reset enviado para: ${email}`);
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
-      message: 'Email enviado com sucesso' 
+      message: 'Email enviado com sucesso'
     });
   } catch (error) {
     console.error('Erro ao enviar email:', error);

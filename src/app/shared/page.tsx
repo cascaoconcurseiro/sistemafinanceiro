@@ -2,8 +2,8 @@
 
 export const dynamic = 'force-dynamic';
 
-import { ModernAppLayout } from '@/components/modern-app-layout';
-import { SharedExpenses } from '@/components/shared-expenses';
+import { ModernAppLayout } from '@/components/layout/modern-app-layout';
+import { SharedExpenses } from '@/components/features/shared-expenses/shared-expenses';
 
 export default function SharedPage() {
   return (

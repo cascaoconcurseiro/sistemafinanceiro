@@ -1092,4 +1092,3 @@ const FinancialAutomationManager: React.FC<AutomationManagerProps> = ({
 
 export default FinancialAutomationManager;
 
-

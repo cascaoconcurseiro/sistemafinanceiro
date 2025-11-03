@@ -16,12 +16,12 @@ interface UseFetchResult<T> {
 
 /**
  * Hook customizado para fazer requisições HTTP
- * 
+ *
  * @template T - Tipo dos dados retornados
  * @param url - URL da requisição
  * @param options - Opções da requisição
  * @returns Objeto com data, loading, error e refetch
- * 
+ *
  * @example
  * const { data, loading, error, refetch } = useFetch<Transaction[]>('/api/transactions');
  */

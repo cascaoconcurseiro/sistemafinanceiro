@@ -64,14 +64,14 @@ export class BackupService {
   async scheduleBackup(config: BackupConfig): Promise<string> {
     const jobId = `backup-${Date.now()}`;
     const cronPattern = this.getCronPattern(config.frequency);
-    
+
     const job = new CronJob(cronPattern, async () => {
       await this.performBackup(config);
     });
 
     this.jobs.set(jobId, job);
     job.start();
-    
+
     console.log(`Backup agendado: ${jobId} - ${config.frequency}`);
     return jobId;
   }
@@ -92,10 +92,10 @@ export class BackupService {
       // Extrair informações da URL do banco
       const url = new URL(dbUrl);
       const dbName = url.pathname.slice(1); // Remove a barra inicial
-      
+
       // Comando pg_dump
       const command = `pg_dump "${dbUrl}" > "${filePath}"`;
-      
+
       await execAsync(command);
 
       // Verificar se o arquivo foi criado
@@ -131,7 +131,7 @@ export class BackupService {
 
     } catch (error) {
       console.error(`Erro no backup ${backupId}:`, error);
-      
+
       return {
         id: backupId,
         timestamp,
@@ -165,7 +165,7 @@ export class BackupService {
       // Restaurar o banco
       const url = new URL(dbUrl);
       const dbName = url.pathname.slice(1);
-      
+
       const command = `psql "${dbUrl}" < "${sqlFile}"`;
       await execAsync(command);
 
@@ -192,7 +192,7 @@ export class BackupService {
         if (file.startsWith('backup_') && (file.endsWith('.sql') || file.endsWith('.sql.gz'))) {
           const filePath = path.join(this.backupDir, file);
           const stats = await fs.stat(filePath);
-          
+
           // Extrair timestamp do nome do arquivo
           const timestampMatch = file.match(/backup_(\d+)/);
           const timestamp = timestampMatch ? new Date(parseInt(timestampMatch[1])) : stats.mtime;
@@ -227,7 +227,7 @@ export class BackupService {
         if (file.startsWith('backup_')) {
           const filePath = path.join(this.backupDir, file);
           const stats = await fs.stat(filePath);
-          
+
           if (stats.mtime < cutoffDate) {
             await fs.unlink(filePath);
             console.log(`Backup antigo removido: ${file}`);
@@ -244,7 +244,7 @@ export class BackupService {
       // Verificar se o arquivo existe e não está corrompido
       await fs.access(backupPath);
       const stats = await fs.stat(backupPath);
-      
+
       if (stats.size === 0) {
         return false;
       }
@@ -261,7 +261,7 @@ export class BackupService {
       // Verificações básicas de integridade
       const hasCreateTable = content.includes('CREATE TABLE');
       const hasInsert = content.includes('INSERT INTO') || content.includes('COPY');
-      
+
       return hasCreateTable || hasInsert;
 
     } catch (error) {

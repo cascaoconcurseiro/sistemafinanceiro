@@ -51,7 +51,7 @@ export function SharedExpenseModal({
   // Buscar dados da API
   const { data: familyMembersData, isLoading: loadingMembers } = useFamilyMembers();
   const familyMembers = familyMembersData?.data || [];
-  
+
   const { accounts, categories } = useUnifiedFinancial();
 
   // Fallback para categorias se não houver no contexto
@@ -142,7 +142,6 @@ export function SharedExpenseModal({
         paidBy: formData.isPaidByOther ? formData.paidBy : undefined, // ✅ ID de quem pagou
       });
 
-      console.log('✅ [SharedExpenseModal] Transação criada com sucesso');
       
       if (formData.isPaidByOther) {
         const payer = familyMembers.find(m => m.id === formData.paidBy);
@@ -296,8 +295,8 @@ export function SharedExpenseModal({
                 checked={formData.isPaidByOther}
                 onChange={(e) => {
                   const checked = e.target.checked;
-                  setFormData({ 
-                    ...formData, 
+                  setFormData({
+                    ...formData,
                     isPaidByOther: checked,
                     account: checked ? '' : formData.account, // Limpar conta se marcar
                     paidBy: checked ? formData.paidBy : '', // Limpar pagador se desmarcar
@@ -332,7 +331,7 @@ export function SharedExpenseModal({
                     ))}
                   </SelectContent>
                 </Select>
-                
+
                 {formData.paidBy && formData.amount && (
                   <div className="mt-3 p-3 bg-white dark:bg-gray-900 rounded border">
                     <p className="text-sm font-medium text-muted-foreground mb-2">

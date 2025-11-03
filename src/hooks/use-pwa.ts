@@ -33,11 +33,11 @@ export function usePWA(): PWAState & PWAActions {
   useEffect(() => {
     // Verificar se está rodando como PWA instalado
     const checkStandalone = () => {
-      const isStandaloneMode = 
+      const isStandaloneMode =
         window.matchMedia('(display-mode: standalone)').matches ||
         (window.navigator as any).standalone ||
         document.referrer.includes('android-app://');
-      
+
       setIsStandalone(isStandaloneMode);
       setIsInstalled(isStandaloneMode);
     };
@@ -88,12 +88,12 @@ export function usePWA(): PWAState & PWAActions {
     try {
       await deferredPrompt.prompt();
       const choiceResult = await deferredPrompt.userChoice;
-      
+
       if (choiceResult.outcome === 'accepted') {
         setIsInstalled(true);
         setIsInstallable(false);
       }
-      
+
       setDeferredPrompt(null);
     } catch (error) {
       console.error('Erro durante instalação:', error);
@@ -127,7 +127,7 @@ export function usePWA(): PWAState & PWAActions {
     isOnline,
     isStandalone,
     canInstall: isInstallable && !isInstalled,
-    
+
     // Ações
     install,
     checkForUpdates,

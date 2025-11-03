@@ -59,7 +59,7 @@ export class SecureLogger {
   static log(level: 'info' | 'warn' | 'error', message: string, data?: any) {
     const sanitizedMessage = InputSanitizer.sanitizeForLog(message);
     const sanitizedData = data ? InputSanitizer.sanitizeForLog(JSON.stringify(data)) : '';
-    
+
     console[level](`[${new Date().toISOString()}] ${sanitizedMessage}`, sanitizedData);
   }
 

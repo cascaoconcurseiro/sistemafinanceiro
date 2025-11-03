@@ -17,8 +17,7 @@ export async function POST(request: NextRequest) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    console.log('🔄 [Installments] Processando parcelas vencidas...');
-
+    
     // Buscar parcelas pendentes que venceram
     const dueInstallments = await prisma.installment.findMany({
       where: {

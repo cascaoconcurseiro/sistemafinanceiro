@@ -40,25 +40,17 @@ import { useUnifiedFinancial } from '@/contexts/unified-financial-context';
 import { usePeriod } from '@/contexts/period-context';
 import { Transaction, TransactionType, TransactionStatus } from '@/types';
 import { toast } from 'sonner';
+import { cleanTransactionDescription } from '@/lib/utils/transaction-utils';
 
 // Regular imports to fix webpack factory function errors
-import { ModernAppLayout } from '@/components/modern-app-layout';
-import { OptimizedPageTransition } from '@/components/optimized-page-transition';
+import { ModernAppLayout } from '@/components/layout/modern-app-layout';
 import { AddTransactionModal } from '@/components/modals/transactions/add-transaction-modal';
 import { TransferModal } from '@/components/modals/transactions/transfer-modal';
 import { CreditCardModal } from '@/components/modals/transactions/credit-card-modal';
-
-
-// Hook para performance
-import { useRenderPerformance } from '@/components/optimized-page-transition';
-
-// Componente para visualização hierárquica
-import { TransactionHierarchyView } from '@/components/transaction-hierarchy-view';
+import { TransactionHierarchyView } from '@/components/features/transactions/transaction-hierarchy-view';
+import { AdvanceInstallmentsModal } from '@/components/modals/transactions/advance-installments-modal';
 
 function TransactionsPageContent() {
-  // Performance monitoring
-  useRenderPerformance('TransactionsPage');
-
   // ✅ CORREÇÃO: Usar dados diretos do contexto unificado
   const {
     accounts: accountsData,
@@ -81,42 +73,20 @@ function TransactionsPageContent() {
     isLoading
   });
 
-  // ✅ Helper para calcular o valor correto de uma transação
-  // Se EU paguei uma despesa compartilhada, usar o valor TOTAL
-  // Se OUTRO pagou, usar apenas minha parte (myShare)
+  // ✅ Helper para calcular o valor correto de uma transação para resumos
+  // Para transações compartilhadas, SEMPRE usar myShare (o que EU realmente gastei/recebi)
   const getTransactionAmount = useCallback((transaction: any): number => {
     const amount = Math.abs(transaction.amount);
     
-    // Se não é compartilhada, retornar o valor total
-    if (!transaction.isShared) {
-      return amount;
+    // ✅ CORREÇÃO: Para transações compartilhadas, SEMPRE usar myShare
+    // myShare representa o valor real que afeta MEU saldo
+    if ((transaction.isShared || transaction.type === 'shared') && 
+        transaction.myShare !== null && 
+        transaction.myShare !== undefined) {
+      return Math.abs(Number(transaction.myShare));
     }
     
-    // Se é compartilhada e tem myShare
-    if (transaction.myShare !== undefined && transaction.myShare !== null) {
-      const myShare = Math.abs(Number(transaction.myShare));
-      
-      // Se myShare é igual ao amount, significa que EU paguei tudo
-      // Retornar o valor total
-      if (myShare === amount) {
-        return amount;
-      }
-      
-      // Se myShare é menor que amount, significa que foi dividido
-      // Verificar se EU paguei ou OUTRO pagou
-      const paidBy = transaction.paidBy;
-      const isPaidByOther = paidBy && paidBy !== 'current_user'; // TODO: comparar com ID real
-      
-      // Se outro pagou, retornar apenas minha parte
-      if (isPaidByOther) {
-        return myShare;
-      }
-      
-      // Se EU paguei, retornar o valor total
-      return amount;
-    }
-    
-    // Fallback: retornar o valor total
+    // Para transações não compartilhadas, usar o valor total
     return amount;
   }, []);
 
@@ -127,6 +97,24 @@ function TransactionsPageContent() {
     
     // Filtrar apenas transações válidas (não futuras e não órfãs)
     const validTransactions = transactions.data.filter(t => {
+      // ✅ NOVO: Excluir transações de dívidas (pago por outra pessoa) do cálculo de saldo
+      // Essas transações não afetam o saldo da conta, pois o dinheiro não saiu da sua conta
+      if (t.paidBy) {
+        console.log('🚫 [getRunningBalance] Excluindo dívida do saldo:', t.description);
+        return false;
+      }
+      
+      // ✅ NOVO: Também verificar metadata.paidByName (formato antigo)
+      try {
+        const metadata = t.metadata ? JSON.parse(t.metadata) : null;
+        if (metadata && metadata.paidByName) {
+          console.log('🚫 [getRunningBalance] Excluindo dívida (metadata) do saldo:', t.description);
+          return false;
+        }
+      } catch (e) {
+        // Ignorar erros de parse
+      }
+      
       // Normalizar a data da transação
       let transactionDate: Date;
       if (typeof t.date === 'string') {
@@ -247,9 +235,11 @@ function TransactionsPageContent() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'hierarchy'>('list');
+  const [showAdvanceModal, setShowAdvanceModal] = useState(false);
+  const [advancingTransaction, setAdvancingTransaction] = useState<Transaction | null>(null);
   
   // Filtros básicos
-  const [showAllTransactions, setShowAllTransactions] = useState(false);
+  const [showAllTransactions, setShowAllTransactions] = useState(false); // ✅ CORREÇÃO: Filtrar por período por padrão
   const [filterType, setFilterType] = useState<TransactionType | 'all'>('all');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterAccount, setFilterAccount] = useState<string>('all');
@@ -348,12 +338,23 @@ function TransactionsPageContent() {
     }
   };
 
+  const handleAdvanceInstallments = (transaction: Transaction) => {
+    setAdvancingTransaction(transaction);
+    setShowAdvanceModal(true);
+  };
+
+  const handleAdvanceSuccess = () => {
+    actions.refresh();
+    setShowAdvanceModal(false);
+    setAdvancingTransaction(null);
+  };
+
   // Usar o período do seletor global
   const getPeriodDates = useCallback(() => {
     const globalDates = getGlobalPeriodDates();
     return {
-      startDate: globalDates.startDate.toISOString().slice(0, 10),
-      endDate: globalDates.endDate.toISOString().slice(0, 10)
+      startDate: globalDates.startDate,
+      endDate: globalDates.endDate
     };
   }, [getGlobalPeriodDates]);
 
@@ -371,6 +372,24 @@ function TransactionsPageContent() {
     let filtered = transactionsArray.filter(t => {
       // VALIDAÇÃO 1: Permitir transações sem categoria (será mostrado como "Sem categoria")
       // Removido filtro que excluía transações sem categoryId
+      
+      // ✅ NOVO: Ocultar transações de dívidas (pago por outra pessoa)
+      // Essas transações já aparecem no sistema de despesas compartilhadas
+      if (t.paidBy) {
+        console.log('🚫 Ocultando transação de dívida:', t.description, 'paidBy:', t.paidBy);
+        return false;
+      }
+      
+      // ✅ NOVO: Também ocultar se tem metadata.paidByName (formato antigo)
+      try {
+        const metadata = t.metadata ? JSON.parse(t.metadata) : null;
+        if (metadata && metadata.paidByName) {
+          console.log('🚫 Ocultando transação de dívida (metadata):', t.description, 'paidByName:', metadata.paidByName);
+          return false;
+        }
+      } catch (e) {
+        // Ignorar erros de parse
+      }
       
       // VALIDAÇÃO 2: Normalizar a data da transação
       let transactionDate: Date;
@@ -403,11 +422,32 @@ function TransactionsPageContent() {
     // Filtrar pelo período apenas se não estiver mostrando todas
     if (!showAllTransactions) {
       const { startDate, endDate } = getPeriodDates();
+      
+      console.log('📅 [FILTRO] Período selecionado:', startDate.toISOString(), 'até', endDate.toISOString());
+      
       filtered = filtered.filter(t => {
-        const transactionDate = t.date.includes('/') 
-          ? t.date.split('/').reverse().join('-')
-          : t.date.split('T')[0];
-        return transactionDate >= startDate && transactionDate <= endDate;
+        // Converter data da transação para Date object
+        let transactionDate: Date;
+        
+        if (typeof t.date === 'string') {
+          if (t.date.includes('/')) {
+            // Formato DD/MM/YYYY
+            const [day, month, year] = t.date.split('/');
+            transactionDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T12:00:00`);
+          } else {
+            // Formato ISO ou YYYY-MM-DD
+            transactionDate = new Date(t.date.includes('T') ? t.date : `${t.date}T12:00:00`);
+          }
+        } else {
+          transactionDate = new Date(t.date);
+        }
+        
+        // Comparar como timestamps
+        const isInPeriod = transactionDate >= startDate && transactionDate <= endDate;
+        
+        console.log(`📅 [FILTRO] ${t.description}: ${t.date} → ${transactionDate.toISOString()} | Incluir? ${isInPeriod}`);
+        
+        return isInPeriod;
       });
     }
 
@@ -499,10 +539,37 @@ function TransactionsPageContent() {
     
     // Filtrar apenas transações do período selecionado
     const currentPeriodTransactions = transactionsArray.filter(t => {
-      // Normalizar datas para comparação (formato YYYY-MM-DD)
-      const transactionDate = t.date.includes('/') 
-        ? t.date.split('/').reverse().join('-') // DD/MM/YYYY -> YYYY-MM-DD
-        : t.date; // Já está em YYYY-MM-DD
+      // ✅ NOVO: Excluir transações de dívidas (pago por outra pessoa)
+      if (t.paidBy) {
+        console.log('🚫 [currentMonthBalance] Excluindo dívida:', t.description);
+        return false;
+      }
+      
+      // ✅ NOVO: Também verificar metadata.paidByName (formato antigo)
+      try {
+        const metadata = t.metadata ? JSON.parse(t.metadata) : null;
+        if (metadata && metadata.paidByName) {
+          console.log('🚫 [currentMonthBalance] Excluindo dívida (metadata):', t.description);
+          return false;
+        }
+      } catch (e) {
+        // Ignorar erros de parse
+      }
+      
+      // Normalizar datas para comparação
+      let transactionDate: Date;
+      if (typeof t.date === 'string') {
+        if (t.date.includes('/')) {
+          // Formato DD/MM/YYYY
+          const [day, month, year] = t.date.split('/');
+          transactionDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T12:00:00`);
+        } else {
+          // Formato ISO ou YYYY-MM-DD
+          transactionDate = new Date(t.date.includes('T') ? t.date : `${t.date}T12:00:00`);
+        }
+      } else {
+        transactionDate = new Date(t.date);
+      }
       
       const isInPeriod = transactionDate >= startDate && 
                         transactionDate <= endDate &&
@@ -544,18 +611,36 @@ function TransactionsPageContent() {
     
     // Filtrar transações do período selecionado
     const periodTransactions = transactionsArray.filter(t => {
-      // Normalizar datas para comparação (formato YYYY-MM-DD)
-      let transactionDate: string;
+      // ✅ NOVO: Excluir transações de dívidas (pago por outra pessoa)
+      if (t.paidBy) {
+        console.log('🚫 [PeriodSummary] Excluindo dívida:', t.description);
+        return false;
+      }
       
-      if (t.date.includes('T')) {
-        // Data ISO (2025-09-30T00:00:00.000Z) -> extrair apenas a parte da data
-        transactionDate = t.date.split('T')[0];
-      } else if (t.date.includes('/')) {
-        // Data DD/MM/YYYY -> YYYY-MM-DD
-        transactionDate = t.date.split('/').reverse().join('-');
+      // ✅ NOVO: Também verificar metadata.paidByName (formato antigo)
+      try {
+        const metadata = t.metadata ? JSON.parse(t.metadata) : null;
+        if (metadata && metadata.paidByName) {
+          console.log('🚫 [PeriodSummary] Excluindo dívida (metadata):', t.description);
+          return false;
+        }
+      } catch (e) {
+        // Ignorar erros de parse
+      }
+      
+      // Normalizar datas para comparação
+      let transactionDate: Date;
+      if (typeof t.date === 'string') {
+        if (t.date.includes('/')) {
+          // Formato DD/MM/YYYY
+          const [day, month, year] = t.date.split('/');
+          transactionDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T12:00:00`);
+        } else {
+          // Formato ISO ou YYYY-MM-DD
+          transactionDate = new Date(t.date.includes('T') ? t.date : `${t.date}T12:00:00`);
+        }
       } else {
-        // Já está em YYYY-MM-DD
-        transactionDate = t.date;
+        transactionDate = new Date(t.date);
       }
       
       // ✅ CORREÇÃO CRÍTICA: Incluir transações PENDENTES nos cálculos
@@ -855,8 +940,7 @@ function TransactionsPageContent() {
       title="Transações"
       subtitle="Todas as operações financeiras em um só lugar"
     >
-      <OptimizedPageTransition>
-        <div className="p-4 md:p-6 space-y-6">
+      <div className="p-4 md:p-6 space-y-6">
           {/* Cards de Resumo - Calculados dinamicamente */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
@@ -928,6 +1012,15 @@ function TransactionsPageContent() {
                   Transações ({filteredTransactions.length})
                 </CardTitle>
                 <div className="flex items-center gap-2">
+                  <Button
+                    variant={showAllTransactions ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setShowAllTransactions(!showAllTransactions)}
+                    className={showAllTransactions ? 'bg-blue-600 hover:bg-blue-700' : ''}
+                  >
+                    <Calendar className="h-4 w-4 mr-2" />
+                    {showAllTransactions ? 'Todas' : 'Período'}
+                  </Button>
                   <Button
                     variant={viewMode === 'list' ? 'default' : 'outline'}
                     size="sm"
@@ -1035,7 +1128,7 @@ function TransactionsPageContent() {
                               {getTransactionIcon(transaction)}
                               <div className="flex-1">
                                 <div className="flex items-center gap-2">
-                                  <p className="font-medium">{transaction.description}</p>
+                                  <p className="font-medium">{cleanTransactionDescription(transaction.description)}</p>
                                   {getStatusBadge(transaction.status)}
                                   
                                   {/* Badge de Receita/Despesa */}
@@ -1135,32 +1228,34 @@ function TransactionsPageContent() {
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
+                              {/* Botão de adiantar parcelas - apenas para parcelas pendentes */}
+                              {transaction.isInstallment && 
+                               transaction.installmentNumber && 
+                               transaction.totalInstallments &&
+                               transaction.installmentNumber < transaction.totalInstallments &&
+                               transaction.status !== 'completed' && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleAdvanceInstallments(transaction)}
+                                  className="h-8 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                  title="Adiantar parcelas"
+                                >
+                                  <CreditCard className="h-4 w-4 mr-1" />
+                                  <span className="text-xs">Adiantar</span>
+                                </Button>
+                              )}
                               <div className="text-right">
                                 <p className={`font-bold text-lg ${getTransactionColor(transaction)}`}>
                                   {(() => {
-                                    // ✅ CORREÇÃO: Mostrar valor total quando EU paguei, myShare quando OUTRO pagou
+                                    // ✅ Para transações compartilhadas, mostrar apenas myShare
                                     let displayAmount = Math.abs(transaction.amount);
                                     
-                                    console.log('💰 [Display] Transação:', {
-                                      id: transaction.id,
-                                      description: transaction.description,
-                                      amount: transaction.amount,
-                                      myShare: transaction.myShare,
-                                      isShared: transaction.isShared,
-                                      paidBy: (transaction as any).paidBy
-                                    });
-                                    
-                                    // Se é compartilhada E outra pessoa pagou, mostrar apenas minha parte
-                                    // Se EU paguei, mostrar o valor total
-                                    const paidBy = (transaction as any).paidBy;
-                                    const isPaidByOther = paidBy && paidBy !== 'current_user'; // TODO: comparar com ID real do usuário
-                                    
-                                    if (transaction.isShared && transaction.myShare && isPaidByOther) {
+                                    // Se é compartilhada E tem myShare, usar myShare
+                                    if ((transaction.isShared || transaction.type === 'shared') && 
+                                        transaction.myShare !== null && 
+                                        transaction.myShare !== undefined) {
                                       displayAmount = Math.abs(Number(transaction.myShare));
-                                      console.log('✅ [Display] Usando myShare (pago por outro):', displayAmount);
-                                    } else {
-                                      displayAmount = Math.abs(transaction.amount);
-                                      console.log('✅ [Display] Usando amount (eu paguei):', displayAmount);
                                     }
                                     
                                     const isExpense = transaction.type === 'expense' || transaction.type === 'DESPESA' || (transaction.type === 'shared' && transaction.amount < 0);
@@ -1223,8 +1318,7 @@ function TransactionsPageContent() {
           </Card>
 
 
-        </div>
-      </OptimizedPageTransition>
+      </div>
 
       {/* Modais */}
       <AddTransactionModal
@@ -1237,6 +1331,14 @@ function TransactionsPageContent() {
         onOpenChange={setShowEditModal}
         editingTransaction={editingTransaction}
         onSave={handleSaveTransaction}
+      />
+      
+      <AdvanceInstallmentsModal
+        isOpen={showAdvanceModal}
+        onClose={() => setShowAdvanceModal(false)}
+        transaction={advancingTransaction}
+        onSuccess={handleAdvanceSuccess}
+        accounts={accounts.data || []}
       />
       
       <TransferModal

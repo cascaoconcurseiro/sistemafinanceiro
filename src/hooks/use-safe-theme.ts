@@ -28,25 +28,41 @@ export const useSafeTheme = () => {
     // Load theme settings from database
     const loadThemeSettings = async () => {
       try {
-        // TODO: Implementar API route para theme settings
-        // Por enquanto, usar configurações padrão
-        setSettings(defaultSettings);
+        const response = await fetch('/api/user/appearance', {
+          credentials: 'include',
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setSettings(data.settings);
+        } else if (response.status === 401) {
+          // Não autenticado - usar configurações padrão silenciosamente
+          setSettings(defaultSettings);
+        } else {
+          setSettings(defaultSettings);
+        }
       } catch (error) {
-        console.error('Error loading theme settings:', error);
+        // Erro de rede ou outro - usar configurações padrão silenciosamente
+        setSettings(defaultSettings);
       } finally {
         setIsLoaded(true);
       }
     };
-    
+
     loadThemeSettings();
   }, []);
 
   const updateSettings = async (newSettings: Partial<ThemeSettings>) => {
     const updatedSettings = { ...settings, ...newSettings };
     setSettings(updatedSettings);
-    
+
     try {
-      // TODO: Implementar API route para salvar theme settings
+      await fetch('/api/user/appearance', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(updatedSettings),
+      });
     } catch (error) {
       console.error('Error saving theme settings:', error);
     }
@@ -54,9 +70,14 @@ export const useSafeTheme = () => {
 
   const resetSettings = async () => {
     setSettings(defaultSettings);
-    
+
     try {
-      // TODO: Implementar API route para resetar theme settings
+      await fetch('/api/user/appearance', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(defaultSettings),
+      });
     } catch (error) {
       console.error('Error resetting theme settings:', error);
     }
@@ -68,7 +89,7 @@ export const useSafeTheme = () => {
 
     try {
       const root = document.documentElement;
-      
+
       // Aplicar tema de forma segura
       if (settings.theme === 'system') {
         try {
@@ -87,7 +108,7 @@ export const useSafeTheme = () => {
       root.classList.toggle('high-contrast', settings.highContrast);
       root.classList.toggle('compact-mode', settings.compactMode);
       root.classList.toggle('no-animations', !settings.animations);
-      
+
       // Aplicar tamanho da fonte
       const fontSizeMap = {
         'small': '14px',
@@ -103,7 +124,7 @@ export const useSafeTheme = () => {
   const toggleTheme = () => {
     const currentTheme = settings.theme;
     let newTheme: 'light' | 'dark' | 'system';
-    
+
     if (currentTheme === 'light') {
       newTheme = 'dark';
     } else if (currentTheme === 'dark') {
@@ -111,7 +132,7 @@ export const useSafeTheme = () => {
     } else {
       newTheme = 'light';
     }
-    
+
     updateSettings({ theme: newTheme });
   };
 

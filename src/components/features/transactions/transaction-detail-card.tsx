@@ -2,11 +2,11 @@
 
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { 
-  Users, 
-  CreditCard, 
-  Plane, 
-  Split, 
+import {
+  Users,
+  CreditCard,
+  Plane,
+  Split,
   Calendar,
   DollarSign,
   Info
@@ -27,13 +27,13 @@ export function TransactionDetailCard({
 }: TransactionDetailCardProps) {
   const isIncome = transaction.type === 'income';
   const isExpense = transaction.type === 'expense';
-  
+
   // Parse sharedWith se for string JSON
   let sharedWithParsed = [];
   if (transaction.sharedWith) {
     try {
-      sharedWithParsed = typeof transaction.sharedWith === 'string' 
-        ? JSON.parse(transaction.sharedWith) 
+      sharedWithParsed = typeof transaction.sharedWith === 'string'
+        ? JSON.parse(transaction.sharedWith)
         : transaction.sharedWith;
     } catch (e) {
       sharedWithParsed = [];
@@ -48,7 +48,7 @@ export function TransactionDetailCard({
           {/* Descrição e Badges */}
           <div className="flex items-center gap-2 mb-2">
             <h3 className="font-medium text-lg">{transaction.description}</h3>
-            
+
             {/* Badge de Parcelamento */}
             {transaction.isInstallment && transaction.totalInstallments > 1 && (
               <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
@@ -56,7 +56,7 @@ export function TransactionDetailCard({
                 {transaction.installmentNumber}/{transaction.totalInstallments}
               </Badge>
             )}
-            
+
             {/* Badge de Compartilhamento */}
             {transaction.isShared && (
               <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-300">
@@ -64,7 +64,7 @@ export function TransactionDetailCard({
                 Compartilhada
               </Badge>
             )}
-            
+
             {/* Badge de Viagem */}
             {transaction.tripId && (
               <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
@@ -73,7 +73,7 @@ export function TransactionDetailCard({
                  transaction.tripExpenseType === 'regular' ? 'Viagem Regular' : 'Viagem'}
               </Badge>
             )}
-            
+
             {/* Badge de Cartão */}
             {transaction.creditCardId && (
               <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-300">
@@ -89,15 +89,15 @@ export function TransactionDetailCard({
               <Calendar className="w-3 h-3" />
               {new Date(transaction.date).toLocaleDateString('pt-BR')}
             </span>
-            
+
             <span>{accountName || 'Conta não informada'}</span>
-            
+
             {categoryName && (
               <span>• {categoryName}</span>
             )}
-            
+
             <Badge variant={transaction.status === 'cleared' ? 'default' : 'secondary'}>
-              {transaction.status === 'cleared' ? 'Efetivada' : 
+              {transaction.status === 'cleared' ? 'Efetivada' :
                transaction.status === 'pending' ? 'Pendente' : 'Concluída'}
             </Badge>
           </div>
@@ -112,8 +112,8 @@ export function TransactionDetailCard({
                   <div>
                     <p className="font-medium text-purple-700">Compartilhada com:</p>
                     <p className="text-gray-600">
-                      {sharedWithParsed.length > 0 
-                        ? sharedWithParsed.join(', ') 
+                      {sharedWithParsed.length > 0
+                        ? sharedWithParsed.join(', ')
                         : 'Não especificado'}
                     </p>
                     {transaction.myShare && (
@@ -175,7 +175,7 @@ export function TransactionDetailCard({
           }`}>
             {isIncome ? '+' : '-'}R$ {Math.abs(Number(transaction.amount)).toFixed(2)}
           </div>
-          
+
           {runningBalance !== undefined && (
             <div className="text-sm text-gray-500 mt-1">
               Saldo: R$ {runningBalance.toFixed(2)}

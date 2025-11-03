@@ -4,21 +4,17 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('🔍 [Credit Cards] Iniciando GET...');
-    const auth = await authenticateRequest(request);
-    console.log('🔍 [Credit Cards] Auth result:', auth);
+        const auth = await authenticateRequest(request);
     
     if (!auth.success) {
-      console.log('❌ [Credit Cards] Auth falhou:', auth.error);
-      return NextResponse.json(
+            return NextResponse.json(
         { error: auth.error },
         { status: 401 }
       );
     }
-    
-    const userId = auth.userId!;
-    console.log('✅ [Credit Cards] UserId:', userId);
 
+    const userId = auth.userId!;
+    
     const creditCards = await prisma.creditCard.findMany({
       where: {
         userId: userId,
@@ -32,14 +28,14 @@ export async function GET(request: NextRequest) {
         closingDay: true,
         dueDay: true,
         isActive: true,
+        paymentAccountId: true,
       },
       orderBy: {
         name: 'asc',
       },
     });
 
-    console.log('✅ [Credit Cards] Encontrados:', creditCards.length);
-    return NextResponse.json({ success: true, data: creditCards });
+        return NextResponse.json({ success: true, data: creditCards });
   } catch (error) {
     console.error('❌ [Credit Cards] Erro:', error);
     return NextResponse.json(
@@ -57,7 +53,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    
+
     // Validar dados obrigatórios
     if (!body.name || !body.limit || !body.dueDay || !body.closingDay) {
       return NextResponse.json(
@@ -75,6 +71,7 @@ export async function POST(request: NextRequest) {
         dueDay: body.dueDay,
         closingDay: body.closingDay,
         isActive: true,
+        paymentAccountId: body.paymentAccountId || null,
       },
     });
 
@@ -125,6 +122,7 @@ export async function PUT(request: NextRequest) {
         dueDay: data.dueDay,
         closingDay: data.closingDay,
         isActive: data.isActive,
+        paymentAccountId: data.paymentAccountId !== undefined ? data.paymentAccountId : undefined,
       },
     });
 

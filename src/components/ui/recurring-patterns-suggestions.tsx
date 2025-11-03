@@ -86,7 +86,7 @@ export function RecurringPatternsSuggestions({
     setDismissedPatterns(newDismissed);
     // Dados agora são salvos no banco de dados, não do localStorage
     console.warn('handleDismissPattern - localStorage removido, use banco de dados');
-    
+
     toast({
       title: 'Sugestão dispensada',
       description: 'Esta sugestão não será mais exibida.',
@@ -232,5 +232,4 @@ export function RecurringPatternsSuggestions({
 }
 
 export default RecurringPatternsSuggestions;
-
 

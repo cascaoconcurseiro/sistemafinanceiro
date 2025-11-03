@@ -1,8 +1,7 @@
-'use client';
-
 // =====================================================
 // SISTEMA DE CATEGORIZAÇÃO AUTOMÁTICA INTELIGENTE
 // =====================================================
+// Funciona tanto no cliente quanto no servidor
 
 export interface CategoryPrediction {
   category: string;

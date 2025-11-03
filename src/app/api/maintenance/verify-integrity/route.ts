@@ -13,8 +13,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
     }
 
-    console.log('🔍 [API Maintenance] Verificando integridade para usuário:', auth.userId);
-
+    
     // ✅ USAR SERVIÇO FINANCEIRO
     const service = new FinancialOperationsService();
     const issues = await service.verifyIntegrity(auth.userId);

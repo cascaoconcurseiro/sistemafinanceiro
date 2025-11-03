@@ -41,7 +41,7 @@ import {
   X,
   Save,
 } from 'lucide-react';
-import type { Trip } from '@/lib/storage';
+import type { Trip } from '@/lib/config/storage';
 import {
   useAccounts,
   useTransactions,
@@ -49,7 +49,7 @@ import {
   useContacts,
 } from '@/contexts/unified-financial-context';
 import { toast } from 'sonner';
-import { storage } from '@/lib/storage';
+import { storage } from '@/lib/config/storage';
 
 interface TripOverviewProps {
   trip: Trip;
@@ -93,8 +93,7 @@ export function TripOverview({ trip, onUpdate }: TripOverviewProps) {
   // ✅ Listener para atualizar quando transação for criada, editada ou deletada
   useEffect(() => {
     const handleTransactionUpdate = (event?: CustomEvent) => {
-      console.log('🔄 [TripOverview] Evento de transação recebido:', event?.type);
-      if (isMounted && transactions && Array.isArray(transactions)) {
+            if (isMounted && transactions && Array.isArray(transactions)) {
         loadTripData();
       }
     };
@@ -105,7 +104,7 @@ export function TripOverview({ trip, onUpdate }: TripOverviewProps) {
     window.addEventListener('transactionDeleted', handleTransactionUpdate);
     window.addEventListener('TRANSACTION_UPDATED', handleTransactionUpdate);
     window.addEventListener('TRANSACTION_DELETED', handleTransactionUpdate);
-    
+
     return () => {
       window.removeEventListener('transactionCreated', handleTransactionUpdate);
       window.removeEventListener('transactionUpdated', handleTransactionUpdate);
@@ -120,21 +119,21 @@ export function TripOverview({ trip, onUpdate }: TripOverviewProps) {
     const tripExpenses = transactions.filter(
       (t) => (t as any).tripId === trip.id
     );
-    
+
     // ✅ CORREÇÃO: Considerar receitas como negativas (reembolsos)
     const totalExpenses = tripExpenses.reduce((sum, t) => {
       const amount = Math.abs(t.amount);
       const isIncome = t.type === 'RECEITA' || t.type === 'income';
-      
+
       // Para compartilhadas, usar myShare
       const value = (t as any).isShared && (t as any).myShare !== null && (t as any).myShare !== undefined
         ? Math.abs(Number((t as any).myShare))
         : amount;
-      
+
       // RECEITA subtrai (reembolso), DESPESA soma
       return isIncome ? sum - value : sum + value;
     }, 0);
-    
+
     console.log('💰 [TripOverview] Total calculado:', {
       transactionsCount: tripExpenses.length,
       totalExpenses,
@@ -145,7 +144,7 @@ export function TripOverview({ trip, onUpdate }: TripOverviewProps) {
         myShare: (t as any).myShare
       }))
     });
-    
+
     setExpenses(totalExpenses);
 
     // Carregar dados do itinerário via API
@@ -200,14 +199,14 @@ export function TripOverview({ trip, onUpdate }: TripOverviewProps) {
     try {
       const start = new Date(trip.startDate);
       const end = new Date(trip.endDate);
-      
+
       if (isNaN(start.getTime()) || isNaN(end.getTime())) {
         return 0;
       }
-      
+
       const diffTime = end.getTime() - start.getTime();
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
-      
+
       // Retornar pelo menos 1 dia se as datas são válidas e a data final é >= data inicial
       return diffDays > 0 ? diffDays : 0;
     } catch (error) {
@@ -225,7 +224,7 @@ export function TripOverview({ trip, onUpdate }: TripOverviewProps) {
   };
 
   const getBudgetProgress = () => {
-    return trip.budget && trip.budget > 0 
+    return trip.budget && trip.budget > 0
       ? Math.min((expenses / trip.budget) * 100, 100)
       : 0;
   };
@@ -236,7 +235,7 @@ export function TripOverview({ trip, onUpdate }: TripOverviewProps) {
 
   const handleOpenParticipantsDialog = () => {
     // Inicializar com participantes atuais (exceto "Você")
-    const currentParticipants = Array.isArray(trip.participants) 
+    const currentParticipants = Array.isArray(trip.participants)
       ? trip.participants.filter(p => p !== 'Você')
       : [];
     setSelectedParticipants(currentParticipants);
@@ -246,10 +245,10 @@ export function TripOverview({ trip, onUpdate }: TripOverviewProps) {
   const handleSaveParticipants = async () => {
     try {
       setIsUpdating(true);
-      
+
       // Sempre incluir "Você" como primeiro participante
       const updatedParticipants = ['Você', ...selectedParticipants];
-      
+
       // Atualizar via API usando PUT (não PATCH)
       const response = await fetch(`/api/trips/${trip.id}`, {
         method: 'PUT',
@@ -275,7 +274,7 @@ export function TripOverview({ trip, onUpdate }: TripOverviewProps) {
 
       // Atualizar storage local
       storage.updateTrip(trip.id, { participants: updatedParticipants });
-      
+
       // Notificar componente pai
       if (onUpdate) {
         onUpdate({ ...trip, participants: updatedParticipants });
@@ -283,7 +282,7 @@ export function TripOverview({ trip, onUpdate }: TripOverviewProps) {
 
       toast.success('Participantes atualizados com sucesso!');
       setShowParticipantsDialog(false);
-      
+
       // Recarregar dados
       loadTripData();
     } catch (error) {
@@ -295,7 +294,7 @@ export function TripOverview({ trip, onUpdate }: TripOverviewProps) {
   };
 
   const toggleParticipant = (contactName: string) => {
-    setSelectedParticipants(prev => 
+    setSelectedParticipants(prev =>
       prev.includes(contactName)
         ? prev.filter(p => p !== contactName)
         : [...prev, contactName]
@@ -720,7 +719,7 @@ export function TripOverview({ trip, onUpdate }: TripOverviewProps) {
             <div className="text-sm text-blue-800">
               <p className="font-medium mb-1">Importante:</p>
               <p>
-                Os participantes devem estar cadastrados na página <strong>Família</strong> para 
+                Os participantes devem estar cadastrados na página <strong>Família</strong> para
                 aparecerem em despesas compartilhadas.
               </p>
             </div>
@@ -902,7 +901,7 @@ export function TripOverview({ trip, onUpdate }: TripOverviewProps) {
               <Label htmlFor="status">Status</Label>
               <Select
                 value={editForm.status}
-                onValueChange={(value: 'planned' | 'active' | 'completed') => 
+                onValueChange={(value: 'planned' | 'active' | 'completed') =>
                   setEditForm({ ...editForm, status: value })
                 }
               >

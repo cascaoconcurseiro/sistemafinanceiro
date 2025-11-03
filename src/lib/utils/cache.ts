@@ -28,15 +28,15 @@ class MemoryCache {
 
   get<T>(key: string): T | null {
     const entry = this.cache.get(key);
-    
+
     if (!entry) return null;
-    
+
     // Verificar se expirou
     if (Date.now() - entry.timestamp > entry.ttl) {
       this.cache.delete(key);
       return null;
     }
-    
+
     return entry.data as T;
   }
 
@@ -50,7 +50,7 @@ class MemoryCache {
 
   private cleanup(): void {
     const now = Date.now();
-    
+
     for (const [key, entry] of this.cache.entries()) {
       if (now - entry.timestamp > entry.ttl) {
         this.cache.delete(key);
@@ -76,14 +76,14 @@ export const cacheHeaders = {
   public: {
     'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400',
   },
-  
+
   /**
    * Cache privado por 5 minutos
    */
   private: {
     'Cache-Control': 'private, max-age=300',
   },
-  
+
   /**
    * Sem cache
    */
@@ -92,7 +92,7 @@ export const cacheHeaders = {
     'Pragma': 'no-cache',
     'Expires': '0',
   },
-  
+
   /**
    * Cache para recursos estáticos (1 ano)
    */
@@ -110,11 +110,11 @@ export function withCache<T>(
   ttlSeconds: number = 300
 ): Promise<T> {
   const cached = cache.get<T>(key);
-  
+
   if (cached !== null) {
     return Promise.resolve(cached);
   }
-  
+
   return fn().then(result => {
     cache.set(key, result, ttlSeconds);
     return result;

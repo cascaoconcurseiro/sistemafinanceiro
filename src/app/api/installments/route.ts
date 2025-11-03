@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     const transactionId = searchParams.get('transactionId');
 
     const { prisma } = await import('@/lib/prisma');
-    
+
     const where: any = { userId: auth.userId };
     if (status) where.status = status;
     if (transactionId) where.transactionId = transactionId;

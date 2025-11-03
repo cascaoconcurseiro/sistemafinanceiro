@@ -52,8 +52,15 @@ export class ApiClient {
 
       if (!response.ok) {
         const error = await response.json();
+        const errorMessage = error.error || 'Erro desconhecido';
+        const errorDetails = Array.isArray(error.details) 
+          ? error.details.join(', ') 
+          : typeof error.details === 'string' 
+            ? error.details 
+            : '';
+        
         throw new Error(
-          error.details?.join(', ') || error.error || 'Erro desconhecido'
+          errorDetails ? `${errorMessage}: ${errorDetails}` : errorMessage
         );
       }
 

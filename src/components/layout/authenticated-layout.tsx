@@ -24,7 +24,7 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
         const response = await fetch('/api/auth/me', {
           credentials: 'include',
         });
-        
+
         if (response.ok) {
           const data = await response.json();
           setUser(data.user);
@@ -49,9 +49,9 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <HeaderWithLogout 
-        userName={user?.name} 
-        userEmail={user?.email} 
+      <HeaderWithLogout
+        userName={user?.name}
+        userEmail={user?.email}
       />
       <main className="container mx-auto px-4 py-6">
         {children}

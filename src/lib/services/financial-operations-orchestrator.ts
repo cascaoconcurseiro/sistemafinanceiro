@@ -1,9 +1,9 @@
 /**
  * ORQUESTRADOR DE OPERAÇÕES FINANCEIRAS
- * 
+ *
  * Mantém compatibilidade com o código existente enquanto usa a nova arquitetura modular.
  * Este arquivo substitui o antigo financial-operations-service.ts de 928 linhas.
- * 
+ *
  * ARQUITETURA MODULAR:
  * - /transactions/transaction-creator.ts - Criação de transações simples
  * - /transactions/installment-creator.ts - Criação de parcelamentos

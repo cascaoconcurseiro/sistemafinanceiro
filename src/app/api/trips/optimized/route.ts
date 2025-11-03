@@ -161,15 +161,15 @@ async function updateTrip(userId: string, id: string, data: z.infer<typeof updat
   }
 
   const updateData: any = { ...data };
-  
+
   if (data.startDate) updateData.startDate = new Date(data.startDate);
   if (data.endDate) updateData.endDate = new Date(data.endDate);
   if (data.sharedWith) updateData.sharedWith = JSON.stringify(data.sharedWith);
 
   const updatedTrip = await prisma.trip.update({
-    where: { 
+    where: {
       id,
-      userId 
+      userId
     },
     data: updateData,
     include: {
@@ -225,9 +225,9 @@ async function updateTrip(userId: string, id: string, data: z.infer<typeof updat
 async function deleteTrip(userId: string, id: string) {
   // Check if trip has transactions
   const transactionCount = await prisma.transaction.count({
-    where: { 
+    where: {
       tripId: id,
-      userId 
+      userId
     }
   });
 
@@ -236,9 +236,9 @@ async function deleteTrip(userId: string, id: string) {
   }
 
   await prisma.trip.delete({
-    where: { 
+    where: {
       id,
-      userId 
+      userId
     }
   });
 }
@@ -256,7 +256,7 @@ export async function PUT(request: NextRequest) {
   const url = new URL(request.url);
   const pathParts = url.pathname.split('/');
   const id = pathParts[pathParts.length - 1];
-  
+
   if (id && id !== 'optimized') {
     const handler = api.createPutHandler(
       updateTripSchema,
@@ -265,7 +265,7 @@ export async function PUT(request: NextRequest) {
     );
     return handler(request, { params: { id } });
   }
-  
+
   return api.errorResponse('Invalid request', 400);
 }
 
@@ -273,7 +273,7 @@ export async function DELETE(request: NextRequest) {
   const url = new URL(request.url);
   const pathParts = url.pathname.split('/');
   const id = pathParts[pathParts.length - 1];
-  
+
   if (id && id !== 'optimized') {
     const handler = api.createDeleteHandler(
       deleteTrip,
@@ -281,6 +281,6 @@ export async function DELETE(request: NextRequest) {
     );
     return handler(request, { params: { id } });
   }
-  
+
   return api.errorResponse('Invalid request', 400);
 }

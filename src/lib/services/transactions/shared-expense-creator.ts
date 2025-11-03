@@ -54,7 +54,7 @@ export class SharedExpenseCreator {
       const debts = [];
       for (const participantId of sharedWith) {
         const amount = division[participantId];
-        
+
         const debt = await tx.sharedDebt.create({
           data: {
             transactionId: mainTransaction.id,

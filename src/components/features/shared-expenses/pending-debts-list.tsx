@@ -45,12 +45,12 @@ export function PendingDebtsList() {
   useEffect(() => {
     const loadPendingDebts = () => {
       const debts: PendingDebt[] = [];
-      
+
       transactions
         .filter(t => t.status === 'pending' || t.status === 'pending_payment')
         .forEach(transaction => {
           const creditor = contacts.find(c => c.id === transaction.paidBy);
-          
+
           if (creditor) {
             debts.push({
               id: transaction.id,
@@ -65,7 +65,7 @@ export function PendingDebtsList() {
             });
           }
         });
-      
+
       setPendingDebts(debts);
     };
 
@@ -79,14 +79,14 @@ export function PendingDebtsList() {
         const response = await fetch('/api/shared-debts', {
           credentials: 'include',
         });
-        
+
         if (response.ok) {
           const data = await response.json();
           const debts = data.debts || [];
-          
+
           // Agrupar créditos por credor
           const creditsByCreditor: Record<string, Credit[]> = {};
-          
+
           debts.forEach((debt: any) => {
             if (debt.status === 'active') {
               const debtor = contacts.find(c => c.id === debt.debtorId);
@@ -103,14 +103,14 @@ export function PendingDebtsList() {
               }
             }
           });
-          
+
           setCredits(creditsByCreditor);
         }
       } catch (error) {
         console.error('Erro ao carregar créditos:', error);
       }
     };
-    
+
     loadCredits();
   }, [contacts]);
 
@@ -127,12 +127,12 @@ export function PendingDebtsList() {
   const getCreditorSummary = (creditorId: string) => {
     const debts = debtsByCreditor[creditorId] || [];
     const totalDebt = debts.reduce((sum, d) => sum + d.amount, 0);
-    
+
     const creditorCredits = credits[creditorId] || [];
     const totalCredit = creditorCredits.reduce((sum, c) => sum + c.amount, 0);
-    
+
     const netAmount = totalDebt - totalCredit;
-    
+
     return {
       totalDebt,
       totalCredit,
@@ -159,39 +159,53 @@ export function PendingDebtsList() {
       const summary = getCreditorSummary(selectedDebt.creditorId);
       const netAmount = summary.netAmount;
 
-      // 1. Criar transação de pagamento
-      if (netAmount > 0) {
-        // Ainda deve (após compensar créditos)
-        await actions.createTransaction({
-          description: `Pagamento - ${selectedDebt.description}`,
-          amount: netAmount,
-          type: 'DESPESA',
-          categoryId: selectedDebt.category,
-          accountId: selectedAccount,
-          date: paymentDate,
-          status: 'cleared',
-          notes: summary.hasCredit 
-            ? `Compensado R$ ${summary.totalCredit.toFixed(2)} de créditos`
-            : undefined,
+      // ✅ Buscar conta principal do credor
+      let creditorAccount;
+      try {
+        const response = await fetch(`/api/accounts?userId=${selectedDebt.creditorId}`, {
+          credentials: 'include',
         });
-      } else if (netAmount < 0) {
-        // Sobrou crédito
-        await actions.createTransaction({
-          description: `Recebimento - Saldo de crédito`,
-          amount: Math.abs(netAmount),
-          type: 'RECEITA',
-          accountId: selectedAccount,
-          date: paymentDate,
-          status: 'cleared',
-          notes: `Crédito excedente após compensação`,
-        });
+        
+        if (response.ok) {
+          const creditorAccounts = await response.json();
+          creditorAccount = creditorAccounts.find((acc: any) => acc.isActive !== false);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar conta do credor:', error);
       }
 
-      // 2. Atualizar transação original para paga
-      await actions.updateTransaction(selectedDebt.transactionId, {
-        status: 'cleared',
-        notes: `Pago em ${paymentDate}`,
+      if (!creditorAccount) {
+        toast.error('❌ Conta do credor não encontrada');
+        return;
+      }
+
+      // ✅ USAR ENDPOINT ATÔMICO
+      const paymentResponse = await fetch('/api/shared-debts/pay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          debtId: selectedDebt.id,
+          creditorId: selectedDebt.creditorId,
+          creditorAccountId: creditorAccount.id,
+          debtorAccountId: selectedAccount,
+          amount: Math.abs(netAmount),
+          totalDebt: summary.totalDebt,
+          totalCredit: summary.totalCredit,
+          description: selectedDebt.description,
+          category: selectedDebt.category,
+          date: paymentDate,
+          isCompensation: netAmount === 0,
+        }),
       });
+
+      if (!paymentResponse.ok) {
+        const error = await paymentResponse.json();
+        throw new Error(error.error || 'Erro ao processar pagamento');
+      }
+
+      const result = await paymentResponse.json();
+      console.log('✅ Pagamento processado:', result);
 
       // 3. Atualizar créditos usados
       if (summary.hasCredit) {
@@ -209,7 +223,7 @@ export function PendingDebtsList() {
         }
       }
 
-      toast.success('✅ Pagamento registrado com sucesso!');
+      toast.success('✅ Pagamento registrado com sucesso! Ambas as transações foram criadas.');
       setPaymentModalOpen(false);
       setSelectedDebt(null);
       setSelectedAccount('');
@@ -327,7 +341,7 @@ export function PendingDebtsList() {
                             Compensação Automática
                           </p>
                           <p className="text-sm text-green-700 dark:text-green-300">
-                            {creditor.creditorName} te deve R$ {summary.totalCredit.toFixed(2)}. 
+                            {creditor.creditorName} te deve R$ {summary.totalCredit.toFixed(2)}.
                             Este valor será descontado automaticamente ao pagar.
                           </p>
                         </div>
@@ -341,7 +355,7 @@ export function PendingDebtsList() {
                     {debts.map(debt => (
                       <div
                         key={debt.id}
-                        className="flex items-center justify-between p-3 bg-red-50 rounded border border-red-200 dark:bg-red-950 dark:border-red-800"
+                        className="flex items-center justify-between p-3 bg-red-50 rounded border border-red-200 dark:bg-red-950 dark:border-red-800 gap-3"
                       >
                         <div className="flex-1">
                           <p className="font-medium">{debt.description}</p>
@@ -354,18 +368,88 @@ export function PendingDebtsList() {
                             {formatCurrency(debt.amount)}
                           </p>
                         </div>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={async () => {
+                              try {
+                                // Buscar transação completa
+                                const response = await fetch(`/api/transactions/${debt.transactionId}`, {
+                                  credentials: 'include',
+                                });
+                                if (response.ok) {
+                                  const transaction = await response.json();
+                                  // Abrir modal de edição
+                                  window.dispatchEvent(new CustomEvent('edit-transaction', {
+                                    detail: { transaction }
+                                  }));
+                                }
+                              } catch (error) {
+                                console.error('Erro ao buscar transação:', error);
+                                toast.error('Erro ao carregar transação');
+                              }
+                            }}
+                            className="h-8 w-8 p-0"
+                            title="Editar dívida"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                              <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                            </svg>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={async () => {
+                              if (confirm(`Tem certeza que deseja excluir a dívida "${debt.description}"?\n\nIsso irá:\n- Remover a transação\n- Cancelar a dívida\n- Atualizar os saldos`)) {
+                                try {
+                                  // Deletar transação
+                                  const response = await fetch(`/api/transactions/${debt.transactionId}`, {
+                                    method: 'DELETE',
+                                    credentials: 'include',
+                                  });
+                                  
+                                  if (response.ok) {
+                                    toast.success('Dívida excluída com sucesso!');
+                                    // Recarregar dados
+                                    setTimeout(() => {
+                                      window.location.reload();
+                                    }, 500);
+                                  } else {
+                                    const error = await response.json();
+                                    throw new Error(error.error || 'Erro ao excluir');
+                                  }
+                                } catch (error) {
+                                  console.error('Erro ao excluir dívida:', error);
+                                  toast.error('Erro ao excluir dívida');
+                                }
+                              }
+                            }}
+                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-100"
+                            title="Excluir dívida"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
 
-                  {/* Botão de pagar */}
+                  {/* Botão de pagar/compensar */}
                   <Button
                     onClick={() => handlePayDebt(debts[0])}
-                    className="w-full bg-red-600 hover:bg-red-700"
+                    className={`w-full ${summary.netAmount === 0 ? 'bg-blue-600 hover:bg-blue-700' : 'bg-red-600 hover:bg-red-700'}`}
                     size="lg"
                   >
                     <CheckCircle className="w-4 h-4 mr-2" />
-                    Pagar {summary.hasCredit ? `R$ ${summary.netAmount.toFixed(2)}` : 'Dívida'}
+                    {summary.netAmount === 0 
+                      ? 'Compensar Dívidas' 
+                      : summary.hasCredit 
+                        ? `Pagar R$ ${summary.netAmount.toFixed(2)}` 
+                        : 'Pagar Dívida'
+                    }
                   </Button>
                 </CardContent>
               </Card>
@@ -379,11 +463,21 @@ export function PendingDebtsList() {
         <Dialog open={paymentModalOpen} onOpenChange={setPaymentModalOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Pagar Dívida</DialogTitle>
+              <DialogTitle>
+                {(() => {
+                  const summary = getCreditorSummary(selectedDebt.creditorId);
+                  return summary.netAmount === 0 ? 'Compensar Dívidas' : 'Pagar Dívida';
+                })()}
+              </DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <p className="text-sm text-muted-foreground">Você deve a:</p>
+                <p className="text-sm text-muted-foreground">
+                  {(() => {
+                    const summary = getCreditorSummary(selectedDebt.creditorId);
+                    return summary.netAmount === 0 ? 'Compensação com:' : 'Você deve a:';
+                  })()}
+                </p>
                 <p className="text-lg font-bold">{selectedDebt.creditorName}</p>
               </div>
 
@@ -444,11 +538,30 @@ export function PendingDebtsList() {
                       />
                     </div>
 
-                    <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-md border border-blue-200 dark:border-blue-800">
-                      <p className="text-sm text-blue-800 dark:text-blue-200">
-                        ℹ️ Será criada uma transação de <strong>DESPESA</strong> na conta selecionada
-                        {summary.hasCredit && ' após compensar os créditos disponíveis'}
+                    <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-md border border-blue-200 dark:border-blue-800 space-y-2">
+                      <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                        📋 O que será registrado:
                       </p>
+                      {summary.netAmount === 0 ? (
+                        <div className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
+                          <p className="font-semibold mb-2">🔄 Compensação Total</p>
+                          <p>✅ <strong>RECEITA</strong> de {formatCurrency(summary.totalDebt)} (você recebe)</p>
+                          <p>✅ <strong>DESPESA</strong> de {formatCurrency(summary.totalDebt)} (você paga)</p>
+                          <p className="text-xs mt-2 text-blue-700 dark:text-blue-300 font-medium">
+                            💡 Saldo líquido: R$ 0,00 - As dívidas se compensam, mas as transações serão registradas para auditoria
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
+                          <p>✅ <strong>RECEITA</strong> de {formatCurrency(Math.max(0, summary.netAmount))} para {selectedDebt.creditorName}</p>
+                          <p>✅ <strong>DESPESA</strong> de {formatCurrency(Math.max(0, summary.netAmount))} na sua conta</p>
+                          {summary.hasCredit && (
+                            <p className="text-xs mt-2 text-blue-700 dark:text-blue-300">
+                              💡 Valores já compensados com créditos disponíveis
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex gap-2 pt-4">
@@ -463,9 +576,14 @@ export function PendingDebtsList() {
                       <Button
                         onClick={confirmPayment}
                         disabled={isProcessing || !selectedAccount}
-                        className="flex-1 bg-red-600 hover:bg-red-700"
+                        className={`flex-1 ${summary.netAmount === 0 ? 'bg-blue-600 hover:bg-blue-700' : 'bg-red-600 hover:bg-red-700'}`}
                       >
-                        {isProcessing ? 'Processando...' : 'Confirmar Pagamento'}
+                        {isProcessing 
+                          ? 'Processando...' 
+                          : summary.netAmount === 0 
+                            ? 'Confirmar Compensação' 
+                            : 'Confirmar Pagamento'
+                        }
                       </Button>
                     </div>
                   </>

@@ -47,14 +47,14 @@ export default function GlobalError({
                   )}
                 </div>
               )}
-              
+
               <div className="flex flex-col gap-2">
                 <Button onClick={reset} className="w-full">
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Recarregar Aplicação
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => window.location.href = '/'}
                   className="w-full"
                 >

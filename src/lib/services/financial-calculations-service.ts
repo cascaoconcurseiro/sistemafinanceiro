@@ -101,10 +101,10 @@ export class FinancialCalculationsService {
    */
   async generateFinancialSummary(userId: string): Promise<FinancialSummary> {
     const accounts = await prisma.account.findMany({
-      where: { 
-        userId, 
+      where: {
+        userId,
         deletedAt: null,
-        isActive: true 
+        isActive: true
       },
       select: { id: true }
     });

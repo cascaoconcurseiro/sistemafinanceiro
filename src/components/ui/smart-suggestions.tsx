@@ -20,11 +20,16 @@ import {
   Sparkles,
   Brain,
 } from 'lucide-react';
-import {
-  smartSuggestions,
-  type SmartSuggestion,
-} from '@/lib/smart-suggestions';
 import { toast } from 'sonner';
+
+// Tipo para sugestões inteligentes
+export interface SmartSuggestion {
+  category?: string;
+  confidence: number;
+  reason: string;
+  tags?: string[];
+  autoNote?: string;
+}
 
 interface SmartSuggestionsProps {
   description: string;
@@ -34,6 +39,8 @@ interface SmartSuggestionsProps {
   currentCategory?: string;
   currentTags?: string[];
   className?: string;
+  transactionType?: 'RECEITA' | 'DESPESA'; // ✨ Novo: tipo de transação
+  amount?: number; // ✨ Novo: valor para melhor categorização
 }
 
 export function SmartSuggestionsComponent({
@@ -44,6 +51,8 @@ export function SmartSuggestionsComponent({
   currentCategory,
   currentTags = [],
   className = '',
+  transactionType = 'DESPESA',
+  amount,
 }: SmartSuggestionsProps) {
   const [suggestions, setSuggestions] = useState<SmartSuggestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -54,29 +63,92 @@ export function SmartSuggestionsComponent({
 
   useEffect(() => {
     if (description && description.length >= 3) {
-      setIsLoading(true);
-
-      // Pequeno delay para evitar muitas chamadas durante a digitação
-      const timer = setTimeout(() => {
+      // ⚡ OTIMIZAÇÃO: Delay de 800ms para não travar a digitação
+      const timer = setTimeout(async () => {
+        setIsLoading(true);
+        
         try {
-          // Temporariamente desabilitado - função não existe
-          // const newSuggestions = smartSuggestions.generateSuggestions({ description });
-          setSuggestions([]);
-          setAppliedSuggestions(new Set());
+          // ✅ NOVA IMPLEMENTAÇÃO: Usar API de categorização inteligente
+          // Ajusta o valor baseado no tipo de transação
+          const amountValue = amount || (transactionType === 'RECEITA' ? 100 : -50);
+          
+          const response = await fetch('/api/ml/categorize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              description,
+              amount: amountValue,
+              transactionType, // ✨ Envia o tipo para melhor categorização
+            }),
+          });
+
+          if (response.ok) {
+            const { prediction } = await response.json();
+            
+            if (prediction && prediction.category) {
+              // Converter para formato de sugestão
+              const newSuggestions: SmartSuggestion[] = [{
+                category: prediction.category,
+                confidence: prediction.confidence || 0.8,
+                reason: prediction.reasoning?.[0] || 'Baseado em padrões anteriores',
+                tags: [],
+                autoNote: undefined,
+              }];
+
+              // Adicionar alternativas se existirem
+              if (prediction.alternatives && prediction.alternatives.length > 0) {
+                prediction.alternatives.forEach((alt: any) => {
+                  if (alt.category && alt.confidence > 0.5) {
+                    newSuggestions.push({
+                      category: alt.category,
+                      confidence: alt.confidence,
+                      reason: 'Categoria alternativa sugerida',
+                      tags: [],
+                      autoNote: undefined,
+                    });
+                  }
+                });
+              }
+
+              setSuggestions(newSuggestions);
+              setAppliedSuggestions(new Set());
+
+              // ✨ NOVO: Aplicar automaticamente a categoria com maior confiança
+              const bestSuggestion = newSuggestions[0]; // Primeira sugestão já é a melhor
+              if (bestSuggestion.category && bestSuggestion.category !== currentCategory && bestSuggestion.confidence >= 0.6) {
+                onCategorySelect(bestSuggestion.category);
+                setAppliedSuggestions(new Set([0])); // Marca como aplicada
+                
+                // Feedback visual discreto apenas se confiança for alta
+                if (bestSuggestion.confidence >= 0.8) {
+                  toast.success('Categoria sugerida', {
+                    description: `${bestSuggestion.category} (${Math.round(bestSuggestion.confidence * 100)}%)`,
+                    duration: 1500,
+                  });
+                }
+              }
+            } else {
+              setSuggestions([]);
+            }
+          } else {
+            setSuggestions([]);
+          }
         } catch (error) {
           console.error('Erro ao obter sugestões:', error);
           setSuggestions([]);
         } finally {
           setIsLoading(false);
         }
-      }, 300);
+      }, 800); // ⚡ Reduzido para 800ms para melhor responsividade
 
       return () => clearTimeout(timer);
     } else {
       setSuggestions([]);
       setAppliedSuggestions(new Set());
+      setIsLoading(false);
     }
-  }, [description]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [description, transactionType, amount]); // ✨ Removido currentCategory e onCategorySelect para evitar loops
 
   const handleApplySuggestion = (
     suggestion: SmartSuggestion,
@@ -110,7 +182,7 @@ export function SmartSuggestionsComponent({
         description: suggestion.reason,
       });
     } catch (error) {
-      logError.ui('Erro ao aplicar sugestão:', error);
+      console.error('Erro ao aplicar sugestão:', error);
       toast.error('Erro ao aplicar sugestão');
     }
   };
@@ -155,7 +227,7 @@ export function SmartSuggestionsComponent({
         description: `${suggestions.length} sugestões processadas`,
       });
     } catch (error) {
-      logError.ui('Erro ao aplicar todas as sugestões:', error);
+      console.error('Erro ao aplicar todas as sugestões:', error);
       toast.error('Erro ao aplicar sugestões');
     }
   };
@@ -191,13 +263,11 @@ export function SmartSuggestionsComponent({
 
   if (isLoading) {
     return (
-      <Card className={className}>
-        <CardContent className="flex items-center justify-center py-6">
-          <div className="text-center">
-            <Sparkles className="w-6 h-6 mx-auto mb-2 animate-pulse text-blue-500" />
-            <p className="text-sm text-gray-600">
-              Analisando e gerando sugestões...
-            </p>
+      <Card className={`border-dashed border-blue-300 bg-blue-50/20 ${className}`}>
+        <CardContent className="flex items-center justify-center py-4">
+          <div className="flex items-center gap-2 text-blue-600">
+            <Sparkles className="w-4 h-4 animate-pulse" />
+            <p className="text-sm">Analisando...</p>
           </div>
         </CardContent>
       </Card>

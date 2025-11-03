@@ -169,7 +169,7 @@ export default function TripChecklist({ trip }: TripChecklistProps) {
           createdAt: new Date().toISOString(),
         },
       ];
-      
+
       setChecklist(defaultItems);
       saveChecklist(defaultItems);
     // }
@@ -203,7 +203,7 @@ export default function TripChecklist({ trip }: TripChecklistProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.title.trim()) {
       toast.error('Título é obrigatório');
       return;
@@ -230,7 +230,7 @@ export default function TripChecklist({ trip }: TripChecklistProps) {
 
     let updatedChecklist;
     if (editingItem) {
-      updatedChecklist = checklist.map(item => 
+      updatedChecklist = checklist.map(item =>
         item.id === editingItem.id ? newItem : item
       );
     } else {
@@ -239,9 +239,9 @@ export default function TripChecklist({ trip }: TripChecklistProps) {
 
     setChecklist(updatedChecklist);
     saveChecklist(updatedChecklist);
-    
+
     toast.success(editingItem ? 'Item atualizado!' : 'Item adicionado!');
-    
+
     // Reset form
     setFormData({
       title: '',
@@ -280,7 +280,7 @@ export default function TripChecklist({ trip }: TripChecklistProps) {
 
   const handleDelete = (id: string) => {
     if (!confirm('Tem certeza que deseja excluir este item?')) return;
-    
+
     const updatedChecklist = checklist.filter(item => item.id !== id);
     setChecklist(updatedChecklist);
     saveChecklist(updatedChecklist);
@@ -296,7 +296,7 @@ export default function TripChecklist({ trip }: TripChecklistProps) {
     const total = checklist.length;
     const completed = checklist.filter(item => item.completed).length;
     const pending = total - completed;
-    
+
     return { total, completed, pending };
   };
 
@@ -342,7 +342,7 @@ export default function TripChecklist({ trip }: TripChecklistProps) {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
@@ -354,7 +354,7 @@ export default function TripChecklist({ trip }: TripChecklistProps) {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
@@ -396,7 +396,7 @@ export default function TripChecklist({ trip }: TripChecklistProps) {
                         onCheckedChange={() => handleToggleComplete(item.id)}
                         className="mt-1"
                       />
-                      
+
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
@@ -410,33 +410,33 @@ export default function TripChecklist({ trip }: TripChecklistProps) {
                                 {item.description}
                               </p>
                             )}
-                            
+
                             <div className="flex items-center space-x-2 mt-2">
                               <Badge className={getPriorityColor(item.priority)}>
-                                {item.priority === 'high' ? 'Alta' : 
+                                {item.priority === 'high' ? 'Alta' :
                                  item.priority === 'medium' ? 'Média' : 'Baixa'}
                               </Badge>
-                              
+
                               {item.dueDate && (
                                 <Badge variant="outline">
                                   {item.dueDate}
                                 </Badge>
                               )}
-                              
+
                               {item.assignedTo && (
                                 <Badge variant="secondary">
                                   {item.assignedTo}
                                 </Badge>
                               )}
                             </div>
-                            
+
                             {item.notes && (
                               <p className="text-xs text-muted-foreground mt-2">
                                 {item.notes}
                               </p>
                             )}
                           </div>
-                          
+
                           <div className="flex items-center space-x-1 ml-2">
                             <Button
                               variant="ghost"
@@ -489,7 +489,7 @@ export default function TripChecklist({ trip }: TripChecklistProps) {
                 {editingItem ? 'Editar Item' : 'Adicionar Item'}
               </DialogTitle>
             </DialogHeader>
-            
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <Label htmlFor="title">Título *</Label>

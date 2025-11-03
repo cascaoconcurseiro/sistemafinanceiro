@@ -14,8 +14,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('🔄 [Cron] Processando transações agendadas...');
-
+    
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -66,7 +65,7 @@ export async function GET(request: NextRequest) {
           // Se for recorrente, criar próximo agendamento
           if (item.isRecurring && item.recurringFrequency) {
             let nextDate = new Date(item.scheduledDate);
-            
+
             switch (item.recurringFrequency) {
               case 'DAILY':
                 nextDate.setDate(nextDate.getDate() + (item.recurringInterval || 1));

@@ -3,9 +3,9 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  WifiOff, 
-  RefreshCw, 
+import {
+  WifiOff,
+  RefreshCw,
   Activity
 } from 'lucide-react';
 
@@ -16,18 +16,18 @@ interface SyncStatusProps {
 
 export function SyncStatus({ showDetails = false, compact = false }: SyncStatusProps) {
   // Componente simplificado sem funcionalidades de sincronização
-  
+
   if (compact) {
     return (
       <div className="flex items-center gap-2">
-        <Badge 
+        <Badge
           variant="secondary"
           className="flex items-center gap-1"
         >
           <WifiOff className="h-3 w-3" />
           Offline
         </Badge>
-        
+
         <Button
           variant="ghost"
           size="sm"
@@ -48,8 +48,8 @@ export function SyncStatus({ showDetails = false, compact = false }: SyncStatusP
             <Activity className="h-5 w-5" />
             Sincronização Desabilitada
           </div>
-          
-          <Badge 
+
+          <Badge
             variant="secondary"
             className="flex items-center gap-1"
           >
@@ -58,7 +58,7 @@ export function SyncStatus({ showDetails = false, compact = false }: SyncStatusP
           </Badge>
         </CardTitle>
       </CardHeader>
-      
+
       <CardContent className="space-y-4">
         <div className="text-sm text-muted-foreground bg-gray-50 p-3 rounded-md border">
           <p className="font-medium text-gray-800">Modo Offline</p>

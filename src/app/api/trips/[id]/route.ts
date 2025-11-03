@@ -9,23 +9,23 @@ export async function PUT(
     // ✅ CORREÇÃO CRÍTICA: Adicionar autenticação
     const { authenticateRequest } = await import('@/lib/utils/auth-helpers');
     const auth = await authenticateRequest(request);
-    
+
     if (!auth.success || !auth.userId) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
     }
 
     const tripData = await request.json();
     const { id } = params;
-    
+
     console.log('📝 [PUT /api/trips/[id]] Dados recebidos:', {
       id,
       userId: auth.userId,
       tripData
     });
-    
+
     // ✅ CORREÇÃO CRÍTICA: Verificar se a viagem pertence ao usuário
     const existingTrip = await prisma.trip.findFirst({
-      where: { 
+      where: {
         id,
         userId: auth.userId // ✅ Isolamento de dados
       }
@@ -37,7 +37,7 @@ export async function PUT(
         { status: 404 }
       );
     }
-    
+
     // ✅ CORREÇÃO CRÍTICA: Atualizar apenas se pertencer ao usuário
     const updateData: any = {
       name: tripData.name,
@@ -46,24 +46,24 @@ export async function PUT(
       budget: tripData.budget,
       currency: tripData.currency,
     };
-    
+
     // Adicionar campos opcionais apenas se existirem
     if (tripData.startDate) updateData.startDate = new Date(tripData.startDate);
     if (tripData.endDate) updateData.endDate = new Date(tripData.endDate);
     if (tripData.description !== undefined) updateData.description = tripData.description;
     if (tripData.participants) updateData.participants = tripData.participants;
     if (tripData.spent !== undefined) updateData.spent = tripData.spent;
-    
+
     console.log('💾 [PUT /api/trips/[id]] Atualizando com dados:', updateData);
-    
+
     const trip = await prisma.trip.update({
-      where: { 
+      where: {
         id,
         userId: auth.userId // ✅ Isolamento de dados
       },
       data: updateData
     });
-    
+
     return NextResponse.json({
       success: true,
       data: trip
@@ -85,16 +85,16 @@ export async function DELETE(
     // ✅ CORREÇÃO CRÍTICA: Adicionar autenticação
     const { authenticateRequest } = await import('@/lib/utils/auth-helpers');
     const auth = await authenticateRequest(request);
-    
+
     if (!auth.success || !auth.userId) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
     }
 
     const { id } = params;
-    
+
     // ✅ CORREÇÃO CRÍTICA: Verificar se a viagem pertence ao usuário
     const existingTrip = await prisma.trip.findFirst({
-      where: { 
+      where: {
         id,
         userId: auth.userId // ✅ Isolamento de dados
       }
@@ -106,15 +106,15 @@ export async function DELETE(
         { status: 404 }
       );
     }
-    
+
     // ✅ CORREÇÃO CRÍTICA: Deletar apenas se pertencer ao usuário
     await prisma.trip.delete({
-      where: { 
+      where: {
         id,
         userId: auth.userId // ✅ Isolamento de dados
       }
     });
-    
+
     return NextResponse.json({
       success: true,
       message: 'Trip deletado com sucesso'

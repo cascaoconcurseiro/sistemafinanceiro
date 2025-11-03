@@ -9,7 +9,7 @@ export default function LogoutButton() {
 
   const handleLogout = async () => {
     setLoading(true);
-    
+
     try {
       const response = await fetch('/api/auth/logout', {
         method: 'POST',

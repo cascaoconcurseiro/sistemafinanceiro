@@ -16,9 +16,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { categoryId, categoryName } = body;
 
-    console.log('🔧 [Fix Categories] Iniciando correção de categorias...');
-    console.log('🔧 [Fix Categories] CategoryId:', categoryId, 'CategoryName:', categoryName);
-
+        
     // Buscar ou criar categoria
     let category;
     if (categoryId) {
@@ -27,7 +25,7 @@ export async function POST(request: NextRequest) {
       });
     } else if (categoryName) {
       category = await prisma.category.findFirst({
-        where: { 
+        where: {
           name: categoryName,
           userId: auth.userId
         }
@@ -44,8 +42,7 @@ export async function POST(request: NextRequest) {
             color: '#8B5CF6'
           }
         });
-        console.log('✅ [Fix Categories] Categoria criada:', category.id);
-      }
+              }
     }
 
     if (!category) {
@@ -91,7 +88,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('❌ [Fix Categories] Erro:', error);
     return NextResponse.json(
-      { 
+      {
         error: 'Erro ao atualizar categorias',
         details: error instanceof Error ? error.message : String(error)
       },

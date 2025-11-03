@@ -88,7 +88,7 @@ export function ErrorReporter({ error, errorInfo, onClose, onRetry }: ErrorRepor
 
     // In a real application, you would send this to your error tracking service
     // Example: Sentry, LogRocket, Bugsnag, etc.
-    
+
     toast({
       title: "Relatório enviado",
       description: "Obrigado pelo relatório. Nossa equipe irá investigar o problema.",
@@ -182,7 +182,7 @@ export function ErrorReporter({ error, errorInfo, onClose, onRetry }: ErrorRepor
                 <p><strong>Sessão:</strong> {errorDetails.sessionId}</p>
                 <p><strong>Erros Recentes:</strong> {recentErrors.length}</p>
               </div>
-              
+
               {errorDetails.stack && (
                 <div>
                   <p className="text-xs font-medium mb-1">Stack Trace:</p>
@@ -200,19 +200,19 @@ export function ErrorReporter({ error, errorInfo, onClose, onRetry }: ErrorRepor
           <Button onClick={submitErrorReport} className="flex-1">
             Enviar Relatório
           </Button>
-          
+
           {onRetry && (
             <Button variant="outline" onClick={onRetry}>
               <RefreshCw className="h-4 w-4 mr-2" />
               Tentar Novamente
             </Button>
           )}
-          
+
           <Button variant="outline" onClick={copyErrorDetails}>
             <Copy className="h-4 w-4 mr-2" />
             Copiar
           </Button>
-          
+
           <Button variant="outline" onClick={downloadErrorReport}>
             <Download className="h-4 w-4 mr-2" />
             Download
@@ -233,7 +233,7 @@ export function useErrorReporter() {
     setError(error);
     setErrorInfo(errorInfo);
     setIsOpen(true);
-    
+
     // TODO: Re-enable logger after fixing webpack issues
     // Also log to our logging system
     // logger.errorWithContext(

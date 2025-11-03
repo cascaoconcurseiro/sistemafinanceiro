@@ -17,7 +17,7 @@ export async function GET(
 
     const accountId = params.id;
     const { searchParams } = new URL(request.url);
-    
+
     // Parâmetros de filtro
     const month = searchParams.get('month');
     const year = searchParams.get('year');

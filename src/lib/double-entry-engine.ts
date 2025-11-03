@@ -117,7 +117,6 @@ class DoubleEntryEngine {
   }
 
   async generateTrialBalance(): Promise<TrialBalance> {
-    console.log('📊 Gerando balancete...');
     
     const transactions = storage.getTransactions();
     const accounts = storage.getAccounts();
@@ -139,11 +138,11 @@ class DoubleEntryEngine {
     // Processar transações
     for (const transaction of transactions) {
       const entry = this.createJournalEntry(transaction);
-      
+
       // Processar débitos
       for (const debit of entry.debits) {
         if (!accountBalances.has(debit.accountId)) {
-          const accountType = debit.accountId.startsWith('expense-') ? 'expense' : 
+          const accountType = debit.accountId.startsWith('expense-') ? 'expense' :
                             debit.accountId.startsWith('revenue-') ? 'revenue' : 'asset';
           accountBalances.set(debit.accountId, {
             accountId: debit.accountId,
@@ -154,7 +153,7 @@ class DoubleEntryEngine {
             netBalance: 0,
           });
         }
-        
+
         const account = accountBalances.get(debit.accountId)!;
         account.debitBalance += debit.amount;
       }
@@ -162,7 +161,7 @@ class DoubleEntryEngine {
       // Processar créditos
       for (const credit of entry.credits) {
         if (!accountBalances.has(credit.accountId)) {
-          const accountType = credit.accountId.startsWith('expense-') ? 'expense' : 
+          const accountType = credit.accountId.startsWith('expense-') ? 'expense' :
                             credit.accountId.startsWith('revenue-') ? 'revenue' : 'asset';
           accountBalances.set(credit.accountId, {
             accountId: credit.accountId,
@@ -173,7 +172,7 @@ class DoubleEntryEngine {
             netBalance: 0,
           });
         }
-        
+
         const account = accountBalances.get(credit.accountId)!;
         account.creditBalance += credit.amount;
       }
@@ -214,10 +213,9 @@ class DoubleEntryEngine {
   }
 
   async generateJournalEntries(startDate?: string, endDate?: string): Promise<JournalEntry[]> {
-    console.log('📋 Gerando lançamentos contábeis...');
     
     let transactions = storage.getTransactions();
-    
+
     // Filtrar por período se especificado
     if (startDate || endDate) {
       transactions = transactions.filter(t => {
@@ -229,9 +227,9 @@ class DoubleEntryEngine {
     }
 
     const entries = transactions.map(t => this.createJournalEntry(t));
-    
+
     console.log(`✅ ${entries.length} lançamentos gerados`);
-    
+
     return entries.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }
 
@@ -240,25 +238,24 @@ class DoubleEntryEngine {
     errors: string[];
     warnings: string[];
   }> {
-    console.log('🔍 Validando integridade contábil...');
     
     const errors: string[] = [];
     const warnings: string[] = [];
-    
+
     try {
       const trialBalance = await this.generateTrialBalance();
-      
+
       if (!trialBalance.isBalanced) {
         errors.push(`Balancete desbalanceado: Débitos (${trialBalance.totalDebits.toFixed(2)}) ≠ Créditos (${trialBalance.totalCredits.toFixed(2)})`);
       }
-      
+
       const entries = await this.generateJournalEntries();
       const unbalancedEntries = entries.filter(e => !e.isBalanced);
-      
+
       if (unbalancedEntries.length > 0) {
         errors.push(`${unbalancedEntries.length} lançamentos desbalanceados encontrados`);
       }
-      
+
       // Verificar contas com saldos negativos inesperados
       const accounts = storage.getAccounts();
       for (const account of accounts) {
@@ -266,19 +263,19 @@ class DoubleEntryEngine {
           warnings.push(`Conta de ativo com saldo negativo: ${account.name} (${account.balance.toFixed(2)})`);
         }
       }
-      
+
     } catch (error) {
       errors.push(`Erro na validação: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     }
-    
+
     const isValid = errors.length === 0;
-    
+
     console.log('✅ Validação concluída:', {
       isValid,
       errorsCount: errors.length,
       warningsCount: warnings.length,
     });
-    
+
     return { isValid, errors, warnings };
   }
 }

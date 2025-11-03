@@ -11,10 +11,9 @@ export async function POST(request: NextRequest) {
   try {
     const { authenticateRequest } = await import('@/lib/utils/auth-helpers');
     const auth = await authenticateRequest(request);
-    
+
     if (!auth.success || !auth.userId) {
-      console.log('❌ [API Shared Expenses Pay] Não autenticado');
-      return NextResponse.json(
+            return NextResponse.json(
         { success: false, error: 'Não autenticado' },
         { status: 401 }
       );
@@ -22,7 +21,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { transactionIds, accountId, paymentDate, notes } = body;
-    
+
     console.log('💰 [API Shared Expenses Pay] Processando pagamento:', {
       userId: auth.userId,
       transactionIds,
@@ -121,7 +120,7 @@ export async function POST(request: NextRequest) {
       paymentTransactions.push(paymentTx);
 
       // Marcar transação original como paga
-      const currentMetadata = typeof originalTx.metadata === 'string' 
+      const currentMetadata = typeof originalTx.metadata === 'string'
         ? JSON.parse(originalTx.metadata || '{}')
         : originalTx.metadata || {};
 
@@ -178,8 +177,8 @@ export async function POST(request: NextRequest) {
     console.error('❌ [API Shared Expenses Pay] Erro ao processar pagamento:', error);
     console.error('❌ [API Shared Expenses Pay] Stack:', error instanceof Error ? error.stack : 'No stack');
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: 'Erro ao processar pagamento',
         details: error instanceof Error ? error.message : 'Erro desconhecido',
         stack: error instanceof Error ? error.stack : undefined

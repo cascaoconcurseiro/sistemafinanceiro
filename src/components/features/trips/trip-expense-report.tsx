@@ -105,21 +105,16 @@ export function TripExpenseReport({ trip, onUpdate }: TripExpenseReportProps) {
   const loadExpenses = async () => {
     try {
       setLoading(true);
-      console.log('🔍 [TripExpenseReport] Carregando transações para viagem:', trip.id);
-      const response = await fetch(`/api/transactions?tripId=${trip.id}`, {
+            const response = await fetch(`/api/transactions?tripId=${trip.id}`, {
         credentials: 'include',
       });
       if (response.ok) {
         const data = await response.json();
         const allTransactions = data.transactions || [];
-        console.log('📊 [TripExpenseReport] Total de transações recebidas:', allTransactions.length);
-        console.log('📊 [TripExpenseReport] Todas:', allTransactions);
-        // ✅ FILTRAR: Apenas DESPESAS para o relatório
+                        // ✅ FILTRAR: Apenas DESPESAS para o relatório
         const transactions = allTransactions.filter((t: any) => t.type === 'DESPESA');
-        console.log('✅ [TripExpenseReport] Apenas DESPESAS:', transactions.length);
-        console.log('📊 [TripExpenseReport] Despesas filtradas:', transactions);
-        setExpenses(transactions);
-        
+                        setExpenses(transactions);
+
         // Forçar atualização do relatório
         setTimeout(() => {
           generateReport(transactions);
@@ -144,8 +139,7 @@ export function TripExpenseReport({ trip, onUpdate }: TripExpenseReportProps) {
   // ✅ Listener para atualizar quando transação for criada, editada ou deletada
   useEffect(() => {
     const handleTransactionUpdate = (event?: CustomEvent) => {
-      console.log('🔄 [TripExpenseReport] Evento de transação recebido:', event?.type);
-      setRefreshKey(prev => prev + 1);
+            setRefreshKey(prev => prev + 1);
     };
 
     // Escutar todos os eventos de transação
@@ -154,7 +148,7 @@ export function TripExpenseReport({ trip, onUpdate }: TripExpenseReportProps) {
     window.addEventListener('transactionDeleted', handleTransactionUpdate);
     window.addEventListener('TRANSACTION_UPDATED', handleTransactionUpdate);
     window.addEventListener('TRANSACTION_DELETED', handleTransactionUpdate);
-    
+
     return () => {
       window.removeEventListener('transactionCreated', handleTransactionUpdate);
       window.removeEventListener('transactionUpdated', handleTransactionUpdate);
@@ -165,8 +159,7 @@ export function TripExpenseReport({ trip, onUpdate }: TripExpenseReportProps) {
   }, []);
 
   const generateReport = (tripExpenses: Transaction[] = expenses) => {
-    console.log('🔍 [TripExpenseReport] Gerando relatório com', tripExpenses.length, 'transações');
-
+    
     // Check budget alerts
     const alerts: { type: 'warning' | 'danger'; message: string }[] = [];
     // ✅ CORREÇÃO: Separar despesas e receitas
@@ -176,8 +169,8 @@ export function TripExpenseReport({ trip, onUpdate }: TripExpenseReportProps) {
       // RECEITA: subtrai (reembolso, diminui gasto)
       return transaction.type === 'RECEITA' ? sum - amount : sum + amount;
     }, 0);
-    const spentPercentage = trip.budget && trip.budget > 0 
-      ? (totalExpenses / trip.budget) * 100 
+    const spentPercentage = trip.budget && trip.budget > 0
+      ? (totalExpenses / trip.budget) * 100
       : 0;
 
     if (spentPercentage >= 100) {
@@ -530,8 +523,7 @@ export function TripExpenseReport({ trip, onUpdate }: TripExpenseReportProps) {
   const averageDaily = getAverageDaily();
   const biggestExpense = getBiggestExpense();
 
-  console.log('📊 [TripExpenseReport] Renderizando relatório');
-  console.log('  - Expenses:', expenses.length);
+    console.log('  - Expenses:', expenses.length);
   console.log('  - Total:', totalExpenses);
   console.log('  - Loading:', loading);
   console.log('  - Categories:', categories.length);
@@ -587,14 +579,14 @@ export function TripExpenseReport({ trip, onUpdate }: TripExpenseReportProps) {
                             : 'bg-green-500'
                       }`}
                       style={{
-                        width: `${trip.budget && trip.budget > 0 
+                        width: `${trip.budget && trip.budget > 0
                           ? Math.min(((totalExpenses || 0) / trip.budget) * 100, 100)
                           : 0}%`,
                       }}
                     ></div>
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    {trip.budget && trip.budget > 0 
+                    {trip.budget && trip.budget > 0
                       ? (((totalExpenses || 0) / trip.budget) * 100).toFixed(1)
                       : '0'}% do
                     orçamento
@@ -782,7 +774,6 @@ export function TripExpenseReport({ trip, onUpdate }: TripExpenseReportProps) {
             </CardContent>
           </Card>
         </TabsContent>
-
 
       </Tabs>
 

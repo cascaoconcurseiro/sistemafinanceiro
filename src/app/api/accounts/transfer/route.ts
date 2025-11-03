@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     const fromAccountTransactions = await prisma.transaction.findMany({
       where: { accountId: fromAccountId, deletedAt: null },
     });
-    
+
     const fromAccountBalance = fromAccountTransactions.reduce((sum, t) => {
       return sum + (t.type === 'income' ? Number(t.amount) : -Number(t.amount));
     }, 0);
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
 
     // ✅ CORREÇÃO: Usar partida dobrada para transferências com transação atômica
     const transferDate = date ? new Date(date) : new Date();
-    
+
     // ✅ USAR TRANSAÇÃO ATÔMICA para garantir que ambas as operações aconteçam
     const transaction = await prisma.$transaction(async (tx) => {
       // Criar transação de saída (despesa na conta origem)

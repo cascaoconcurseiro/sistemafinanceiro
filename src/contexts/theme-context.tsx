@@ -36,7 +36,7 @@ export function ThemeProvider({
       try {
         const response = await fetch('/api/theme-settings');
         const result = await response.json();
-        
+
         if (result.success && result.data) {
           setTheme(result.data.theme || 'system');
         }
@@ -80,7 +80,7 @@ export function ThemeProvider({
           },
           body: JSON.stringify({ theme: newTheme }),
         });
-        
+
         if (response.ok) {
           setTheme(newTheme);
         } else {

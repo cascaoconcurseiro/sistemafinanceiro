@@ -4,11 +4,11 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { 
-  CheckCircle2, 
-  Circle, 
-  Clock, 
-  MapPin, 
+import {
+  CheckCircle2,
+  Circle,
+  Clock,
+  MapPin,
   TrendingUp,
   Calendar
 } from 'lucide-react';
@@ -36,10 +36,10 @@ interface ItineraryProgressProps {
   tripEndDate?: string;
 }
 
-export function ItineraryProgress({ 
-  itinerary, 
-  tripStartDate, 
-  tripEndDate 
+export function ItineraryProgress({
+  itinerary,
+  tripStartDate,
+  tripEndDate
 }: ItineraryProgressProps) {
   const totalItems = itinerary.length;
   const completedItems = itinerary.filter(item => item.completed).length;
@@ -187,13 +187,13 @@ export function ItineraryProgress({
               <Clock className="w-5 h-5 text-blue-600" />
             )}
             <span className="font-medium">
-              {progressPercentage === 100 
-                ? 'Roteiro Completo!' 
+              {progressPercentage === 100
+                ? 'Roteiro Completo!'
                 : `${totalItems - completedItems} itens restantes`
               }
             </span>
           </div>
-          <Badge 
+          <Badge
             variant={progressPercentage === 100 ? "default" : "secondary"}
             className={progressPercentage === 100 ? "bg-green-600" : ""}
           >

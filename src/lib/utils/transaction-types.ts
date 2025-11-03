@@ -1,6 +1,6 @@
 /**
  * 🔄 UTILITÁRIO DE CONVERSÃO DE TIPOS DE TRANSAÇÃO
- * 
+ *
  * Padroniza os tipos de transação entre frontend e backend
  * - Backend/Banco: RECEITA, DESPESA, TRANSFERENCIA (maiúsculo)
  * - Frontend: income, expense, transfer (minúsculo)

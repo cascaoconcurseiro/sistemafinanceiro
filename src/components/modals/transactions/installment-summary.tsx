@@ -50,9 +50,9 @@ export function InstallmentSummary({
             </div>
           </div>
         </div>
-        
+
         <Separator />
-        
+
         <div className="grid grid-cols-2 gap-4">
           <div>
             <span className="text-sm text-gray-600">Valor por Parcela:</span>
@@ -60,7 +60,7 @@ export function InstallmentSummary({
               R$ {installmentAmount.toFixed(2)}
             </div>
           </div>
-          
+
           {isShared && (
             <div>
               <span className="text-sm text-gray-600">Minha Parte (Mensal):</span>
@@ -73,7 +73,7 @@ export function InstallmentSummary({
             </div>
           )}
         </div>
-        
+
         {isShared && (
           <>
             <Separator />
@@ -87,7 +87,7 @@ export function InstallmentSummary({
             </div>
           </>
         )}
-        
+
         {creditCardName && (
           <div className="mt-2 p-2 bg-white rounded border">
             <div className="flex items-center gap-2 text-sm">

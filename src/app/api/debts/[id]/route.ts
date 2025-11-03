@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { authenticateRequest } from '@/lib/utils/auth-helpers';
 
-// PUT - Atualizar dívida
+/**
+ * PUT /api/debts/[id]
+ * Atualizar dívida (marcar como paga, etc)
+ */
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -13,51 +16,74 @@ export async function PUT(
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
     }
 
-    const { id } = params;
+    const userId = auth.userId;
     const body = await request.json();
+    const debtId = params.id;
 
-    console.log('🔍 [API] Buscando dívida:', { id, userId: auth.userId, body });
+    console.log('🔄 [Debts API PUT] Atualizando dívida:', debtId, body);
 
-    // Buscar dívida (você pode ser o devedor OU o credor)
+    // Buscar dívida
     const debt = await prisma.sharedDebt.findFirst({
       where: {
-        id,
+        id: debtId,
         OR: [
-          { debtorId: auth.userId },
-          { creditorId: auth.userId }
-        ]
-      }
+          { debtorId: userId },
+          { creditorId: userId },
+        ],
+      },
     });
 
-    console.log('🔍 [API] Dívida encontrada:', debt);
-
     if (!debt) {
-      console.error('❌ [API] Dívida não encontrada');
-      return NextResponse.json(
-        { error: 'Dívida não encontrada' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Dívida não encontrada' }, { status: 404 });
     }
+
+    // ✅ CORREÇÃO CRÍTICA: Não zerar currentAmount ao marcar como paga
+    // Manter o valor original para que apareça na fatura
+    const updateData: any = {};
+
+    if (body.status) {
+      updateData.status = body.status;
+    }
+
+    if (body.paidAt) {
+      updateData.paidAt = new Date(body.paidAt);
+    }
+
+    // ✅ IMPORTANTE: NÃO atualizar currentAmount para 0
+    // O valor deve permanecer o mesmo para aparecer na fatura como "PAGO"
+
+    console.log('📝 [Debts API PUT] Dados de atualização:', updateData);
 
     // Atualizar dívida
     const updatedDebt = await prisma.sharedDebt.update({
-      where: { id },
-      data: {
-        status: body.status || debt.status,
-        paidAt: body.paidAt !== undefined ? (body.paidAt ? new Date(body.paidAt) : null) : debt.paidAt,
-        currentAmount: body.currentAmount !== undefined ? body.currentAmount : debt.currentAmount,
-      }
+      where: { id: debtId },
+      data: updateData,
     });
 
-    console.log('✅ Dívida atualizada:', {
+    console.log('✅ [Debts API PUT] Dívida atualizada:', {
       id: updatedDebt.id,
       status: updatedDebt.status,
-      paidAt: updatedDebt.paidAt
+      currentAmount: updatedDebt.currentAmount,
+      paidAt: updatedDebt.paidAt,
     });
 
-    return NextResponse.json(updatedDebt);
+    return NextResponse.json({
+      success: true,
+      debt: {
+        id: updatedDebt.id,
+        creditorId: updatedDebt.creditorId,
+        debtorId: updatedDebt.debtorId,
+        originalAmount: Number(updatedDebt.originalAmount),
+        currentAmount: Number(updatedDebt.currentAmount),
+        paidAmount: Number(updatedDebt.paidAmount),
+        description: updatedDebt.description,
+        status: updatedDebt.status,
+        paidAt: updatedDebt.paidAt,
+        createdAt: updatedDebt.createdAt,
+      },
+    });
   } catch (error) {
-    console.error('❌ Erro ao atualizar dívida:', error);
+    console.error('❌ [Debts API PUT] Erro:', error);
     return NextResponse.json(
       { error: 'Erro interno do servidor' },
       { status: 500 }
@@ -65,85 +91,4 @@ export async function PUT(
   }
 }
 
-// DELETE - Deletar dívida
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const auth = await authenticateRequest(request);
-    if (!auth.success || !auth.userId) {
-      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-    }
-
-    const { id } = params;
-
-    // Buscar dívida
-    const debt = await prisma.debt.findFirst({
-      where: {
-        id,
-        userId: auth.userId
-      }
-    });
-
-    if (!debt) {
-      return NextResponse.json(
-        { error: 'Dívida não encontrada' },
-        { status: 404 }
-      );
-    }
-
-    // Deletar dívida
-    await prisma.debt.delete({
-      where: { id }
-    });
-
-    console.log('✅ Dívida deletada:', id);
-
-    return NextResponse.json({ message: 'Dívida deletada com sucesso' });
-  } catch (error) {
-    console.error('❌ Erro ao deletar dívida:', error);
-    return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
-    );
-  }
-}
-
-// GET - Buscar dívida específica
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const auth = await authenticateRequest(request);
-    if (!auth.success || !auth.userId) {
-      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-    }
-
-    const { id } = params;
-
-    // Buscar dívida
-    const debt = await prisma.debt.findFirst({
-      where: {
-        id,
-        userId: auth.userId
-      }
-    });
-
-    if (!debt) {
-      return NextResponse.json(
-        { error: 'Dívida não encontrada' },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json(debt);
-  } catch (error) {
-    console.error('❌ Erro ao buscar dívida:', error);
-    return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
-    );
-  }
-}
+export const dynamic = 'force-dynamic';

@@ -35,7 +35,7 @@ import {
   Trash2,
   DollarSign,
 } from 'lucide-react';
-import type { Trip, CurrencyExchange } from '@/lib/storage';
+import type { Trip, CurrencyExchange } from '@/lib/config/storage';
 import { toast } from 'sonner';
 import { formatCurrency, getCurrencySymbol } from '@/lib/utils/currency';
 
@@ -72,11 +72,11 @@ export function TripCurrencyExchange({
       const response = await fetch(`/api/currency-exchanges?tripId=${trip.id}`, {
         credentials: 'include',
       });
-      
+
       if (!response.ok) {
         throw new Error('Erro ao carregar câmbios');
       }
-      
+
       const tripExchanges = await response.json();
       setExchanges(tripExchanges);
 
@@ -128,7 +128,7 @@ export function TripCurrencyExchange({
     // Guards defensivos para valores numéricos
     const amountBRL = Number.parseFloat(formData.amountBRL);
     const amountForeign = Number.parseFloat(formData.amountForeign);
-    
+
     if (isNaN(amountBRL) || isNaN(amountForeign)) {
       toast.error('Valores devem ser números válidos');
       return;
@@ -140,7 +140,7 @@ export function TripCurrencyExchange({
     }
 
     const exchangeRate = amountBRL / amountForeign;
-    
+
     // Guard defensivo para taxa de câmbio
     if (!isFinite(exchangeRate) || exchangeRate <= 0) {
       toast.error('Taxa de câmbio inválida');
@@ -163,7 +163,7 @@ export function TripCurrencyExchange({
 
     try {
       const method = editingExchange ? 'PUT' : 'POST';
-      const body = editingExchange 
+      const body = editingExchange
         ? { ...exchange, id: editingExchange.id }
         : exchange;
 
@@ -249,11 +249,11 @@ export function TripCurrencyExchange({
     if (formData.amountBRL && formData.amountForeign) {
       const brl = parseFloat(formData.amountBRL);
       const foreign = parseFloat(formData.amountForeign);
-      
+
       if (!isNaN(brl) && !isNaN(foreign) && foreign > 0) {
         const rate = brl / foreign;
         const rateStr = rate.toFixed(4);
-        
+
         // Só atualizar se o valor mudou para evitar loop
         if (formData.exchangeRate !== rateStr) {
           setFormData((prev) => ({ ...prev, exchangeRate: rateStr }));

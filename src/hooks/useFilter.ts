@@ -13,12 +13,12 @@ interface UseFilterResult<T> {
 
 /**
  * Hook para gerenciar filtros de dados
- * 
+ *
  * @template T - Tipo dos itens
  * @param data - Array de dados para filtrar
  * @param filterFn - Função que aplica os filtros
  * @returns Objeto com dados filtrados e controles
- * 
+ *
  * @example
  * const { filteredData, setFilter, clearFilters } = useFilter(
  *   transactions,
@@ -28,7 +28,7 @@ interface UseFilterResult<T> {
  *     return true;
  *   }
  * );
- * 
+ *
  * setFilter('category', 'Food');
  * setFilter('minAmount', 100);
  */

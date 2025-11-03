@@ -1,18 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { authenticateRequest } from '@/lib/utils/auth-helpers';
-import { z } from 'zod';
 
-const payDebtSchema = z.object({
-  debtId: z.string().min(1, 'ID da dívida é obrigatório'),
-  accountId: z.string().min(1, 'Conta é obrigatória'),
-  amount: z.number().positive('Valor deve ser positivo').optional(),
-  paymentDate: z.string().optional(),
-});
-
+/**
+ * POST /api/debts/pay
+ * Pagar uma dívida criando transação de pagamento
+ */
 export async function POST(request: NextRequest) {
-  console.log('💳 [Pay Debt API] Processando pagamento de dívida...');
-  
   try {
     const auth = await authenticateRequest(request);
     if (!auth.success || !auth.userId) {
@@ -21,113 +15,96 @@ export async function POST(request: NextRequest) {
 
     const userId = auth.userId;
     const body = await request.json();
-    
-    console.log('📦 [Pay Debt API] Dados recebidos:', body);
 
-    // Validar dados
-    const validation = payDebtSchema.safeParse(body);
-    if (!validation.success) {
+    console.log('💰 [Debts Pay API] Dados recebidos:', body);
+
+    const { debtId, accountId, amount, paymentDate } = body;
+
+    if (!debtId || !accountId || !amount) {
       return NextResponse.json(
-        { 
-          error: 'Dados inválidos', 
-          details: validation.error.errors.map(e => `${e.path.join('.')}: ${e.message}`)
-        },
+        { error: 'Dados incompletos: debtId, accountId e amount são obrigatórios' },
         { status: 400 }
       );
     }
 
-    const { debtId, accountId, amount, paymentDate } = validation.data;
-
     // Buscar dívida
-    const debt = await prisma.sharedDebt.findUnique({
-      where: { id: debtId },
+    const debt = await prisma.sharedDebt.findFirst({
+      where: {
+        id: debtId,
+        OR: [
+          { debtorId: userId },
+          { creditorId: userId },
+        ],
+      },
     });
 
     if (!debt) {
       return NextResponse.json({ error: 'Dívida não encontrada' }, { status: 404 });
     }
 
-    // Verificar se o usuário é o devedor
-    if (debt.debtorId !== userId) {
-      return NextResponse.json({ error: 'Você não é o devedor desta dívida' }, { status: 403 });
-    }
-
-    // Verificar se a dívida já foi paga
+    // Verificar se já está paga
     if (debt.status === 'paid') {
-      return NextResponse.json({ error: 'Dívida já foi paga' }, { status: 400 });
+      return NextResponse.json({ error: 'Dívida já está paga' }, { status: 400 });
     }
 
-    // Valor a pagar (se não especificado, paga o total)
-    const paymentAmount = amount || Number(debt.currentAmount);
+    // Buscar informações do credor para a descrição
+    const creditor = await prisma.user.findUnique({
+      where: { id: debt.creditorId },
+      select: { name: true, email: true },
+    });
 
-    // Verificar se o valor não excede a dívida
-    if (paymentAmount > Number(debt.currentAmount)) {
-      return NextResponse.json(
-        { error: 'Valor de pagamento excede o valor da dívida' },
-        { status: 400 }
-      );
-    }
+    const creditorName = creditor?.name || creditor?.email || debt.creditorId;
 
     // Criar transação de pagamento
     const transaction = await prisma.transaction.create({
       data: {
         userId: userId,
         accountId: accountId,
-        amount: paymentAmount,
+        amount: -Math.abs(Number(amount)), // Negativo porque é saída de dinheiro
+        description: `💸 Pagamento - ${debt.description} (para ${creditorName})`,
         type: 'DESPESA',
-        description: `Pagamento de dívida - ${debt.description}`,
         date: paymentDate ? new Date(paymentDate) : new Date(),
-        categoryId: null, // Pode criar uma categoria "Pagamento de Dívida"
-        status: 'completed',
+        status: 'cleared',
         metadata: JSON.stringify({
-          debtId: debt.id,
-          creditorId: debt.creditorId,
-          originalDebtAmount: Number(debt.originalAmount),
+          type: 'shared_expense_payment',
+          billingItemId: `debt-${debtId}`,
+          originalTransactionId: debtId,
+          paidBy: creditorName,
         }),
       },
     });
 
-    // Atualizar dívida
-    const newCurrentAmount = Number(debt.currentAmount) - paymentAmount;
-    const newPaidAmount = Number(debt.paidAmount) + paymentAmount;
-    const newStatus = newCurrentAmount <= 0 ? 'paid' : 'active';
-
+    // ✅ CORREÇÃO: Marcar dívida como paga SEM zerar o currentAmount
     await prisma.sharedDebt.update({
       where: { id: debtId },
       data: {
-        currentAmount: newCurrentAmount,
-        paidAmount: newPaidAmount,
-        status: newStatus,
-        paidAt: newStatus === 'paid' ? new Date() : null,
-        transactionId: transaction.id,
+        status: 'paid',
+        paidAt: new Date(),
+        // ✅ NÃO atualizar currentAmount - manter o valor original
       },
     });
 
-    console.log('✅ [Pay Debt API] Pagamento processado:', {
+    console.log('✅ [Debts Pay API] Dívida paga:', {
       debtId,
-      paymentAmount,
-      newStatus,
+      transactionId: transaction.id,
+      amount,
     });
 
     return NextResponse.json({
       success: true,
-      message: newStatus === 'paid' 
-        ? 'Dívida paga completamente!' 
-        : `Pagamento de R$ ${paymentAmount.toFixed(2)} realizado. Restante: R$ ${newCurrentAmount.toFixed(2)}`,
       transaction: {
         id: transaction.id,
         amount: Number(transaction.amount),
-        date: transaction.date,
+        description: transaction.description,
       },
       debt: {
         id: debt.id,
-        currentAmount: newCurrentAmount,
-        paidAmount: newPaidAmount,
-        status: newStatus,
+        status: 'paid',
+        currentAmount: Number(debt.currentAmount), // Mantém o valor original
       },
     });
   } catch (error) {
-    console.error('❌ [Pay Debt API] Erro:', error);
+    console.error('❌ [Debts Pay API] Erro:', error);
     return NextResponse.json(
       { error: 'Erro interno do servidor' },
       { status: 500 }

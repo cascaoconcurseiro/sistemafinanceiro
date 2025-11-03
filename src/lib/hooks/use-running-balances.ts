@@ -12,10 +12,10 @@ interface Transaction {
 
 /**
  * Hook otimizado para calcular saldos acumulados
- * 
+ *
  * ANTES: O(n²) - calculava para cada transação individualmente
  * DEPOIS: O(n) - calcula uma vez para todas
- * 
+ *
  * Reduz de 36 cálculos para 8 cálculos (78% menos processamento)
  */
 export function useRunningBalances(transactions: Transaction[], initialBalance = 0) {
@@ -37,7 +37,7 @@ export function useRunningBalances(transactions: Transaction[], initialBalance =
       } else {
         runningBalance -= Number(transaction.amount);
       }
-      
+
       balances[transaction.id] = runningBalance;
     });
 

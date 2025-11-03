@@ -58,7 +58,7 @@ export async function GET(
     // Se não existe, criar fatura vazia
     if (!invoice) {
       const invoiceId = `invoice_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
+
       // ✅ CORREÇÃO CRÍTICA: Usar Prisma ORM em vez de SQL raw
       invoice = await prisma.invoice.create({
         data: {
@@ -83,8 +83,6 @@ export async function GET(
     const startDate = new Date(year, month - 1, 1); // Primeiro dia do mês
     const endDate = new Date(year, month, 0); // Último dia do mês
 
-    console.log('🔍 [Invoice] Buscando transações entre:', startDate.toISOString(), 'e', endDate.toISOString());
-
     const transactions = await prisma.transaction.findMany({
       where: {
         creditCardId: cardId,
@@ -100,8 +98,7 @@ export async function GET(
       },
     });
 
-    console.log('📊 [Invoice] Transações encontradas:', transactions.length);
-
+    
     // Calcular total
     const totalAmount = transactions.reduce(
       (sum, t) => sum + Math.abs(Number(t.amount)),
@@ -111,7 +108,7 @@ export async function GET(
     // ✅ CORREÇÃO CRÍTICA: Usar Prisma ORM em vez de SQL raw
     if (Number(invoiceData.totalAmount) !== totalAmount) {
       await prisma.invoice.update({
-        where: { 
+        where: {
           id: invoiceData.id,
           userId: auth.userId // ✅ Garantir isolamento de dados
         },
@@ -126,7 +123,7 @@ export async function GET(
     // Determinar status da fatura
     let status = 'open';
     let isPaid = invoiceData.isPaid;
-    
+
     if (Number(invoiceData.paidAmount) >= Number(invoiceData.totalAmount) && Number(invoiceData.totalAmount) > 0) {
       status = 'paid';
       isPaid = true;
@@ -144,7 +141,7 @@ export async function GET(
     // ✅ CORREÇÃO CRÍTICA: Usar Prisma ORM em vez de SQL raw
     if (isPaid !== invoiceData.isPaid) {
       await prisma.invoice.update({
-        where: { 
+        where: {
           id: invoiceData.id,
           userId: auth.userId // ✅ Garantir isolamento de dados
         },

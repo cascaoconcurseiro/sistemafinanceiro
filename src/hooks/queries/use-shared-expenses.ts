@@ -12,27 +12,26 @@ export function useSharedExpenses() {
           credentials: 'include',
           cache: 'no-cache'
         });
-        
+
         if (!response.ok) {
 
           throw new Error(`Erro ${response.status}`);
         }
-        
+
         const result = await response.json();
 
-        
         // TEMPORÁRIO: Retornar todas as transações para debug
         const sharedTransactions = (result.transactions || []).filter(
           (transaction: Transaction) => {
-            const hasSharedWith = transaction.sharedWith && 
-              (Array.isArray(transaction.sharedWith) ? transaction.sharedWith.length > 0 : 
+            const hasSharedWith = transaction.sharedWith &&
+              (Array.isArray(transaction.sharedWith) ? transaction.sharedWith.length > 0 :
                typeof transaction.sharedWith === 'string' && transaction.sharedWith.length > 0);
             return hasSharedWith;
           }
         );
-        
+
         // Retornar tanto as compartilhadas quanto todas as transações
-        return { 
+        return {
           data: sharedTransactions,
           allTransactions: result.transactions || []
         };

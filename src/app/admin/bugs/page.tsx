@@ -15,9 +15,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { 
-  ArrowLeft, 
-  Bug, 
+import {
+  ArrowLeft,
+  Bug,
   AlertTriangle,
   CheckCircle,
   Clock,

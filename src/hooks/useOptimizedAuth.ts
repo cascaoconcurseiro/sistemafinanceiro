@@ -61,7 +61,7 @@ export function useOptimizedAuth(): AuthState & AuthActions {
 
       // Validate with server if cache is empty/invalid
       const validation = await authCache.validateAuth();
-      
+
       setState({
         isAuthenticated: validation.isValid,
         isLoading: false,
@@ -120,9 +120,9 @@ export function useOptimizedAuth(): AuthState & AuthActions {
       if (data.success && data.accessToken) {
         // Cache tokens
         authCache.setToken(data.accessToken, data.refreshToken, data.expiresIn || 3600);
-        
+
         const userInfo = authCache.getUserInfo();
-        
+
         setState({
           isAuthenticated: true,
           isLoading: false,
@@ -192,7 +192,7 @@ export function useOptimizedAuth(): AuthState & AuthActions {
 
     try {
       const success = await authCache.refreshTokenSilently();
-      
+
       if (success) {
         const userInfo = authCache.getUserInfo();
         setState(prev => ({
@@ -200,7 +200,7 @@ export function useOptimizedAuth(): AuthState & AuthActions {
           user: userInfo,
           isAuthenticated: true
         }));
-        
+
         scheduleTokenRefresh();
         return true;
       } else {
@@ -235,7 +235,7 @@ export function useOptimizedAuth(): AuthState & AuthActions {
 
     if (typeof window !== 'undefined') {
       window.addEventListener('auth:session-expired', handleSessionExpired);
-      
+
       return () => {
         window.removeEventListener('auth:session-expired', handleSessionExpired);
         if (refreshTimeoutRef.current) {

@@ -116,7 +116,7 @@ export class SmartNotificationEngine {
 
     goals.forEach((goal) => {
       const progress = (goal.currentAmount / goal.targetAmount) * 100;
-      
+
       if (progress >= 100) {
         notifications.push({
           id: `goal-completed-${goal.id}`,
@@ -196,7 +196,7 @@ export class SmartNotificationEngine {
     now: Date
   ): SmartNotification[] {
     const notifications: SmartNotification[] = [];
-    
+
     // Análise simples de gastos por categoria
     const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const recentTransactions = transactions.filter(
@@ -209,7 +209,7 @@ export class SmartNotificationEngine {
     });
 
     const totalExpenses = Object.values(categoryTotals).reduce((sum, amount) => sum + amount, 0);
-    
+
     Object.entries(categoryTotals).forEach(([category, amount]) => {
       const percentage = (amount / totalExpenses) * 100;
       if (percentage > 40) {
@@ -236,7 +236,7 @@ export class SmartNotificationEngine {
     now: Date
   ): SmartNotification[] {
     const notifications: SmartNotification[] = [];
-    
+
     // Análise de transações recorrentes que podem ser otimizadas
     const last60Days = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
     const recentTransactions = transactions.filter(

@@ -6,7 +6,7 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = "file:./dev.db"
+  url      = env("DATABASE_URL")
 }
 
 // ✅ TIPOS CONTÁBEIS (SQLite não suporta enums, usar strings com validação)
@@ -29,6 +29,8 @@ model User {
   riskProfile      String?   @map("risk_profile")
   financialGoals   String?   @map("financial_goals")
   preferences      String? // JSON string
+  notificationPreferences String? @map("notification_preferences") // JSON string
+  themeSettings    String? @map("theme_settings") // JSON string
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
 
@@ -77,6 +79,10 @@ model Account {
   overdraftLimit       Decimal @default(0) @map("overdraft_limit")
   overdraftInterestRate Decimal? @map("overdraft_interest_rate")
 
+  // ✅ NOVO: Informações do Banco
+  bankCode String? @map("bank_code") // Código do banco (ex: 001, 237, 341)
+  bankName String? @map("bank_name") // Nome do banco (ex: Banco do Brasil, Bradesco, Itaú)
+
   // Relacionamentos
   user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   budgets               Budget[]
@@ -85,6 +91,7 @@ model Account {
   transactions          Transaction[]
   journalEntries        JournalEntry[] // ADICIONADO
   invoicePayments       InvoicePayment[] // ADICIONADO
+  history               AccountHistory[] // ✅ FASE 3: Histórico de saldos
 
   @@map("accounts")
 }
@@ -140,11 +147,16 @@ model Transaction {
   invoiceId          String?   @map("invoice_id") // ✅ NOVO: Vincular a fatura do cartão
   metadata           String?   // ✅ NOVO: JSON string para dados adicionais (investimentos, etc)
   version            Int       @default(1) // ✅ NOVO: Optimistic locking
+  operationUuid      String?   @unique @map("operation_uuid") // ✅ IDEMPOTÊNCIA: UUID único da operação
+  transactionGroupId String?   @map("transaction_group_id") // ✅ TRANSFERÊNCIAS: Agrupa transações relacionadas
+  closedPeriod       Boolean   @default(false) @map("closed_period") // ✅ FECHAMENTO: Indica se está em período fechado
+  createdBy          String?   @map("created_by") // ✅ AUDITORIA: Quem criou
+  updatedBy          String?   @map("updated_by") // ✅ AUDITORIA: Quem atualizou
 
   // Relacionamentos
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  account     Account?    @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  categoryRef Category?   @relation("CategoryTransactions", fields: [categoryId], references: [id])
+  account     Account?    @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  categoryRef Category?   @relation("CategoryTransactions", fields: [categoryId], references: [id], onDelete: Restrict)
   trip        Trip?       @relation(fields: [tripId], references: [id])
   goal        Goal?       @relation(fields: [goalId], references: [id])
   investment  Investment? @relation(fields: [investmentId], references: [id])
@@ -166,6 +178,8 @@ model Transaction {
   @@index([status])
   @@index([isShared])
   @@index([installmentGroupId])
+  @@index([operationUuid])
+  @@index([transactionGroupId])
   @@map("transactions")
 }
 
@@ -189,6 +203,9 @@ model CreditCard {
   overLimitPercent  Int     @default(0) @map("over_limit_percent") // 0-20%
   brand             String? // Visa, Mastercard, Elo, etc
   lastFourDigits    String? @map("last_four_digits")
+  
+  // ✅ NOVO: Conta de Pagamento da Fatura
+  paymentAccountId  String? @map("payment_account_id")
 
   // Relacionamentos CORRIGIDOS
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -721,20 +738,6 @@ model SecurityEvent {
   @@map("security_events")
 }
 
-model SystemEvent {
-  id          String   @id @default(cuid())
-  type        String
-  level       String
-  source      String
-  message     String
-  details     String?
-  duration    Int?
-  memoryUsage BigInt?
-  timestamp   DateTime @default(now())
-
-  @@map("system_events")
-}
-
 model SystemConfig {
   id          String   @id @default(cuid())
   key         String   @unique
@@ -772,6 +775,7 @@ model SharedDebt {
   description    String
   status         String       @default("active") // active, paid, cancelled
   transactionId  String?      @map("transaction_id")
+  tripId         String?      @map("trip_id") // ✅ NOVO: Vincular dívida a viagem
   paidAt         DateTime?    @map("paid_at")
   createdAt      DateTime     @default(now()) @map("created_at")
   updatedAt      DateTime     @updatedAt @map("updated_at")
@@ -781,6 +785,7 @@ model SharedDebt {
   @@index([userId, status])
   @@index([creditorId])
   @@index([debtorId])
+  @@index([tripId])
   @@map("shared_debts")
 }
 
@@ -1014,3 +1019,64 @@ model UserSettings {
 
 
 
+
+
+// ============================================
+// FASE 3: MELHORIAS
+// ============================================
+
+// Eventos do Sistema
+model SystemEvent {
+  id          String   @id @default(cuid())
+  userId      String?  @map("user_id")
+  type        String   // Tipo do evento (para compatibilidade)
+  eventType   String   @map("event_type") // transaction_created, invoice_paid, etc
+  entityType  String   @map("entity_type") // transaction, invoice, account, etc
+  entityId    String   @map("entity_id")
+  data        String?  // JSON com dados do evento
+  processed   Boolean  @default(false)
+  processedAt DateTime? @map("processed_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  @@index([eventType, processed])
+  @@index([entityType, entityId])
+  @@map("system_events")
+}
+
+// Histórico de Saldos
+model AccountHistory {
+  id          String   @id @default(cuid())
+  accountId   String   @map("account_id")
+  date        DateTime
+  balance     Decimal
+  change      Decimal  // Mudança em relação ao dia anterior
+  description String?  // Descrição da mudança
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  
+  @@index([accountId, date])
+  @@map("account_history")
+}
+
+
+
+// Conciliação Bancária
+model BankReconciliation {
+  id              String   @id @default(cuid())
+  accountId       String   @map("account_id")
+  userId          String   @map("user_id")
+  date            DateTime
+  bankBalance     Decimal  @map("bank_balance")
+  systemBalance   Decimal  @map("system_balance")
+  difference      Decimal
+  status          String   @default("pending") // pending, reconciled, adjusted
+  reconciledAt    DateTime? @map("reconciled_at")
+  reconciledBy    String?   @map("reconciled_by")
+  adjustmentId    String?   @map("adjustment_id") // ID da transação de ajuste
+  notes           String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  
+  @@index([accountId, date])
+  @@map("bank_reconciliations")
+}

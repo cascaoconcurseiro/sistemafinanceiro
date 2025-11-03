@@ -27,8 +27,7 @@ export async function POST(
     const body = await request.json();
     const { transactionIds } = body;
 
-    console.log('🔗 [LinkTransactions API] Vinculando transações:', transactionIds, 'à viagem:', tripId);
-
+    
     if (!tripId) {
       return NextResponse.json(
         { error: 'ID da viagem é obrigatório' },

@@ -70,7 +70,7 @@ export function useCreateTransaction() {
         { queryKey: queryKeys.transactions.lists() },
         (old: any) => {
           if (!old) return old;
-          
+
           const tempTransaction = {
             ...newTransaction,
             id: `temp-${Date.now()}`,

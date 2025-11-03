@@ -24,7 +24,7 @@ import { formatCurrency } from '@/lib/utils/format-currency';
 // Se OUTRO pagou, mostrar apenas minha parte (myShare)
 const getTransactionAmount = (transaction: any): number => {
   const amount = Math.abs(transaction.amount);
-  
+
   console.log('💰 [getTransactionAmount] Calculando valor:', {
     id: transaction.id,
     description: transaction.description,
@@ -33,36 +33,36 @@ const getTransactionAmount = (transaction: any): number => {
     myShare: transaction.myShare,
     status: transaction.status
   });
-  
+
   // Se não é compartilhada, retornar o valor total
   if (!transaction.isShared) {
     return amount;
   }
-  
+
   // Se é compartilhada e tem myShare
   if (transaction.myShare !== undefined && transaction.myShare !== null) {
     const myShare = Math.abs(Number(transaction.myShare));
-    
+
     // Se myShare é igual ao amount, significa que EU paguei tudo
     // Retornar o valor total
     if (myShare === amount) {
       return amount;
     }
-    
+
     // Se myShare é menor que amount, significa que foi dividido
     // Verificar se EU paguei ou OUTRO pagou
     const paidBy = transaction.paidBy;
     const isPaidByOther = paidBy && paidBy !== 'current_user'; // TODO: comparar com ID real
-    
+
     // Se outro pagou, retornar apenas minha parte
     if (isPaidByOther) {
       return myShare;
     }
-    
+
     // Se EU paguei, retornar o valor total
     return amount;
   }
-  
+
   // Fallback: retornar o valor total
   return amount;
 };
@@ -135,22 +135,22 @@ export const MonthlyResultCard = memo(function MonthlyResultCard() {
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
-    
+
     const monthlyTransactions = transactionsData.filter(t => {
       const transDate = new Date(t.date);
-      return transDate.getMonth() === currentMonth && 
+      return transDate.getMonth() === currentMonth &&
              transDate.getFullYear() === currentYear;
     });
-    
+
     // ✅ CORREÇÃO: Usar helper que considera quem pagou
     const income = monthlyTransactions
       .filter(t => t.type === 'income' || t.type === 'RECEITA')
       .reduce((sum, t) => sum + getTransactionAmount(t), 0);
-    
+
     const expenses = monthlyTransactions
       .filter(t => t.type === 'expense' || t.type === 'DESPESA')
       .reduce((sum, t) => sum + getTransactionAmount(t), 0);
-    
+
     return income - expenses;
   }, [transactionsData]);
 
@@ -196,8 +196,6 @@ export const MonthlyResultCard = memo(function MonthlyResultCard() {
   );
 });
 
-
-
 // Card de Receitas do Mês
 export const MonthlyIncomeCard = memo(function MonthlyIncomeCard() {
   const { data, isLoading } = useUnifiedFinancial();
@@ -213,13 +211,13 @@ export const MonthlyIncomeCard = memo(function MonthlyIncomeCard() {
       selectedMonth,
       selectedYear
     });
-    
+
     return transactionsData
       .filter(t => {
         const transDate = new Date(t.date);
         // ✅ CORREÇÃO: Aceitar ambos os formatos
-        return (t.type === 'income' || t.type === 'RECEITA') && 
-               transDate.getMonth() === selectedMonth && 
+        return (t.type === 'income' || t.type === 'RECEITA') &&
+               transDate.getMonth() === selectedMonth &&
                transDate.getFullYear() === selectedYear;
       })
       .reduce((sum, t) => sum + getTransactionAmount(t), 0);
@@ -277,9 +275,9 @@ export const MonthlyExpensesCard = memo(function MonthlyExpensesCard() {
         const transDate = new Date(t.date);
         // ✅ CORREÇÃO: Aceitar ambos os formatos
         const isExpense = t.type === 'expense' || t.type === 'DESPESA';
-        const isInPeriod = transDate.getMonth() === selectedMonth && 
+        const isInPeriod = transDate.getMonth() === selectedMonth &&
                           transDate.getFullYear() === selectedYear;
-        
+
         // Debug: Log transações de despesa
         if (isExpense && isInPeriod) {
           console.log('💰 [MonthlyExpenses] Transação encontrada:', {
@@ -291,18 +289,18 @@ export const MonthlyExpensesCard = memo(function MonthlyExpensesCard() {
             date: t.date
           });
         }
-        
+
         return isExpense && isInPeriod;
       });
-    
+
     const total = filtered.reduce((sum, t) => sum + getTransactionAmount(t), 0);
-    
+
     console.log('💰 [MonthlyExpenses] Total calculado:', {
       totalTransactions: transactionsData.length,
       filteredCount: filtered.length,
       total
     });
-    
+
     return total;
   }, [transactionsData, selectedMonth, selectedYear]);
 
@@ -355,10 +353,10 @@ export const SavingsRateCard = memo(function SavingsRateCard() {
   const savingsRate = useMemo(() => {
     const monthlyTransactions = transactionsData.filter(t => {
       const transDate = new Date(t.date);
-      return transDate.getMonth() === selectedMonth && 
+      return transDate.getMonth() === selectedMonth &&
              transDate.getFullYear() === selectedYear;
     });
-    
+
     // ✅ CORREÇÃO: Aceitar ambos os formatos
     const income = monthlyTransactions
       .filter(t => t.type === 'income' || t.type === 'RECEITA')
@@ -367,7 +365,7 @@ export const SavingsRateCard = memo(function SavingsRateCard() {
         const amount = (t.isShared && t.myShare) ? Math.abs(Number(t.myShare)) : Math.abs(t.amount);
         return sum + amount;
       }, 0);
-    
+
     const expenses = monthlyTransactions
       .filter(t => t.type === 'expense' || t.type === 'DESPESA')
       .reduce((sum, t) => {
@@ -375,7 +373,7 @@ export const SavingsRateCard = memo(function SavingsRateCard() {
         const amount = (t.isShared && t.myShare) ? Math.abs(Number(t.myShare)) : Math.abs(t.amount);
         return sum + amount;
       }, 0);
-    
+
     return income > 0 ? ((income - expenses) / income) * 100 : 0;
   }, [transactionsData, selectedMonth, selectedYear]);
 
@@ -418,7 +416,7 @@ export const SavingsRateCard = memo(function SavingsRateCard() {
 export const InvestmentValueCard = memo(function InvestmentValueCard() {
   const { data, isLoading } = useUnifiedFinancial();
   const { accounts } = data || {};
-  
+
   const accountsData = accounts || [];
 
   const investmentValue = useMemo(() => {

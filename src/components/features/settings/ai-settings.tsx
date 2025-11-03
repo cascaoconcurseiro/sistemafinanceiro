@@ -156,7 +156,7 @@ export default function AISettings() {
       // Dados agora vêm do banco de dados, não do localStorage
       console.warn('ai-settings - localStorage removido, use banco de dados');
       if (typeof window === 'undefined') return;
-      
+
       // Usar configurações padrão até implementar banco de dados
       setPreferences(defaultPreferences);
       setModelSettings(defaultModelSettings);
@@ -950,5 +950,4 @@ export default function AISettings() {
     </div>
   );
 }
-
 

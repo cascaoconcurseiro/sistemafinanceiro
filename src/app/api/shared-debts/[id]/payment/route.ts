@@ -8,7 +8,7 @@ export async function POST(
 ) {
   try {
     const body = await request.json()
-    
+
     if (!body.amount || body.amount <= 0) {
       return NextResponse.json(
         { error: 'Valor do pagamento deve ser maior que zero' },
@@ -20,24 +20,24 @@ export async function POST(
       params.id,
       Number(body.amount)
     )
-    
+
     return NextResponse.json({
       success: true,
       debt: updatedDebt,
-      message: updatedDebt.status === 'paid' 
-        ? 'Dívida quitada completamente!' 
+      message: updatedDebt.status === 'paid'
+        ? 'Dívida quitada completamente!'
         : `Pagamento processado. Valor restante: R$ ${updatedDebt.currentAmount.toFixed(2)}`
     })
   } catch (error) {
     console.error('Erro ao processar pagamento:', error)
-    
+
     if (error instanceof Error && error.message === 'Dívida não encontrada') {
       return NextResponse.json(
         { error: 'Dívida não encontrada' },
         { status: 404 }
       )
     }
-    
+
     return NextResponse.json(
       { error: 'Erro interno do servidor' },
       { status: 500 }

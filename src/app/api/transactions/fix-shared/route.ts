@@ -3,8 +3,7 @@ import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🔧 [FixShared] Iniciando correção de transações compartilhadas...');
-
+    
     // Buscar transações com isShared=true mas sharedWith vazio ou null
     const problematicTransactions = await prisma.transaction.findMany({
       where: {
@@ -60,8 +59,8 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('❌ [FixShared] Erro ao corrigir transações:', error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: 'Erro interno do servidor',
         details: error instanceof Error ? error.message : 'Erro desconhecido'
       },
@@ -101,9 +100,9 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('❌ [FixShared] Erro ao verificar transações:', error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Erro interno do servidor' 
+      {
+        success: false,
+        error: 'Erro interno do servidor'
       },
       { status: 500 }
     );

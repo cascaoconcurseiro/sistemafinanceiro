@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/db';
+import { authOptions } from '@/lib/auth/auth';
+import { prisma } from '@/lib/prisma';
 import crypto from 'crypto';
 import { logSecurityEvent } from '@/lib/security-logger';
 
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     const { email } = body;
 
     // Verificar se usuário existe
-    const user = await db.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { email },
     });
 
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     const resetLink = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
 
     // Salvar token no banco
-    await db.passwordResetToken.create({
+    await prisma.passwordResetToken.create({
       data: {
         userId: user.id,
         token,
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
       metadata: { email, requestedBy: session.user.id },
     });
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       resetLink,
       token,

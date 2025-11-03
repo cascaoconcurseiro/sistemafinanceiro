@@ -73,23 +73,42 @@ export function UserSettingsModal({ isOpen, onClose }: UserSettingsModalProps) {
 
     setIsLoggingOut(true);
     try {
+      // Chamar API de logout
       const response = await fetch('/api/auth/logout', {
         method: 'POST',
+        credentials: 'include'
       });
 
-      if (response.ok) {
-        // Fechar o modal primeiro
-        onClose();
-        // Forçar reload completo da página para limpar todo o estado
-        window.location.href = '/auth/login';
-      } else {
-        alert('Erro ao fazer logout. Tente novamente.');
-        setIsLoggingOut(false);
+      // Limpar cookies manualmente também (fallback)
+      document.cookie.split(";").forEach(function(c) {
+        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+      });
+
+      // Limpar storage
+      if (typeof window !== 'undefined') {
+        localStorage.clear();
+        sessionStorage.clear();
       }
+
+      // Fechar modal
+      onClose();
+
+      // Redirecionar para login (forçar reload completo)
+      window.location.href = '/auth/login';
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
-      alert('Erro ao fazer logout. Tente novamente.');
-      setIsLoggingOut(false);
+      
+      // Mesmo com erro, limpar tudo e redirecionar
+      document.cookie.split(";").forEach(function(c) {
+        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+      });
+      
+      if (typeof window !== 'undefined') {
+        localStorage.clear();
+        sessionStorage.clear();
+      }
+      
+      window.location.href = '/auth/login';
     }
   };
 
@@ -462,8 +481,8 @@ export function UserSettingsModal({ isOpen, onClose }: UserSettingsModalProps) {
         </Tabs>
 
         <div className="flex justify-between items-center pt-4 border-t">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={handleLogout}
             disabled={isLoggingOut}
             className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950/20"

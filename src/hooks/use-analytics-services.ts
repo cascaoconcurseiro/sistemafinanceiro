@@ -50,13 +50,13 @@ export function useAnalyticsServices() {
 
         try {
             const alert = await analyticsService.checkNegativeBalanceAlert(userId);
-            
+
             if (alert.hasAlert) {
                 toast.warning(alert.message, {
                     duration: 5000,
                 });
             }
-            
+
             return alert;
         } catch (err: any) {
             const errorMessage = err.message || 'Erro ao verificar saldo';

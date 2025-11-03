@@ -26,12 +26,11 @@ interface FixResult {
 }
 
 export async function runReconciliation(): Promise<ReconciliationReport> {
-  console.log('🔍 Iniciando reconciliação de contas...');
   
   const accounts = storage.getAccounts();
   const transactions = storage.getTransactions();
   const results: ReconciliationResult[] = [];
-  
+
   let balancedAccounts = 0;
   let totalDifference = 0;
 
@@ -40,9 +39,9 @@ export async function runReconciliation(): Promise<ReconciliationReport> {
     const accountTransactions = transactions.filter(
       (t) => t.account === account.name || t.account === account.id
     );
-    
+
     let calculatedBalance = account.initialBalance || 0;
-    
+
     for (const transaction of accountTransactions) {
       if (transaction.type === 'income') {
         calculatedBalance += Math.abs(transaction.amount);
@@ -50,16 +49,16 @@ export async function runReconciliation(): Promise<ReconciliationReport> {
         calculatedBalance -= Math.abs(transaction.amount);
       }
     }
-    
+
     const difference = Math.abs(account.balance - calculatedBalance);
     const isBalanced = difference < 0.01; // Tolerância de 1 centavo
-    
+
     if (isBalanced) {
       balancedAccounts++;
     } else {
       totalDifference += difference;
     }
-    
+
     results.push({
       accountId: account.id,
       accountName: account.name,
@@ -91,7 +90,7 @@ export async function runReconciliation(): Promise<ReconciliationReport> {
 
 export async function fixAccountBalances(accountIds: string[]): Promise<FixResult> {
   console.log(`🔧 Corrigindo saldos de ${accountIds.length} contas...`);
-  
+
   const accounts = storage.getAccounts();
   const transactions = storage.getTransactions();
   const errors: string[] = [];
@@ -109,9 +108,9 @@ export async function fixAccountBalances(accountIds: string[]): Promise<FixResul
       const accountTransactions = transactions.filter(
         (t) => t.account === account.name || t.account === account.id
       );
-      
+
       let correctBalance = account.initialBalance || 0;
-      
+
       for (const transaction of accountTransactions) {
         if (transaction.type === 'income') {
           correctBalance += Math.abs(transaction.amount);
@@ -123,9 +122,9 @@ export async function fixAccountBalances(accountIds: string[]): Promise<FixResul
       // Atualizar saldo da conta
       storage.updateAccount(accountId, { balance: correctBalance });
       fixed++;
-      
+
       console.log(`✅ Conta ${account.name} corrigida: ${account.balance} → ${correctBalance}`);
-      
+
     } catch (error) {
       const errorMsg = `Erro ao corrigir conta ${accountId}: ${error instanceof Error ? error.message : 'Erro desconhecido'}`;
       errors.push(errorMsg);
@@ -134,6 +133,6 @@ export async function fixAccountBalances(accountIds: string[]): Promise<FixResul
   }
 
   console.log(`🎉 Correção concluída: ${fixed} contas corrigidas, ${errors.length} erros`);
-  
+
   return { fixed, errors };
 }

@@ -1,6 +1,6 @@
 /**
  * HOOK - ROTAÇÃO DE LOGS
- * 
+ *
  * Hook React para gerenciar o sistema de rotação automática de logs
  * Fornece interface para configurar, monitorar e controlar a rotação
  */
@@ -52,15 +52,15 @@ export function useLogRotation(): LogRotationState & LogRotationActions {
   // Carregar configuração e estatísticas
   const loadConfig = useCallback(async () => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
-    
+
     try {
       const response = await fetch('/api/logs/rotation');
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || 'Erro ao carregar configuração');
       }
-      
+
       setState(prev => ({
         ...prev,
         config: data.data.config,
@@ -79,7 +79,7 @@ export function useLogRotation(): LogRotationState & LogRotationActions {
   // Atualizar configuração
   const updateConfig = useCallback(async (newConfig: Partial<LogRotationConfig>) => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
-    
+
     try {
       const response = await fetch('/api/logs/rotation', {
         method: 'POST',
@@ -91,13 +91,13 @@ export function useLogRotation(): LogRotationState & LogRotationActions {
           config: newConfig
         })
       });
-      
+
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || 'Erro ao atualizar configuração');
       }
-      
+
       setState(prev => ({
         ...prev,
         config: data.data.config,
@@ -116,7 +116,7 @@ export function useLogRotation(): LogRotationState & LogRotationActions {
   // Executar rotação manual
   const performRotation = useCallback(async (): Promise<RotationResult> => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
-    
+
     try {
       const response = await fetch('/api/logs/rotation', {
         method: 'POST',
@@ -127,22 +127,22 @@ export function useLogRotation(): LogRotationState & LogRotationActions {
           action: 'rotate'
         })
       });
-      
+
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || 'Erro ao executar rotação');
       }
-      
+
       setState(prev => ({
         ...prev,
         lastRotation: new Date(),
         isLoading: false
       }));
-      
+
       // Atualizar estatísticas após rotação
       await refreshStats();
-      
+
       return data.data;
     } catch (error) {
       setState(prev => ({
@@ -157,27 +157,27 @@ export function useLogRotation(): LogRotationState & LogRotationActions {
   // Limpar logs antigos
   const cleanupLogs = useCallback(async (days?: number, force = false) => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
-    
+
     try {
       const params = new URLSearchParams();
       if (days !== undefined) params.append('days', days.toString());
       if (force) params.append('force', 'true');
-      
+
       const response = await fetch(`/api/logs/rotation?${params.toString()}`, {
         method: 'DELETE'
       });
-      
+
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || 'Erro ao limpar logs');
       }
-      
+
       setState(prev => ({ ...prev, isLoading: false }));
-      
+
       // Atualizar estatísticas após limpeza
       await refreshStats();
-      
+
       return data.data;
     } catch (error) {
       setState(prev => ({
@@ -194,7 +194,7 @@ export function useLogRotation(): LogRotationState & LogRotationActions {
     try {
       const response = await fetch('/api/logs/rotation');
       const data = await response.json();
-      
+
       if (response.ok) {
         setState(prev => ({
           ...prev,
@@ -231,11 +231,11 @@ export function useLogRotation(): LogRotationState & LogRotationActions {
 export function useLogRotationFormatters() {
   const formatFileSize = useCallback((bytes: number): string => {
     if (bytes === 0) return '0 B';
-    
+
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    
+
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
   }, []);
 

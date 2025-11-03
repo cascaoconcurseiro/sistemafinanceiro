@@ -35,14 +35,14 @@ interface TransferModalProps {
 
 export function TransferModal({ open, onOpenChange }: TransferModalProps) {
   console.log('TransferModal rendered with open:', open);
-  
+
   const { data, isLoading } = useUnifiedFinancial();
-  
+
   // Extrair os dados dos arrays
   const accountsData = data?.accounts || [];
   const transactionsData = data?.transactions || [];
   const actions = data?.actions;
-  
+
   const [formData, setFormData] = useState({
     fromAccount: '',
     toAccount: '',
@@ -50,7 +50,7 @@ export function TransferModal({ open, onOpenChange }: TransferModalProps) {
     description: '',
     date: getCurrentDateBR(),
   });
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Reset form when modal opens
@@ -74,29 +74,29 @@ export function TransferModal({ open, onOpenChange }: TransferModalProps) {
     };
   }, [accountsData]);
 
-  const fromAccount = useMemo(() => 
-    accountsData?.find(a => a.id === formData.fromAccount), 
+  const fromAccount = useMemo(() =>
+    accountsData?.find(a => a.id === formData.fromAccount),
     [accountsData, formData.fromAccount]
   );
-  
-  const toAccount = useMemo(() => 
-    accountsData?.find(a => a.id === formData.toAccount), 
+
+  const toAccount = useMemo(() =>
+    accountsData?.find(a => a.id === formData.toAccount),
     [accountsData, formData.toAccount]
   );
-  
-  const fromAccountBalance = useMemo(() => 
-    fromAccount ? getAccountBalance(fromAccount.id) : 0, 
+
+  const fromAccountBalance = useMemo(() =>
+    fromAccount ? getAccountBalance(fromAccount.id) : 0,
     [fromAccount, getAccountBalance]
   );
-  
-  const transferAmount = useMemo(() => 
-    parseFloat(formData.amount) || 0, 
+
+  const transferAmount = useMemo(() =>
+    parseFloat(formData.amount) || 0,
     [formData.amount]
   );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validação de campos obrigatórios
     if (!formData.fromAccount || !formData.toAccount || !formData.amount || !formData.description) {
       toast.error('Todos os campos são obrigatórios');
@@ -112,7 +112,7 @@ export function TransferModal({ open, onOpenChange }: TransferModalProps) {
     // Verificar se as contas existem
     const fromAccount = accountsData.find(acc => acc.id === formData.fromAccount);
     const toAccount = accountsData.find(acc => acc.id === formData.toAccount);
-    
+
     if (!fromAccount || !toAccount) {
       toast.error('Uma ou ambas as contas selecionadas não são válidas');
       return;
@@ -148,7 +148,7 @@ export function TransferModal({ open, onOpenChange }: TransferModalProps) {
 
       // Create transfer transactions using financial engine
       const transferAmount = parseFloat(formData.amount);
-      
+
       // Create expense transaction for source account
       await actions.createTransaction({
         id: `transfer-out-${Date.now()}`,
@@ -236,8 +236,8 @@ export function TransferModal({ open, onOpenChange }: TransferModalProps) {
                 </SelectTrigger>
                 <SelectContent>
                   {accountsData?.map((account) => (
-                    <SelectItem 
-                      key={account.id} 
+                    <SelectItem
+                      key={account.id}
                       value={account.id}
                       disabled={account.id === formData.fromAccount}
                     >

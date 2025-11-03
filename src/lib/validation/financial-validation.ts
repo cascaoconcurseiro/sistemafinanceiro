@@ -1,6 +1,6 @@
 /**
  * 🔒 SISTEMA DE VALIDAÇÃO FINANCEIRA ROBUSTA
- * 
+ *
  * Centraliza todas as validações de dados financeiros,
  * garantindo integridade e consistência dos dados.
  */
@@ -119,7 +119,7 @@ export class FinancialValidator {
 
       // Verificar se conta existe e pertence ao usuário
       const account = await this.prisma.account.findFirst({
-        where: { 
+        where: {
           id: validData.accountId,
           userId,
           isActive: true
@@ -426,7 +426,7 @@ export class FinancialValidator {
 
       const calculatedBalance = transactions.reduce((balance, transaction) => {
         const amount = new Decimal(transaction.amount);
-        
+
         if (transaction.type === 'income') {
           return balance.plus(amount);
         } else {

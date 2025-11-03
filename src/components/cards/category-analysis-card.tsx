@@ -48,7 +48,7 @@ export const CategoryAnalysisCard = memo(function CategoryAnalysisCard() {
       const isExpense = t.type === 'expense' || t.type === 'DESPESA';
       const isInMonth = transactionDate.getMonth() === selectedMonth;
       const isInYear = transactionDate.getFullYear() === selectedYear;
-      
+
       // Log detalhado para debug
       if (isExpense) {
         console.log('📊 [CategoryAnalysis] Verificando despesa:', {
@@ -63,7 +63,7 @@ export const CategoryAnalysisCard = memo(function CategoryAnalysisCard() {
           willInclude: isExpense && isInMonth && isInYear
         });
       }
-      
+
       return isExpense && isInMonth && isInYear;
     });
 
@@ -79,11 +79,10 @@ export const CategoryAnalysisCard = memo(function CategoryAnalysisCard() {
     });
 
     // ✅ CORREÇÃO: Não usar fallback - se não há despesas, mostrar mensagem clara
-    console.log('📊 [CategoryAnalysis] Total de despesas no período:', expenseTransactions.length);
-
+    
     // Agrupar por categoria
     const categoryMap = new Map<string, { amount: number; count: number }>();
-    
+
     expenseTransactions.forEach((t: any) => {
       // Buscar o nome da categoria pelo categoryId
       let categoryName = 'Outros';
@@ -94,10 +93,15 @@ export const CategoryAnalysisCard = memo(function CategoryAnalysisCard() {
         // Fallback para transações antigas que podem ter category em vez de categoryId
         categoryName = t.category;
       }
+
+      // ✅ CORREÇÃO: Usar myShare para transações compartilhadas
+      const transactionAmount = (t.isShared && t.myShare !== null && t.myShare !== undefined)
+        ? Math.abs(Number(t.myShare))
+        : Math.abs(t.amount);
       
       const existing = categoryMap.get(categoryName) || { amount: 0, count: 0 };
       categoryMap.set(categoryName, {
-        amount: existing.amount + Math.abs(t.amount),
+        amount: existing.amount + transactionAmount,
         count: existing.count + 1
       });
     });
@@ -170,7 +174,7 @@ export const CategoryAnalysisCard = memo(function CategoryAnalysisCard() {
               Nenhuma despesa encontrada
             </p>
             <p className="text-sm text-gray-400 mt-2">
-              {isFromFallback 
+              {isFromFallback
                 ? 'Não há despesas nos últimos 30 dias'
                 : `Não há despesas em ${monthName} ${selectedYear}`
               }
@@ -198,10 +202,10 @@ export const CategoryAnalysisCard = memo(function CategoryAnalysisCard() {
               <div key={category.name} className="space-y-2">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
-                    <div 
+                    <div
                       className="w-3 h-3 rounded-full"
-                      style={{ 
-                        backgroundColor: `hsl(${(index * 60) % 360}, 70%, 50%)` 
+                      style={{
+                        backgroundColor: `hsl(${(index * 60) % 360}, 70%, 50%)`
                       }}
                     />
                     <span className="font-medium text-sm">{category.name}</span>
@@ -218,8 +222,8 @@ export const CategoryAnalysisCard = memo(function CategoryAnalysisCard() {
                     </div>
                   </div>
                 </div>
-                <Progress 
-                  value={category.percentage} 
+                <Progress
+                  value={category.percentage}
                   className="h-2"
                   style={{
                     '--progress-background': `hsl(${(index * 60) % 360}, 70%, 50%)`

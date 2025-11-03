@@ -26,23 +26,23 @@ export function HeaderWithLogout({ userName, userEmail }: HeaderWithLogoutProps)
 
   const handleLogout = async () => {
     if (isLoggingOut) return;
-    
+
     setIsLoggingOut(true);
-    
+
     try {
       // Chamar API de logout
       await fetch('/api/auth/logout', {
         method: 'POST',
         credentials: 'include',
       });
-      
+
       // Limpar cookies manualmente
       if (typeof document !== 'undefined') {
         document.cookie.split(';').forEach(c => {
           document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/');
         });
       }
-      
+
       // Usar window.location para garantir redirecionamento
       window.location.href = '/auth/login';
     } catch (error) {

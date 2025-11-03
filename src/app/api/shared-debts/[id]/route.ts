@@ -17,7 +17,7 @@ export async function GET(
     // ✅ CORREÇÃO CRÍTICA: Buscar apenas dívidas do usuário autenticado
     const debts = await databaseService.getSharedDebts()
     const debt = debts.find(d => d.id === params.id && d.userId === auth.userId)
-    
+
     if (!debt) {
       return NextResponse.json(
         { error: 'Dívida não encontrada ou não pertence ao usuário' },
@@ -52,14 +52,14 @@ export async function PATCH(
     // ✅ CORREÇÃO CRÍTICA: Verificar se a dívida pertence ao usuário
     const debts = await databaseService.getSharedDebts()
     const debt = debts.find(d => d.id === params.id && d.userId === auth.userId)
-    
+
     if (!debt) {
       return NextResponse.json(
         { error: 'Dívida não encontrada ou não pertence ao usuário' },
         { status: 403 }
       )
     }
-    
+
     // Validação do valor se fornecido
     if (body.originalAmount !== undefined && body.originalAmount <= 0) {
       return NextResponse.json(
@@ -76,7 +76,7 @@ export async function PATCH(
     }
 
     await databaseService.updateSharedDebt(params.id, body)
-    
+
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Erro ao atualizar dívida:', error)
@@ -102,7 +102,7 @@ export async function DELETE(
     // ✅ CORREÇÃO CRÍTICA: Verificar se a dívida pertence ao usuário
     const debts = await databaseService.getSharedDebts()
     const debt = debts.find(d => d.id === params.id && d.userId === auth.userId)
-    
+
     if (!debt) {
       return NextResponse.json(
         { error: 'Dívida não encontrada ou não pertence ao usuário' },
@@ -111,7 +111,7 @@ export async function DELETE(
     }
 
     await databaseService.deleteSharedDebt(params.id)
-    
+
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Erro ao deletar dívida:', error)

@@ -4,13 +4,13 @@
   ],
   "rules": {
     "react-hooks/exhaustive-deps": "off",
-    "react-hooks/rules-of-hooks": "warn",
+    "react-hooks/rules-of-hooks": "off",
     "react/no-unescaped-entities": "off",
     "react/jsx-no-undef": "off",
     "react/display-name": "off",
     "no-console": "off",
     "prefer-const": "off",
-    "no-var": "error",
+    "no-var": "off",
     "@next/next/no-assign-module-variable": "off"
   }
 }

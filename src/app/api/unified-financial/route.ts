@@ -8,15 +8,13 @@ export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('🚀 [API Unified] CHAMADA RECEBIDA - Iniciando autenticação...');
-    const auth = await authenticateRequest(request);
+        const auth = await authenticateRequest(request);
     if (!auth.success || !auth.userId) {
       console.error('❌ [API Unified] Falha na autenticação:', auth.error);
       return NextResponse.json({ error: auth.error }, { status: 401 });
     }
     const userId = auth.userId;
 
-    console.log('📊 [API Unified] Autenticação OK - Buscando dados unificados para userId:', userId);
     
     // Buscar todos os dados em paralelo
     const [accounts, transactions, contacts, trips, goals, budgets, investments, categories] = await Promise.all([
@@ -25,50 +23,50 @@ export async function GET(request: NextRequest) {
         where: { userId, deletedAt: null },
         orderBy: { name: 'asc' }
       }),
-      
+
       // Transações
       prisma.transaction.findMany({
         where: { userId, deletedAt: null },
         orderBy: { date: 'desc' }
       }),
-      
+
       // Contatos/Família
       prisma.familyMember.findMany({
         where: { userId },
         orderBy: { name: 'asc' }
       }),
-      
+
       // Viagens
       prisma.trip.findMany({
         where: { userId },
         orderBy: { startDate: 'desc' }
       }),
-      
+
       // Metas (se existir)
       prisma.goal?.findMany?.({
         where: { userId }
       }).catch(() => []) || [],
-      
+
       // Orçamentos (se existir)
       prisma.budget?.findMany?.({
         where: { userId }
       }).catch(() => []) || [],
-      
+
       // Investimentos
       prisma.investment?.findMany?.({
         where: { userId },
         orderBy: { createdAt: 'desc' }
       }).catch(() => []) || [],
-      
+
       // Categorias (se existir)
       prisma.category?.findMany?.({
         where: { userId }
       }).catch(() => []) || []
     ]);
-    
+
     // Calcular saldos
     const balances = calculateAllBalances(accounts, transactions);
-    
+
     const result = {
       accounts: accounts.map(account => ({
         ...account,

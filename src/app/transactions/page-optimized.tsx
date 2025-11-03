@@ -2,7 +2,7 @@
 
 /**
  * PÁGINA DE TRANSAÇÕES - VERSÃO 100% OTIMIZADA
- * 
+ *
  * Melhorias implementadas:
  * ✅ React Query com cache inteligente
  * ✅ Optimistic Updates
@@ -10,7 +10,7 @@
  * ✅ Memoização de cálculos (O(n) em vez de O(n²))
  * ✅ React.memo para evitar re-renders
  * ✅ Debounce em buscas
- * 
+ *
  * Resultado:
  * - 100% menos renderizações desnecessárias
  * - 100% menos cálculos repetidos
@@ -37,24 +37,24 @@ import { DashboardCardSkeleton } from '@/components/skeletons/dashboard-skeleton
 
 // Modais
 import { AddTransactionModal } from '@/components/modals/transactions/add-transaction-modal';
-import { ModernAppLayout } from '@/components/modern-app-layout';
+import { ModernAppLayout } from '@/components/layout/modern-app-layout';
 
 import { toast } from 'sonner';
 
 // ✅ COMPONENTE DE TRANSAÇÃO MEMOIZADO
-const TransactionItem = React.memo(({ 
-  transaction, 
-  balance, 
-  onEdit, 
-  onDelete 
-}: { 
-  transaction: any; 
+const TransactionItem = React.memo(({
+  transaction,
+  balance,
+  onEdit,
+  onDelete
+}: {
+  transaction: any;
   balance: number;
   onEdit: (t: any) => void;
   onDelete: (id: string) => void;
 }) => {
   const isIncome = transaction.type === 'INCOME' || transaction.type === 'income';
-  
+
   return (
     <div className="flex items-center justify-between p-4 border-b hover:bg-gray-50 transition-colors">
       <div className="flex items-center gap-3 flex-1">
@@ -97,15 +97,15 @@ const TransactionItem = React.memo(({
 TransactionItem.displayName = 'TransactionItem';
 
 // ✅ CARDS DE RESUMO MEMOIZADOS
-const SummaryCard = React.memo(({ 
-  title, 
-  value, 
-  icon: Icon, 
-  color 
-}: { 
-  title: string; 
-  value: string; 
-  icon: any; 
+const SummaryCard = React.memo(({
+  title,
+  value,
+  icon: Icon,
+  color
+}: {
+  title: string;
+  value: string;
+  icon: any;
   color: string;
 }) => (
   <Card>
@@ -128,8 +128,8 @@ export default function TransactionsPageOptimized() {
   const [filterAccount, setFilterAccount] = useState<string>('all');
 
   // ✅ BUSCA COM DEBOUNCE (500ms)
-  const { 
-    data: transactionsData, 
+  const {
+    data: transactionsData,
     isLoading: isLoadingTransactions,
     searchTerm,
     setSearchTerm,

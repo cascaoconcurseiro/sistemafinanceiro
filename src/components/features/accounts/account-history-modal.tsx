@@ -6,13 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  ArrowUpDown, 
-  Search, 
-  Calendar, 
-  History, 
+import {
+  TrendingUp,
+  TrendingDown,
+  ArrowUpDown,
+  Search,
+  Calendar,
+  History,
   Eye,
   Users,
   Circle
@@ -44,22 +44,22 @@ export function AccountHistoryModal({
   // Filtrar transações da conta - INCLUINDO transferências de entrada
   const accountTransactions = useMemo(() => {
     if (!account) return [];
-    
+
     const today = new Date();
     today.setHours(23, 59, 59, 999);
-    
+
     // Buscar TODAS as transações relacionadas à conta (saída E entrada)
     let filtered = transactions.filter(t => {
       // Filtro 1: Transação relacionada à conta
       const isRelated = t.accountId === account.id || t.toAccountId === account.id;
       if (!isRelated) return false;
-      
+
       // Filtro 2: Categoria obrigatória
       if (!t.categoryId || t.categoryId === '' || t.categoryId === null) {
         console.warn('⚠️ Transação sem categoria no histórico:', t.description);
         return false;
       }
-      
+
       // Filtro 3: Ocultar parcelas futuras
       let transactionDate: Date;
       if (typeof t.date === 'string') {
@@ -72,14 +72,14 @@ export function AccountHistoryModal({
       } else {
         transactionDate = new Date(t.date);
       }
-      
+
       if (t.installmentNumber && transactionDate > today) {
         return false;
       }
-      
+
       return true;
     });
-    
+
     // Aplicar filtro de tipo
     if (filterType !== 'all') {
       filtered = filtered.filter(t => {
@@ -96,51 +96,51 @@ export function AccountHistoryModal({
         return false;
       });
     }
-    
+
     // Aplicar filtro de busca
     if (searchTerm) {
-      filtered = filtered.filter(t => 
+      filtered = filtered.filter(t =>
         t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
         t.category?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-    
+
     // Ordenar por data
     filtered.sort((a, b) => {
       const dateA = new Date(a.date).getTime();
       const dateB = new Date(b.date).getTime();
       return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
     });
-    
+
     return filtered;
   }, [account, transactions, filterType, searchTerm, sortOrder]);
 
   // Calcular saldo corrente para cada transação
   const transactionsWithBalance = useMemo(() => {
     if (!account) return [];
-    
+
     const result: TransactionWithBalance[] = [];
-    
+
     // Ordenar todas as transações da conta por data (mais antigas primeiro)
     const allAccountTransactions = transactions
       .filter(t => t.accountId === account.id || t.toAccountId === account.id)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    
+
     // Calcular saldo corrente manualmente para cada transação
     let runningBalance = account.initialBalance || 0;
-    
+
     accountTransactions.forEach(transaction => {
       // Encontrar a posição desta transação na lista ordenada
       const transactionIndex = allAccountTransactions.findIndex(t => t.id === transaction.id);
-      
+
       if (transactionIndex !== -1) {
         // Recalcular saldo até esta transação
         let calculatedBalance = account.initialBalance || 0;
-        
+
         for (let i = 0; i <= transactionIndex; i++) {
           const t = allAccountTransactions[i];
           const amount = Number(t.amount);
-          
+
           if (t.accountId === account.id) {
             // Transação de saída da conta
             if (t.type === 'income') {
@@ -155,34 +155,34 @@ export function AccountHistoryModal({
             calculatedBalance += Math.abs(amount);
           }
         }
-        
+
         result.push({
           ...transaction,
           runningBalance: calculatedBalance
         });
       }
     });
-    
+
     return result;
   }, [account, accountTransactions, transactions]);
 
   // Estatísticas do período - CORRIGIDO para mostrar valores corretos nos totais
   const periodStats = useMemo(() => {
     if (!account) return { income: 0, expenses: 0, transfers: 0, net: 0, totalTransactions: 0 };
-    
+
     // Buscar TODAS as transações relacionadas à conta (saída e entrada)
-    const allRelatedTransactions = transactions.filter(t => 
+    const allRelatedTransactions = transactions.filter(t =>
       t.accountId === account.id || t.toAccountId === account.id
     );
-    
+
     let income = 0;
     let expenses = 0;
     let transfersIn = 0;
     let transfersOut = 0;
-    
+
     allRelatedTransactions.forEach(t => {
       const amount = Math.abs(Number(t.amount)); // Garantir que é número e positivo
-      
+
       if (t.accountId === account.id) {
         // Transações de saída da conta
         if (t.type === 'income') {
@@ -197,9 +197,9 @@ export function AccountHistoryModal({
         transfersIn += amount; // Transferência entrando
       }
     });
-    
+
     const netTransfers = transfersIn - transfersOut;
-    
+
     console.log(`=== ESTATÍSTICAS PERÍODO - ${account.name} ===`);
     console.log('Transações relacionadas:', allRelatedTransactions);
     console.log('Receitas:', income);
@@ -208,7 +208,7 @@ export function AccountHistoryModal({
     console.log('Transferências Out:', transfersOut);
     console.log('Transferências Net:', netTransfers);
     console.log('=== FIM ESTATÍSTICAS ===');
-    
+
     return {
       income,
       expenses,
@@ -249,7 +249,7 @@ export function AccountHistoryModal({
   const formatDate = (dateString: string | Date) => {
     try {
       let dateObj: Date;
-      
+
       if (dateString instanceof Date) {
         dateObj = dateString;
       } else if (typeof dateString === 'string') {
@@ -258,17 +258,17 @@ export function AccountHistoryModal({
         console.warn('Formato de data inválido:', typeof dateString, dateString);
         return 'Data inválida';
       }
-      
+
       if (isNaN(dateObj.getTime())) {
         console.warn('Data inválida detectada:', dateString);
         return 'Data inválida';
       }
-      
+
       // Usar formatação mais robusta
       const year = dateObj.getFullYear();
       const month = String(dateObj.getMonth() + 1).padStart(2, '0');
       const day = String(dateObj.getDate()).padStart(2, '0');
-      
+
       return `${day}/${month}/${year}`;
     } catch (error) {
       console.warn('Erro ao formatar data:', error, dateString);
@@ -378,7 +378,7 @@ export function AccountHistoryModal({
                 />
               </div>
             </div>
-            
+
             <div className="flex gap-2">
               <Button
                 variant={filterType === 'all' ? 'default' : 'outline'}
@@ -509,7 +509,7 @@ export function AccountHistoryModal({
               {periodStats.totalTransactions} transação(ões) encontrada(s)
             </span>
             <span>
-              Saldo líquido do período: 
+              Saldo líquido do período:
               <span className={`ml-1 font-semibold ${periodStats.net >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {formatCurrency(periodStats.net)}
               </span>

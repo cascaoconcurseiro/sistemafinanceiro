@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
 
     // ✅ CORREÇÃO CRÍTICA: Criar chave de cache incluindo userId
     const cacheParams: CacheParams & { userId: string } = { year, month, type, userId: auth.userId };
-    
+
     // Tentar obter do cache primeiro (por usuário)
     const cachedSummary = transactionCache.getSummary(cacheParams);
     if (cachedSummary) {
@@ -61,16 +61,16 @@ export async function GET(request: NextRequest) {
 
     // ✅ CORREÇÃO CRÍTICA: Buscar apenas transações do usuário autenticado
     let transactions: Transaction[] = await databaseService.getTransactions();
-    
+
     // Filtrar por usuário
     transactions = transactions.filter((t: Transaction) => t.userId === auth.userId);
-    
+
     // Verificar se as transações foram carregadas corretamente
     if (!Array.isArray(transactions)) {
       console.warn('Transações não carregadas corretamente, usando array vazio');
       transactions = [];
     }
-    
+
     console.log(`[Summary API] Transações carregadas: ${transactions.length}`);
 
     // Filtrar por período se especificado

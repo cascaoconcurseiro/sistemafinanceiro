@@ -88,8 +88,7 @@ export class AlertService {
       }
     });
 
-    console.log('✅ Listeners de alertas configurados');
-  }
+      }
 
   // =====================================================
   // MÉTODOS DE CRIAÇÃO
@@ -131,7 +130,7 @@ export class AlertService {
       // Inserir alerta no banco
       const query = `
         INSERT INTO alerts (
-          user_id, type, title, message, threshold_value, 
+          user_id, type, title, message, threshold_value,
           account_id, credit_card_id, is_active, created_at
         )
         VALUES ($1, $2, $3, $4, $5, $6, $7, true, CURRENT_TIMESTAMP)
@@ -166,8 +165,7 @@ export class AlertService {
         { user_id: result.user_id, source: 'alert-service' }
       );
 
-      console.log('✅ Alerta criado com sucesso:', result.id);
-
+      
       return {
         success: true,
         data: result,
@@ -258,8 +256,8 @@ export class AlertService {
    * Lista alertas do usuário
    */
   public async listUserAlerts(
-    userId: UUID, 
-    params: PaginationParams & { 
+    userId: UUID,
+    params: PaginationParams & {
       type?: AlertType;
       is_read?: boolean;
       is_active?: boolean;
@@ -298,14 +296,14 @@ export class AlertService {
 
       // Query para buscar dados
       const dataQuery = `
-        SELECT a.*, 
+        SELECT a.*,
                acc.name as account_name,
                cc.name as credit_card_name
         FROM alerts a
         LEFT JOIN accounts acc ON a.account_id = acc.id
         LEFT JOIN credit_cards cc ON a.credit_card_id = cc.id
         WHERE ${whereClause}
-        ORDER BY 
+        ORDER BY
           CASE WHEN a.triggered_at IS NOT NULL THEN a.triggered_at ELSE a.created_at END DESC
         LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
       `;
@@ -350,7 +348,7 @@ export class AlertService {
         LEFT JOIN accounts acc ON a.account_id = acc.id
         LEFT JOIN credit_cards cc ON a.credit_card_id = cc.id
         WHERE a.user_id = $1 AND a.is_read = false AND a.is_active = true
-        ORDER BY 
+        ORDER BY
           CASE WHEN a.triggered_at IS NOT NULL THEN a.triggered_at ELSE a.created_at END DESC
         LIMIT 50
       `;
@@ -452,7 +450,7 @@ export class AlertService {
       values.push(alertId);
 
       const query = `
-        UPDATE alerts 
+        UPDATE alerts
         SET ${updateFields.join(', ')}
         WHERE id = $${paramIndex}
         RETURNING *
@@ -472,15 +470,14 @@ export class AlertService {
         EventType.ALERT_UPDATED,
         'alert',
         alertId,
-        { 
+        {
           old_data: existingAlert,
-          new_data: result 
+          new_data: result
         },
         { user_id: result.user_id, source: 'alert-service' }
       );
 
-      console.log('✅ Alerta atualizado com sucesso:', alertId);
-
+      
       return {
         success: true,
         data: result,
@@ -509,15 +506,14 @@ export class AlertService {
   public async markAllAsRead(userId: UUID): Promise<ApiResponse<void>> {
     try {
       const query = `
-        UPDATE alerts 
+        UPDATE alerts
         SET is_read = true, read_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
         WHERE user_id = $1 AND is_read = false
       `;
 
       await db.query(query, [userId]);
 
-      console.log('✅ Todos os alertas marcados como lidos para usuário:', userId);
-
+      
       return {
         success: true,
         message: 'Todos os alertas foram marcados como lidos'
@@ -550,7 +546,7 @@ export class AlertService {
       }
 
       const query = `
-        UPDATE alerts 
+        UPDATE alerts
         SET is_active = false, updated_at = CURRENT_TIMESTAMP
         WHERE id = $1
       `;
@@ -566,8 +562,7 @@ export class AlertService {
         { user_id: existingAlert.user_id, source: 'alert-service' }
       );
 
-      console.log('✅ Alerta desativado com sucesso:', alertId);
-
+      
       return {
         success: true,
         message: 'Alerta desativado com sucesso'
@@ -593,9 +588,9 @@ export class AlertService {
     try {
       // Buscar alertas de saldo baixo para esta conta
       const alertsQuery = `
-        SELECT * FROM alerts 
-        WHERE user_id = $1 
-        AND type = 'low_balance' 
+        SELECT * FROM alerts
+        WHERE user_id = $1
+        AND type = 'low_balance'
         AND (account_id = $2 OR account_id IS NULL)
         AND is_active = true
       `;
@@ -604,7 +599,7 @@ export class AlertService {
 
       for (const alert of alerts) {
         const checkResult = this.checkLowBalanceCondition(account, alert);
-        
+
         if (checkResult.shouldTrigger) {
           await this.createSystemAlert(
             account.user_id,
@@ -650,9 +645,9 @@ export class AlertService {
 
       // Buscar alertas de limite de cartão
       const alertsQuery = `
-        SELECT * FROM alerts 
-        WHERE user_id = $1 
-        AND type = 'credit_limit' 
+        SELECT * FROM alerts
+        WHERE user_id = $1
+        AND type = 'credit_limit'
         AND (credit_card_id = $2 OR credit_card_id IS NULL)
         AND is_active = true
       `;
@@ -661,7 +656,7 @@ export class AlertService {
 
       for (const alert of alerts) {
         const thresholdPercentage = alert.threshold_value ? parseFloat(alert.threshold_value) : 80;
-        
+
         if (usagePercentage >= thresholdPercentage) {
           await this.createSystemAlert(
             creditCard.user_id,
@@ -705,9 +700,9 @@ export class AlertService {
 
       // Buscar alertas de transação alta
       const alertsQuery = `
-        SELECT * FROM alerts 
-        WHERE user_id = $1 
-        AND type = 'high_transaction' 
+        SELECT * FROM alerts
+        WHERE user_id = $1
+        AND type = 'high_transaction'
         AND is_active = true
       `;
 
@@ -715,10 +710,10 @@ export class AlertService {
 
       for (const alert of alerts) {
         const threshold = alert.threshold_value ? parseFloat(alert.threshold_value) : 1000;
-        
+
         if (Math.abs(amount) >= threshold) {
           const transactionType = amount > 0 ? 'receita' : 'despesa';
-          
+
           await this.createSystemAlert(
             transaction.user_id,
             'high_transaction',
@@ -864,7 +859,7 @@ export class AlertService {
     if (data.account_id) {
       const accountQuery = 'SELECT id FROM accounts WHERE id = $1 AND user_id = $2 AND is_active = true';
       const account = await db.queryOne(accountQuery, [data.account_id, data.user_id]);
-      
+
       if (!account) {
         return {
           isValid: false,
@@ -877,7 +872,7 @@ export class AlertService {
     if (data.credit_card_id) {
       const cardQuery = 'SELECT id FROM credit_cards WHERE id = $1 AND user_id = $2 AND is_active = true';
       const card = await db.queryOne(cardQuery, [data.credit_card_id, data.user_id]);
-      
+
       if (!card) {
         return {
           isValid: false,
@@ -940,8 +935,7 @@ export class AlertService {
         await this.createAlert(alertData);
       }
 
-      console.log('✅ Alertas padrão criados para usuário:', userId);
-
+      
     } catch (error) {
       console.error('❌ Erro ao criar alertas padrão:', error);
     }
@@ -953,10 +947,10 @@ export class AlertService {
   public async cleanupOldAlerts(daysOld: number = 30): Promise<number> {
     try {
       const query = `
-        UPDATE alerts 
+        UPDATE alerts
         SET is_active = false, updated_at = CURRENT_TIMESTAMP
-        WHERE is_system_generated = true 
-        AND is_read = true 
+        WHERE is_system_generated = true
+        AND is_read = true
         AND created_at < CURRENT_TIMESTAMP - INTERVAL '${daysOld} days'
         AND is_active = true
       `;

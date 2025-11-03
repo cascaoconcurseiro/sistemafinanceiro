@@ -141,6 +141,16 @@ async function createAdminUser() {
 }
 
 async function createDefaultCategories() {
+  // Buscar o usuário admin
+  const admin = await prisma.user.findUnique({
+    where: { email: 'admin@suagrana.com' }
+  });
+
+  if (!admin) {
+    console.warn('⚠️ Usuário admin não encontrado, pulando criação de categorias');
+    return;
+  }
+
   const defaultCategories = [
     // Categorias de Receita
     { name: 'Salário', type: 'income', color: '#10B981', icon: '💰' },
@@ -168,12 +178,13 @@ async function createDefaultCategories() {
   for (const category of defaultCategories) {
     try {
       const existing = await prisma.category.findFirst({
-        where: { name: category.name, type: category.type }
+        where: { name: category.name, type: category.type, userId: admin.id }
       });
       
       if (!existing) {
         await prisma.category.create({
           data: {
+            userId: admin.id,
             name: category.name,
             type: category.type,
             color: category.color,

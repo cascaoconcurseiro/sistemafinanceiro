@@ -79,7 +79,7 @@ export async function PUT(
 
     // Preparar dados para atualização
     const updateData: any = {};
-    
+
     if (validatedData.name !== undefined) updateData.name = validatedData.name;
     if (validatedData.description !== undefined) updateData.description = validatedData.description;
     if (validatedData.targetAmount !== undefined) updateData.targetAmount = validatedData.targetAmount;
@@ -95,8 +95,7 @@ export async function PUT(
       data: updateData,
     });
 
-    console.log('✅ Meta atualizada:', updatedGoal.id, updatedGoal.name);
-
+    
     return NextResponse.json({
       success: true,
       goal: {
@@ -108,9 +107,9 @@ export async function PUT(
   } catch (error) {
     console.error('❌ Erro ao atualizar meta:', error);
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ 
-        error: 'Dados inválidos', 
-        details: error.errors 
+      return NextResponse.json({
+        error: 'Dados inválidos',
+        details: error.errors
       }, { status: 400 });
     }
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
@@ -145,8 +144,7 @@ export async function DELETE(
       where: { id: params.id },
     });
 
-    console.log('✅ Meta deletada:', params.id);
-
+    
     return NextResponse.json({
       success: true,
       message: 'Meta deletada com sucesso',

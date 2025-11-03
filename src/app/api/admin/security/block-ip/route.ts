@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '@/lib/auth/auth';
 
 export async function POST(request: Request) {
   try {
@@ -16,9 +16,9 @@ export async function POST(request: Request) {
     // TODO: Implementar bloqueio de IP real
     console.log(`IP bloqueado: ${ipAddress}`);
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
-      message: `IP ${ipAddress} bloqueado com sucesso` 
+      message: `IP ${ipAddress} bloqueado com sucesso`
     });
   } catch (error) {
     console.error('Erro ao bloquear IP:', error);

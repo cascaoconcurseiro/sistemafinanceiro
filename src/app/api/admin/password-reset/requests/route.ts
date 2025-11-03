@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/db';
+import { authOptions } from '@/lib/auth/auth';
+import { prisma } from '@/lib/prisma';
 
 export async function GET() {
   try {
@@ -12,7 +12,7 @@ export async function GET() {
     }
 
     // Buscar solicitações de reset do banco
-    const requests = await db.passwordResetToken.findMany({
+    const requests = await prisma.passwordResetToken.findMany({
       orderBy: {
         createdAt: 'desc',
       },
@@ -22,7 +22,7 @@ export async function GET() {
     // Buscar informações dos usuários
     const requestsWithUserInfo = await Promise.all(
       requests.map(async (request) => {
-        const user = await db.user.findUnique({
+        const user = await prisma.user.findUnique({
           where: { id: request.userId },
           select: { name: true, email: true },
         });

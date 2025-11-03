@@ -932,14 +932,14 @@ export const ASSETS_DATABASE: AssetData[] = [
 
 // Função para buscar ativo por ticker
 export function findAssetByTicker(ticker: string): AssetData | undefined {
-  return ASSETS_DATABASE.find(asset => 
+  return ASSETS_DATABASE.find(asset =>
     asset.ticker.toLowerCase() === ticker.toLowerCase()
   );
 }
 
 // Função para buscar ativos por setor
 export function findAssetsBySector(sector: string): AssetData[] {
-  return ASSETS_DATABASE.filter(asset => 
+  return ASSETS_DATABASE.filter(asset =>
     asset.sector?.toLowerCase().includes(sector.toLowerCase())
   );
 }
@@ -957,7 +957,7 @@ export function getActiveAssets(): AssetData[] {
 // Função para buscar ativos por nome (busca parcial)
 export function searchAssetsByName(searchTerm: string): AssetData[] {
   const term = searchTerm.toLowerCase();
-  return ASSETS_DATABASE.filter(asset => 
+  return ASSETS_DATABASE.filter(asset =>
     asset.name.toLowerCase().includes(term) ||
     asset.ticker.toLowerCase().includes(term)
   );
@@ -965,7 +965,7 @@ export function searchAssetsByName(searchTerm: string): AssetData[] {
 
 // Função para buscar ativo por ticker
 export function getAssetByTicker(ticker: string): AssetData | undefined {
-  return ASSETS_DATABASE.find(asset => 
+  return ASSETS_DATABASE.find(asset =>
     asset.ticker.toLowerCase() === ticker.toLowerCase()
   );
 }
@@ -980,7 +980,7 @@ export function getAllSectors(): string[] {
   const sectors = ASSETS_DATABASE
     .map(asset => asset.sector)
     .filter((sector): sector is string => sector !== undefined);
-  
+
   return [...new Set(sectors)].sort();
 }
 

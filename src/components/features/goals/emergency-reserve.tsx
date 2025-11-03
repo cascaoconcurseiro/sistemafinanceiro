@@ -121,7 +121,7 @@ export function EmergencyReserveComponent({ onUpdate }: EmergencyReserveProps) {
     }
 
     try {
-      const newReserve = 
+      const newReserve =
 
       setReserve(newReserve);
       setIsSetupOpen(false);

@@ -59,7 +59,7 @@ export function UnifiedTransactionList({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  
+
   // Usar o contexto de perÃ­odo para filtrar transaÃ§Ãµes
   const { getPeriodDates } = usePeriod();
   const [editingTransaction, setEditingTransaction] = useState<any>(null);
@@ -73,11 +73,11 @@ export function UnifiedTransactionList({
   });
 
   // Usar o hook do Unified Context
-  const { 
-    transactions: allTransactions = [], 
-    accounts = [], 
-    loading, 
-    actions 
+  const {
+    transactions: allTransactions = [],
+    accounts = [],
+    loading,
+    actions
   } = useUnifiedFinancial();
 
   // Conectar ao sistema de eventos em tempo real (desabilitado em desenvolvimento por padrÃ£o)
@@ -86,12 +86,10 @@ export function UnifiedTransactionList({
     maxReconnectAttempts: 2
   });
 
-
-
   // Filtrar transaÃ§Ãµes pelo perÃ­odo selecionado
   const filteredTransactions = useMemo(() => {
     const { startDate, endDate } = getPeriodDates();
-    
+
     return validTransactions
       .filter(transaction => {
         const transactionDate = new Date(transaction.date);
@@ -121,7 +119,7 @@ export function UnifiedTransactionList({
   }, [filteredTransactions, currentPage]);
 
   const { transactions, pagination } = paginationData;
-  // Buscar contas via API para evitar dependÃªncia do contexto  
+  // Buscar contas via API para evitar dependÃªncia do contexto
   const { data: accountsData } = useQuery({
     queryKey: ['accounts'],
     queryFn: async () => {
@@ -143,7 +141,7 @@ export function UnifiedTransactionList({
     },
     staleTime: 5 * 60 * 1000, // 5 minutos
   });
-  
+
   // Usar contas do Financial Engine
   const allAccounts = accounts.length > 0 ? accounts : (accountsData || []);
 
@@ -157,7 +155,7 @@ export function UnifiedTransactionList({
   const validTransactions = useMemo(() => {
     const today = new Date();
     today.setHours(23, 59, 59, 999); // Fim do dia de hoje
-    
+
     return allTransactions.filter(transaction => {
       // 1. ✅ NOVO: Filtrar transações pendentes (pago por outra pessoa)
       if (transaction.status === 'pending' || transaction.status === 'pending_payment') {
@@ -180,7 +178,7 @@ export function UnifiedTransactionList({
         });
         return false;
       }
-      
+
       // 2. Verificar se Ã© uma parcela futura
       const transactionDate = new Date(transaction.date);
       if (transaction.installmentNumber && transactionDate > today) {
@@ -191,7 +189,7 @@ export function UnifiedTransactionList({
         });
         return false; // Ocultar parcelas futuras
       }
-      
+
       return true;
     });
   }, [allTransactions, allAccounts]);
@@ -200,7 +198,7 @@ export function UnifiedTransactionList({
   const futureInstallmentsCount = useMemo(() => {
     const today = new Date();
     today.setHours(23, 59, 59, 999);
-    
+
     return allTransactions.filter(t => {
       const transactionDate = new Date(t.date);
       return t.installmentNumber && transactionDate > today;
@@ -221,7 +219,7 @@ export function UnifiedTransactionList({
         type: firstTransaction.type
       });
     }
-    
+
     // Alertar sobre transaÃ§Ãµes Ã³rfÃ£s e parcelas futuras
     const orphanCount = allTransactions.length - validTransactions.length - futureInstallmentsCount;
     if (orphanCount > 0) {
@@ -273,11 +271,11 @@ export function UnifiedTransactionList({
     try {
       console.log('ðŸ” Actions disponÃ­veis:', actions);
       console.log('ðŸ” Tentando deletar transaÃ§Ã£o:', id);
-      
+
       if (!actions || !actions.deleteTransaction) {
         throw new Error('FunÃ§Ã£o deleteTransaction nÃ£o estÃ¡ disponÃ­vel');
       }
-      
+
       await actions.deleteTransaction(id);
       toast.success('TransaÃ§Ã£o excluÃ­da com sucesso!');
       onUpdate?.();
@@ -335,11 +333,11 @@ export function UnifiedTransactionList({
     try {
       console.log('ðŸ” Actions disponÃ­veis para ediÃ§Ã£o:', actions);
       console.log('ðŸ” Tentando editar transaÃ§Ã£o:', editingTransaction.id, updatedData);
-      
+
       if (!actions || !actions.updateTransaction) {
         throw new Error('FunÃ§Ã£o updateTransaction nÃ£o estÃ¡ disponÃ­vel');
       }
-      
+
       await actions.updateTransaction(editingTransaction.id, updatedData);
 
       toast.success('TransaÃ§Ã£o editada com sucesso!');
@@ -382,17 +380,33 @@ export function UnifiedTransactionList({
     // ✅ CORREÇÃO: Para transações compartilhadas, mostrar apenas minha parte
     let amount = transaction.amount;
     const type = transaction.type;
-    
+
+    // Debug: Log para todas as transações compartilhadas
+    if (transaction.isShared || type === 'shared') {
+      console.log('🔍 [formatAmount] Transação compartilhada detectada:', {
+        description: transaction.description,
+        type: type,
+        isShared: transaction.isShared,
+        amount: transaction.amount,
+        myShare: transaction.myShare,
+        myShareType: typeof transaction.myShare,
+        willUseMyShare: transaction.myShare !== null && transaction.myShare !== undefined
+      });
+    }
+
     // Se for compartilhada e tiver myShare definido, usar myShare
-    if ((transaction.isShared || type === 'shared') && transaction.myShare) {
+    // ✅ CORREÇÃO: Verificar se myShare existe e é diferente de null/undefined
+    if ((transaction.isShared || type === 'shared') && 
+        transaction.myShare !== null && 
+        transaction.myShare !== undefined) {
       amount = transaction.myShare;
-      console.log('💰 [formatAmount] Transação compartilhada - usando myShare:', {
+      console.log('✅ [formatAmount] Usando myShare:', {
         description: transaction.description,
         totalAmount: transaction.amount,
         myShare: transaction.myShare
       });
     }
-    
+
     // Verificar se amount é válido
     if (amount === undefined || amount === null || isNaN(amount)) {
       return <span className="text-gray-500 font-semibold">R$ 0,00</span>;
@@ -504,28 +518,28 @@ export function UnifiedTransactionList({
                               </span>
                             )}
                           </h4>
-                          
+
                           {/* Categoria */}
                           {transaction.category && (
                             <Badge variant="secondary" className="text-xs">
                               {transaction.category}
                             </Badge>
                           )}
-                          
+
                           {/* Badge: Parcelada - Mostrar informaÃ§Ã£o completa */}
                           {transaction.totalInstallments && Number(transaction.totalInstallments) > 1 && (
                             <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 flex items-center gap-1 font-semibold">
                               <Layers className="w-3 h-3" />
-                              {transaction.installmentNumber ? 
-                                `Parcela ${transaction.installmentNumber}/${transaction.totalInstallments}` : 
+                              {transaction.installmentNumber ?
+                                `Parcela ${transaction.installmentNumber}/${transaction.totalInstallments}` :
                                 `Parcelada ${transaction.totalInstallments}x`
                               }
                             </Badge>
                           )}
-                          
+
                           {/* Badge: Compartilhada - APENAS quando EU paguei */}
-                          {!transaction.paidBy && (transaction.isShared || 
-                            transaction.type === 'shared' || 
+                          {!transaction.paidBy && (transaction.isShared ||
+                            transaction.type === 'shared' ||
                             (transaction.sharedWith && transaction.sharedWith.length > 0) ||
                             (typeof transaction.sharedWith === 'string' && transaction.sharedWith !== '[]' && transaction.sharedWith !== '')) && (
                             <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 flex items-center gap-1 font-semibold">
@@ -533,13 +547,13 @@ export function UnifiedTransactionList({
                               Compartilhada
                             </Badge>
                           )}
-                          
+
                           {/* Badge: Pago por [Nome] - APENAS quando OUTRA PESSOA pagou */}
                           {transaction.paidBy && (() => {
                             // Buscar nome da pessoa que pagou
                             const payer = contacts.find((c: any) => c.id === transaction.paidBy);
                             const payerName = payer?.name || transaction.paidBy;
-                            
+
                             return (
                               <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 flex items-center gap-1 font-semibold">
                                 <Users className="w-3 h-3" />
@@ -547,7 +561,7 @@ export function UnifiedTransactionList({
                               </Badge>
                             );
                           })()}
-                          
+
                           {/* Badge: Viagem */}
                           {transaction.tripId && transaction.tripId !== '' && (
                             <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 flex items-center gap-1 font-semibold">
@@ -566,7 +580,7 @@ export function UnifiedTransactionList({
                             )}
                             <span>{getAccountName(transaction.account)}</span>
                           </div>
-                          
+
                           {/* Data da TransaÃ§Ã£o */}
                           <span>
                             {(() => {
@@ -574,7 +588,7 @@ export function UnifiedTransactionList({
                                 // Verificar se transaction.date Ã© vÃ¡lido
                                 const dateValue = transaction.date;
                                 let dateObj: Date;
-                                
+
                                 if (dateValue instanceof Date) {
                                   dateObj = dateValue;
                                 } else if (typeof dateValue === 'string') {
@@ -583,18 +597,18 @@ export function UnifiedTransactionList({
                                   console.warn('Formato de data invÃ¡lido:', typeof dateValue, dateValue);
                                   return 'Data invÃ¡lida';
                                 }
-                                
+
                                 // Verificar se a data Ã© vÃ¡lida
                                 if (isNaN(dateObj.getTime())) {
                                   console.warn('Data invÃ¡lida detectada:', dateValue);
                                   return 'Data invÃ¡lida';
                                 }
-                                
+
                                 // Usar formataÃ§Ã£o mais robusta
                                 const year = dateObj.getFullYear();
                                 const month = String(dateObj.getMonth() + 1).padStart(2, '0');
                                 const day = String(dateObj.getDate()).padStart(2, '0');
-                                
+
                                 return `${day}/${month}/${year}`;
                               } catch (error) {
                                 console.warn('Erro ao formatar data da transaÃ§Ã£o:', error, transaction);
@@ -602,7 +616,7 @@ export function UnifiedTransactionList({
                               }
                             })()}
                           </span>
-                          
+
                           {/* Data de Vencimento para CartÃ£o de CrÃ©dito */}
                           {transaction.dueDate && (
                             <span className="text-orange-600 flex items-center gap-1">
@@ -612,7 +626,7 @@ export function UnifiedTransactionList({
                                 // Verificar se transaction.dueDate Ã© vÃ¡lido
                                 const dueDateValue = transaction.dueDate;
                                 let dateObj: Date;
-                                
+
                                 if (dueDateValue instanceof Date) {
                                   dateObj = dueDateValue;
                                 } else if (typeof dueDateValue === 'string') {
@@ -621,18 +635,18 @@ export function UnifiedTransactionList({
                                   console.warn('Formato de data de vencimento invÃ¡lido:', typeof dueDateValue, dueDateValue);
                                   return 'Data invÃ¡lida';
                                 }
-                                
+
                                 // Verificar se a data Ã© vÃ¡lida
                                 if (isNaN(dateObj.getTime())) {
                                   console.warn('Data de vencimento invÃ¡lida detectada:', dueDateValue);
                                   return 'Data invÃ¡lida';
                                 }
-                                
+
                                 // Usar formataÃ§Ã£o mais robusta
                                 const year = dateObj.getFullYear();
                                 const month = String(dateObj.getMonth() + 1).padStart(2, '0');
                                 const day = String(dateObj.getDate()).padStart(2, '0');
-                                
+
                                 return `${day}/${month}/${year}`;
                               } catch (error) {
                                 console.warn('Erro ao formatar data de vencimento:', error, transaction);
@@ -641,23 +655,23 @@ export function UnifiedTransactionList({
                             })()}
                             </span>
                           )}
-                          
+
                           {/* Status da TransaÃ§Ã£o */}
                           {transaction.status && (
-                            <Badge 
-                              variant="outline" 
+                            <Badge
+                              variant="outline"
                               className={cn(
                                 "text-xs flex items-center gap-1",
-                                transaction.status === 'cleared' || transaction.status === 'completed' 
+                                transaction.status === 'cleared' || transaction.status === 'completed'
                                   ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400"
                                   : transaction.status === 'pending'
                                   ? "bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400"
                                   : "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400"
                               )}
                             >
-                              {transaction.status === 'cleared' || transaction.status === 'completed' ? 'Efetivada' : 
-                               transaction.status === 'pending' ? 'Pendente' : 
-                               transaction.status === 'cancelled' ? 'Cancelada' : 
+                              {transaction.status === 'cleared' || transaction.status === 'completed' ? 'Efetivada' :
+                               transaction.status === 'pending' ? 'Pendente' :
+                               transaction.status === 'cancelled' ? 'Cancelada' :
                                transaction.status}
                             </Badge>
                           )}

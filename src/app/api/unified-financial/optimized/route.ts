@@ -31,7 +31,7 @@ function calculateSimpleBalances(accounts: any[], transactions: any[]) {
   // O saldo inicial da conta NÃO deve ser somado, pois as transações já representam todo o histórico
   accounts.forEach(account => {
     const accountTransactions = transactions.filter(t => t.accountId === account.id);
-    
+
     // ✅ IMPORTANTE: Começar do ZERO, não do saldo inicial
     // As transações já representam todo o movimento da conta
     const balance = accountTransactions.reduce((sum, t) => {
@@ -39,9 +39,9 @@ function calculateSimpleBalances(accounts: any[], transactions: any[]) {
       // O myShare é apenas para relatórios, NÃO para saldo de conta
       // Se você pagou R$ 100 por outra pessoa, R$ 100 saiu da sua conta
       const amount = Math.abs(Number(t.amount));
-      
+
       const normalizedType = normalizeTransactionType(t.type);
-      
+
       // Usar tipos normalizados
       if (normalizedType === 'RECEITA') {
         return sum + amount;
@@ -50,9 +50,9 @@ function calculateSimpleBalances(accounts: any[], transactions: any[]) {
       }
       return sum;
     }, 0); // ✅ Começar do ZERO
-    
+
     console.log(`💰 [Unified API] Conta ${account.name}: ${accountTransactions.length} transações, saldo final ${balance}`);
-    
+
     accountBalances[account.id] = balance;
     totalBalance += balance;
   });
@@ -61,15 +61,15 @@ function calculateSimpleBalances(accounts: any[], transactions: any[]) {
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
-  
+
   transactions.forEach(t => {
     const transDate = new Date(t.date);
     if (transDate.getMonth() === currentMonth && transDate.getFullYear() === currentYear) {
       // ✅ CORREÇÃO: SEMPRE usar o valor TOTAL quando vinculado a uma conta
       const amount = Math.abs(t.amount);
-      
+
       const normalizedType = normalizeTransactionType(t.type);
-      
+
       if (normalizedType === 'RECEITA') {
         monthlyIncome += amount;
       } else if (normalizedType === 'DESPESA') {
@@ -89,15 +89,14 @@ function calculateSimpleBalances(accounts: any[], transactions: any[]) {
 
 // Fetch all unified financial data
 async function fetchUnifiedFinancialData(userId: string) {
-  console.log('📊 [Simple Unified API] Fetching unified data for userId:', userId);
   
   try {
     // ✅ CORREÇÃO: Fetch basic data - apenas contas ativas e tipos válidos
     const validAccountTypes = ['checking', 'savings', 'investment', 'credit_card', 'cash'];
     const [accounts, creditCards] = await Promise.all([
       prisma.account.findMany({
-        where: { 
-          userId, 
+        where: {
+          userId,
           deletedAt: null,
           isActive: true, // ✅ Apenas contas ativas
           type: { in: validAccountTypes } // ✅ Apenas tipos válidos de conta
@@ -116,7 +115,7 @@ async function fetchUnifiedFinancialData(userId: string) {
       type: a.type,
       isActive: a.isActive
     })));
-    
+
     console.log('💳 [Unified API] Cartões encontrados:', creditCards.map(c => ({
       id: c.id,
       name: c.name,
@@ -157,27 +156,23 @@ async function fetchUnifiedFinancialData(userId: string) {
     const investments: any[] = [];
 
     // Use the same balance calculation as /api/accounts
-    console.log('💰 [Unified API] Calculando saldos...');
-    let correctBalances: Record<string, number> = {};
+        let correctBalances: Record<string, number> = {};
     try {
       correctBalances = calculateAllBalances(accounts, transactions);
-      console.log('✅ [Unified API] Saldos calculados:', correctBalances);
-    } catch (balanceError) {
+          } catch (balanceError) {
       console.error('❌ [Unified API] Erro ao calcular saldos:', balanceError);
       // Usar saldos vazios se houver erro
       correctBalances = {};
     }
-    
+
     // Calculate simple stats for compatibility
-    console.log('📊 [Unified API] Calculando estatísticas simples...');
-    let simpleBalances;
+        let simpleBalances;
     try {
       simpleBalances = calculateSimpleBalances(
         accounts.map(a => ({ ...a, balance: Number(a.balance) || 0 })),
         transactions.map(t => ({ ...t, amount: Number(t.amount) || 0 }))
       );
-      console.log('✅ [Unified API] Estatísticas calculadas:', simpleBalances);
-    } catch (statsError) {
+          } catch (statsError) {
       console.error('❌ [Unified API] Erro ao calcular estatísticas:', statsError);
       // Usar valores padrão se houver erro
       simpleBalances = {
@@ -189,33 +184,33 @@ async function fetchUnifiedFinancialData(userId: string) {
       };
     }
 
-    // Combinar contas e cartões em uma única lista para o frontend
-    const allAccounts = [
-      // Contas bancárias
-      ...accounts.map(account => ({
-        ...account,
-        balance: correctBalances[account.id] || 0
-      })),
-      // Cartões de crédito (com prefixo para identificação)
-      ...creditCards.map(card => ({
-        id: `card-${card.id}`,
-        name: card.name,
-        type: 'credit_card',
-        balance: Number(card.limit) - Number(card.currentBalance), // Limite disponível
-        isActive: card.isActive,
-        creditLimit: Number(card.limit),
-        closingDay: card.closingDay,
-        dueDay: card.dueDay,
-        userId: card.userId,
-        currency: 'BRL',
-        createdAt: card.createdAt,
-        updatedAt: card.updatedAt
-      }))
-    ];
+    // ✅ CORREÇÃO: NÃO combinar cartões com contas
+    // Cartões de crédito são PASSIVOS (dívidas) e devem ser tratados separadamente
+    // Eles NÃO devem aparecer na lista de contas nem no cálculo de saldo total
+    const allAccounts = accounts.map(account => ({
+      ...account,
+      balance: correctBalances[account.id] || 0
+    }));
+    
+    // Cartões ficam separados para uso específico na página de cartões
+    const creditCardsData = creditCards.map(card => ({
+      id: card.id,
+      name: card.name,
+      limit: Number(card.limit),
+      currentBalance: Number(card.currentBalance),
+      availableLimit: Number(card.limit) - Number(card.currentBalance),
+      closingDay: card.closingDay,
+      dueDay: card.dueDay,
+      isActive: card.isActive,
+      userId: card.userId,
+      createdAt: card.createdAt,
+      updatedAt: card.updatedAt
+    }));
 
     // Format response data - usar saldo calculado correto
     const unifiedData = {
-      accounts: allAccounts,
+      accounts: allAccounts, // ✅ Apenas contas bancárias
+      creditCards: creditCardsData, // ✅ Cartões separados
       transactions: transactions.map(transaction => ({
         ...transaction,
         amount: Number(transaction.amount) || 0,
@@ -234,18 +229,18 @@ async function fetchUnifiedFinancialData(userId: string) {
       },
       meta: {
         totalAccounts: allAccounts.length,
+        totalCreditCards: creditCardsData.length,
         totalTransactions: transactions.length,
         totalCategories: categories.length,
         lastUpdated: new Date().toISOString()
       }
     };
 
-    console.log('✅ [Simple Unified API] Data fetched successfully');
-    console.log('📊 [Unified API] Retornando dados:', {
+        console.log('📊 [Unified API] Retornando dados:', {
       totalAccounts: allAccounts.length,
-      bankAccounts: allAccounts.filter(a => a.type !== 'credit_card').length,
-      creditCards: allAccounts.filter(a => a.type === 'credit_card').length,
-      accounts: allAccounts.map(a => ({ id: a.id, name: a.name, type: a.type }))
+      totalCreditCards: creditCardsData.length,
+      accounts: allAccounts.map(a => ({ id: a.id, name: a.name, type: a.type, balance: a.balance })),
+      creditCards: creditCardsData.map(c => ({ id: c.id, name: c.name, limit: c.limit, available: c.availableLimit }))
     });
     return unifiedData;
 
@@ -257,20 +252,17 @@ async function fetchUnifiedFinancialData(userId: string) {
 
 // Simple GET handler
 export async function GET(request: NextRequest) {
-  console.log('📊 [Unified API] Iniciando busca de dados unificados...');
   
   try {
     const auth = await authenticateRequest(request);
     if (!auth.success || !auth.userId) {
-      console.log('❌ [Unified API] Não autenticado');
-      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+            return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
     }
 
     const userId = auth.userId;
-    console.log('✅ [Unified API] Usuário autenticado:', userId);
-
-    const unifiedData = await fetchUnifiedFinancialData(userId);
     
+    const unifiedData = await fetchUnifiedFinancialData(userId);
+
     console.log('✅ [Unified API] Dados retornados:', {
       accounts: unifiedData.accounts?.length || 0,
       transactions: unifiedData.transactions?.length || 0,
@@ -282,9 +274,9 @@ export async function GET(request: NextRequest) {
     console.error('❌ [Unified API] Erro completo:', error);
     console.error('❌ [Unified API] Stack:', error instanceof Error ? error.stack : 'N/A');
     console.error('❌ [Unified API] Mensagem:', error instanceof Error ? error.message : String(error));
-    
+
     return NextResponse.json(
-      { 
+      {
         error: 'Erro interno do servidor',
         message: error instanceof Error ? error.message : String(error),
         details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : String(error)) : undefined

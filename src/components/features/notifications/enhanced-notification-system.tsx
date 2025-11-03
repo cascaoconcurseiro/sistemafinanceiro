@@ -65,13 +65,13 @@ export function EnhancedNotificationSystem() {
 
   const formatTime = (timestamp: Date | undefined) => {
     if (!timestamp) return 'Agora';
-    
+
     const now = new Date();
     const notificationTime = new Date(timestamp);
-    
+
     // Validar se a data é válida
     if (isNaN(notificationTime.getTime())) return 'Agora';
-    
+
     const diff = now.getTime() - notificationTime.getTime();
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);

@@ -1,6 +1,6 @@
 /**
  * SISTEMA DE INICIALIZAÇÃO SEGURA
- * 
+ *
  * Garante que o sistema inicie limpo, sem dados de localStorage,
  * e configure todas as proteções necessárias.
  */
@@ -45,20 +45,19 @@ class SystemInitializer {
     let clearedItems = 0;
 
     try {
-      console.log('🚀 Iniciando sistema financeiro seguro...');
-
+      
       // 1. Limpar dados locais (sem usar storage-blocker)
       clearedItems = await this.clearAllLocalStorage();
-      
+
       // 2. Verificar conexão com banco de dados (com timeout)
       await this.verifyDatabaseConnection();
-      
+
       // 3. Inicializar sistema de eventos
       eventBus.initialize();
-      
+
       // 4. Configurar interceptadores de segurança
       this.setupSecurityInterceptors();
-      
+
       // 5. Registrar inicialização no banco
       console.log('Sistema inicializado:', {
         event: 'system_initialization',
@@ -77,19 +76,17 @@ class SystemInitializer {
         timestamp: new Date().toISOString()
       };
 
-      console.log('✅ Sistema financeiro inicializado com segurança');
-      console.log(`🧹 ${clearedItems} itens de cache removidos`);
+            console.log(`🧹 ${clearedItems} itens de cache removidos`);
       console.log('🔒 Proteções de segurança ativadas');
-      console.log('📊 Banco de dados configurado como única fonte de dados');
-
+      
       return result;
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       errors.push(errorMessage);
-      
+
       console.error('❌ Erro durante inicialização:', error);
-      
+
       return {
         success: false,
         message: `Erro durante inicialização: ${errorMessage}`,
@@ -105,14 +102,14 @@ class SystemInitializer {
    */
   private async clearAllLocalStorage(): Promise<number> {
     let clearedCount = 0;
-    
+
     try {
       // Simula limpeza - localStorage/sessionStorage não são mais usados
       console.warn('🚫 localStorage/sessionStorage removidos - dados agora vêm do banco de dados');
-      
+
       // Simula limpeza de IndexedDB
       await this.clearIndexedDBDatabases();
-      
+
       return clearedCount;
     } catch (error) {
       console.warn('Erro durante limpeza de storage local:', error);
@@ -139,13 +136,12 @@ class SystemInitializer {
     try {
       // Timeout para evitar loops infinitos na conexão
       const connectionPromise = clientDatabaseAdapter.testConnection();
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Timeout na conexão com banco')), 5000)
       );
-      
+
       await Promise.race([connectionPromise, timeoutPromise]);
-      console.log('✅ Conexão com banco de dados verificada');
-    } catch (error) {
+          } catch (error) {
       console.error('❌ Erro de conexão com banco de dados:', error);
       // Não lança erro para não impedir o carregamento do sistema
       console.warn('⚠️ Sistema continuará sem conexão com banco - modo offline');
@@ -157,16 +153,16 @@ class SystemInitializer {
    */
   private setupSecurityInterceptors(): void {
     if (typeof window === 'undefined') return;
-    
+
     // Intercepta tentativas de uso de storage local
     const originalFetch = window.fetch;
     window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === 'string' ? input : input.toString();
-      
+
       // Log tentativas de acesso a storage
       if (url.includes('storage') || url.includes('cache')) {
         console.warn('🔍 Tentativa de acesso a storage interceptada:', url);
-        
+
         console.log('Tentativa de acesso a storage:', {
           event: 'storage_access_attempt',
           message: `Tentativa de acesso a storage: ${url}`,
@@ -174,7 +170,7 @@ class SystemInitializer {
           timestamp: new Date().toISOString()
         });
       }
-      
+
       return originalFetch(input, init);
     };
   }
@@ -248,7 +244,7 @@ if (typeof window !== 'undefined') {
       console.error('Erro durante auto-inicialização:', error);
     });
   });
-  
+
   // Fallback se DOMContentLoaded já passou
   if (document.readyState === 'loading') {
     // DOMContentLoaded ainda não disparou

@@ -1,0 +1,29 @@
+{
+  "timestamp": "2025-10-29T19:36:35.081Z",
+  "date": "2025-10-29",
+  "purpose": "Backup completo antes da limpeza de código não utilizado",
+  "source": "C:\\Users\\Wesley\\Documents\\FINANCA\\Não apagar\\SuaGrana-Clean",
+  "destination": "C:\\Users\\Wesley\\Documents\\FINANCA\\Não apagar\\SuaGrana-Clean-BACKUP-PRE-LIMPEZA-2025-10-29",
+  "itemsCopied": [
+    "src",
+    "public",
+    "scripts",
+    "package.json",
+    "package-lock.json",
+    "tsconfig.json",
+    "next.config.js",
+    "tailwind.config.ts",
+    "postcss.config.mjs",
+    ".eslintrc.json",
+    ".env.local",
+    ".gitignore",
+    "README.md",
+    "*.md"
+  ],
+  "notes": [
+    "Este backup contém o sistema 100% funcional",
+    "Todas as funcionalidades estão operacionais",
+    "Use este backup para restaurar em caso de problemas",
+    "Próximo passo: Limpeza de código não utilizado"
+  ]
+}

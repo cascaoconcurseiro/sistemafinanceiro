@@ -24,14 +24,14 @@ export const sanitize = {
    */
   html: (html: string | null | undefined): string => {
     if (!html) return '';
-    
+
     // Remove scripts e eventos
     let clean = String(html)
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
       .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
       .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
       .replace(/javascript:/gi, '');
-    
+
     return clean;
   },
 
@@ -40,7 +40,7 @@ export const sanitize = {
    */
   url: (url: string | null | undefined): string => {
     if (!url) return '';
-    
+
     try {
       const parsed = new URL(url);
       // Apenas permite http e https
@@ -77,7 +77,7 @@ export const sanitize = {
    */
   json: (json: string | null | undefined): any => {
     if (!json) return null;
-    
+
     try {
       return JSON.parse(String(json));
     } catch {
@@ -91,20 +91,20 @@ export const sanitize = {
  */
 export function sanitizeRequestBody<T extends Record<string, any>>(body: T): T {
   const sanitized: any = {};
-  
+
   for (const [key, value] of Object.entries(body)) {
     if (typeof value === 'string') {
       sanitized[key] = sanitize.text(value);
     } else if (typeof value === 'number') {
       sanitized[key] = sanitize.number(value);
     } else if (Array.isArray(value)) {
-      sanitized[key] = value.map(item => 
+      sanitized[key] = value.map(item =>
         typeof item === 'string' ? sanitize.text(item) : item
       );
     } else {
       sanitized[key] = value;
     }
   }
-  
+
   return sanitized as T;
 }

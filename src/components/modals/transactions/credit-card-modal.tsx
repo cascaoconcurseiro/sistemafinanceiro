@@ -59,9 +59,7 @@ const CATEGORIES = [
 ];
 
 export function CreditCardModal({ isOpen, onClose }: CreditCardModalProps) {
-  const { data } = useUnifiedFinancial();
-  const accounts = data?.accounts || [];
-  const actions = data;
+  const { accounts, actions } = useUnifiedFinancial();
   const [formData, setFormData] = useState<CreditCardFormData>({
     description: '',
     amount: '',
@@ -91,7 +89,7 @@ export function CreditCardModal({ isOpen, onClose }: CreditCardModalProps) {
     }
   }, [isOpen]);
 
-  const creditCardAccounts = Array.isArray(accounts) 
+  const creditCardAccounts = Array.isArray(accounts)
     ? accounts.filter((account) => account.type === 'credit' && account.isActive)
     : [];
 
@@ -109,7 +107,7 @@ export function CreditCardModal({ isOpen, onClose }: CreditCardModalProps) {
 
     const totalAmount = parseFloat(formData.amount);
     const installmentAmount = totalAmount / formData.installments;
-    
+
     return {
       totalAmount,
       installmentAmount,
@@ -158,28 +156,24 @@ export function CreditCardModal({ isOpen, onClose }: CreditCardModalProps) {
         description: formData.description,
         amount: parseFloat(formData.amount),
         date: convertBRDateToISO(formData.date),
-        account: formData.account,
+        accountId: formData.account, // ✅ CORRIGIDO: usar accountId
         categoryId: formData.categoryId,
         type: 'expense',
-        category: formData.categoryId,
         dueDate: formData.dueDate,
         notes: formData.notes || undefined,
-        creditCardId: formData.account,
+        creditCardId: formData.account, // ID do cartão
+        status: 'pending', // Transação de cartão começa como pendente
       };
 
-      // Parcelamento agora é tratado apenas pela API
-      // Removida lógica duplicada que causava parcelas em duplicata
-      {
-        // Single transaction
-        await actions.createTransaction({
-          ...transactionData,
-          amount: parseFloat(formData.amount),
-          type: 'expense',
-          category: formData.categoryId,
-          account: formData.account,
-        });
-        toast.success('Transação de cartão de crédito criada com sucesso!');
-      }
+      console.log('📤 [CreditCardModal] Enviando transação:', transactionData);
+
+      // Criar transação
+      await actions.createTransaction(transactionData);
+      
+      toast.success('Transação de cartão de crédito criada com sucesso!');
+      
+      // Aguardar um pouco para garantir que o contexto atualizou
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       onClose();
     } catch (error) {

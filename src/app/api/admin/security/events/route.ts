@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/db';
 
 export async function GET() {
@@ -24,7 +24,7 @@ export async function GET() {
       events.map(async (event) => {
         let userName = undefined;
         let userId = undefined;
-        
+
         // Tentar extrair userId dos detalhes JSON
         if (event.details) {
           try {
@@ -34,7 +34,7 @@ export async function GET() {
             // Ignorar erro de parse
           }
         }
-        
+
         if (userId) {
           const user = await db.user.findUnique({
             where: { id: userId },

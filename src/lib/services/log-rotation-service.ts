@@ -1,6 +1,6 @@
 /**
  * SERVIÇO DE ROTAÇÃO DE LOGS
- * 
+ *
  * Implementa rotação automática de logs com:
  * - Rotação baseada em tamanho e tempo
  * - Compressão de logs antigos
@@ -105,7 +105,7 @@ export class LogRotationService {
       this.log('Iniciando rotação de logs');
 
       const files = await fs.readdir(this.config.logDirectory);
-      
+
       for (const file of files) {
         if (file.endsWith('.log')) {
           try {
@@ -145,7 +145,7 @@ export class LogRotationService {
   private async rotateLogFile(filePath: string): Promise<boolean> {
     try {
       const stats = await fs.stat(filePath);
-      
+
       // Verificar se o arquivo precisa ser rotacionado
       if (stats.size < this.config.maxFileSize) {
         return false;
@@ -154,7 +154,7 @@ export class LogRotationService {
       const directory = path.dirname(filePath);
       const filename = path.basename(filePath, '.log');
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      
+
       // Mover arquivo atual
       const rotatedPath = path.join(directory, `${filename}-${timestamp}.log`);
       await fs.rename(filePath, rotatedPath);
@@ -181,7 +181,7 @@ export class LogRotationService {
 
     try {
       const files = await fs.readdir(this.config.logDirectory);
-      const rotatedLogs = files.filter(file => 
+      const rotatedLogs = files.filter(file =>
         file.includes('-') && file.endsWith('.log') && !file.endsWith('.gz')
       );
 
@@ -203,7 +203,7 @@ export class LogRotationService {
 
   private async compressLogFile(filePath: string): Promise<void> {
     const compressedPath = `${filePath}.gz`;
-    
+
     await pipeline(
       createReadStream(filePath),
       createGzip(),
@@ -212,7 +212,7 @@ export class LogRotationService {
 
     // Remover arquivo original após compressão
     await fs.unlink(filePath);
-    
+
     this.log(`Log comprimido: ${path.basename(filePath)} -> ${path.basename(compressedPath)}`);
   }
 
@@ -238,7 +238,7 @@ export class LogRotationService {
       // Remover arquivos excedentes
       if (logFiles.length > this.config.maxFiles) {
         const filesToRemove = logFiles.slice(0, logFiles.length - this.config.maxFiles);
-        
+
         for (const file of filesToRemove) {
           await fs.unlink(file.path);
           this.log(`Arquivo removido por limite: ${file.name}`);
@@ -257,12 +257,12 @@ export class LogRotationService {
       cutoffDate.setDate(cutoffDate.getDate() - this.config.retentionDays);
 
       const files = await fs.readdir(this.config.logDirectory);
-      
+
       for (const file of files) {
         if (file.endsWith('.log') || file.endsWith('.log.gz')) {
           const filePath = path.join(this.config.logDirectory, file);
           const stats = await fs.stat(filePath);
-          
+
           if (stats.mtime < cutoffDate) {
             await fs.unlink(filePath);
             deletedFiles.push(file);
@@ -281,7 +281,7 @@ export class LogRotationService {
     try {
       const files = await fs.readdir(this.config.logDirectory);
       const logFiles = files.filter(file => file.endsWith('.log') || file.endsWith('.log.gz'));
-      
+
       let totalSize = 0;
       let oldestLog: Date | null = null;
       let newestLog: Date | null = null;
@@ -289,13 +289,13 @@ export class LogRotationService {
       for (const file of logFiles) {
         const filePath = path.join(this.config.logDirectory, file);
         const stats = await fs.stat(filePath);
-        
+
         totalSize += stats.size;
-        
+
         if (!oldestLog || stats.mtime < oldestLog) {
           oldestLog = stats.mtime;
         }
-        
+
         if (!newestLog || stats.mtime > newestLog) {
           newestLog = stats.mtime;
         }
@@ -330,11 +330,11 @@ export class LogRotationService {
   private log(message: string): void {
     const timestamp = new Date().toISOString();
     console.log(`[${timestamp}] [LogRotation] ${message}`);
-    
+
     // Escrever no arquivo de log do sistema (se existir)
     const logFile = path.join(this.config.logDirectory, 'system.log');
     const logEntry = `${timestamp} [LogRotation] ${message}\n`;
-    
+
     fs.appendFile(logFile, logEntry).catch(() => {
       // Ignorar erros de escrita no log para evitar loops
     });
@@ -353,7 +353,7 @@ export class LogRotationService {
 
   async updateConfig(newConfig: Partial<LogRotationConfig>): Promise<void> {
     this.config = { ...this.config, ...newConfig };
-    
+
     // Reiniciar job se o schedule mudou
     if (newConfig.rotationSchedule && this.rotationJob) {
       this.rotationJob.stop();
@@ -362,7 +362,7 @@ export class LogRotationService {
       });
       this.rotationJob.start();
     }
-    
+
     this.log('Configuração de rotação atualizada');
   }
 }

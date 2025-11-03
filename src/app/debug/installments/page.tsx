@@ -11,7 +11,7 @@ export default function InstallmentsDebugPage() {
           Ferramenta de diagnóstico e limpeza de transações parceladas
         </p>
       </div>
-      
+
       <InstallmentsDebugPanel />
     </div>
   );

@@ -93,6 +93,7 @@ export const authOptions: NextAuthOptions = {
   ],
   session: {
     strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 dias
   },
   pages: {
     signIn: '/login',
@@ -117,12 +118,12 @@ export const authOptions: NextAuthOptions = {
       if (url.includes('/api/auth/signout')) {
         return baseUrl + '/login';
       }
-      
+
       // Se já está em uma URL específica, manter
       if (url.startsWith(baseUrl)) {
         return url;
       }
-      
+
       return baseUrl;
     },
     async signIn({ user }) {

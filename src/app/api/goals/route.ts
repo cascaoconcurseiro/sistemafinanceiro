@@ -67,8 +67,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    console.log('✅ Meta criada:', goal.id, goal.name);
-
+    
     return NextResponse.json({
       success: true,
       goal: {

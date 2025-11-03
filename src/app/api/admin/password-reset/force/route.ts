@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/db';
+import { authOptions } from '@/lib/auth/auth';
+import { prisma } from '@/lib/prisma';
 
 export async function POST(request: Request) {
   try {
@@ -22,9 +22,9 @@ export async function POST(request: Request) {
 
     console.log(`Usuário ${userId} será forçado a resetar senha`);
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
-      message: 'Usuário será obrigado a resetar senha no próximo login' 
+      message: 'Usuário será obrigado a resetar senha no próximo login'
     });
   } catch (error) {
     console.error('Erro ao forçar reset:', error);

@@ -17,7 +17,7 @@ export function PeriodSelector() {
     setMonthYear,
     getMonthYearLabel,
   } = usePeriod();
-  
+
   const [isOpen, setIsOpen] = useState(false);
 
   const goToPreviousMonth = () => {

@@ -1,75 +1,63 @@
-/**
- * 👤 SCRIPT PARA CRIAR USUÁRIO ADMIN PADRÃO
- * 
- * Credenciais: admin@suagrana.com / admin123
- */
-
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
-async function createAdminUser() {
-  console.log('👤 [CreateAdmin] Criando usuário admin padrão...');
+async function main() {
+  console.log('🔧 Criando usuário admin...');
 
-  try {
-    // Verificar se usuário já existe
-    const existingUser = await prisma.user.findUnique({
-      where: { email: 'admin@suagrana.com' }
+  const email = 'admin@suagrana.com';
+  const password = 'admin123';
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  // Verificar se o usuário já existe
+  const existingUser = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  if (existingUser) {
+    console.log('⚠️  Usuário admin já existe. Atualizando senha...');
+    
+    await prisma.user.update({
+      where: { email },
+      data: {
+        password: hashedPassword,
+        name: 'Administrador',
+        role: 'ADMIN',
+        isActive: true,
+      },
     });
 
-    if (existingUser) {
-      console.log('✅ [CreateAdmin] Usuário admin já existe:', existingUser.email);
-      return existingUser;
-    }
-
-    // Hash da senha
-    const hashedPassword = await bcrypt.hash('admin123', 12);
-
-    // Criar usuário admin
-    const adminUser = await prisma.user.create({
+    console.log('✅ Senha do admin atualizada com sucesso!');
+  } else {
+    console.log('➕ Criando novo usuário admin...');
+    
+    await prisma.user.create({
       data: {
-        email: 'admin@suagrana.com',
+        email,
         name: 'Administrador',
         password: hashedPassword,
+        role: 'ADMIN',
         isActive: true,
-        monthlyIncome: 5000.00,
-        emergencyReserve: 10000.00,
-        riskProfile: 'moderado',
-        financialGoals: 'Controle financeiro pessoal completo',
-        preferences: JSON.stringify({
-          theme: 'light',
-          currency: 'BRL',
-          notifications: true
-        })
-      }
+        monthlyIncome: 0,
+        emergencyReserve: 0,
+      },
     });
 
-    console.log('✅ [CreateAdmin] Usuário admin criado com sucesso!');
-    console.log('📧 Email:', adminUser.email);
-    console.log('🔑 Senha: admin123');
-    console.log('👤 ID:', adminUser.id);
-    console.log('🎯 [CreateAdmin] PRIMEIRO ACESSO LIMPO - Sem dados pré-criados');
-
-    // ❌ REMOVIDO: Não criar contas/cartões automaticamente
-    // Usuário deve criar suas próprias contas no primeiro acesso
-
-    return adminUser;
-  } catch (error) {
-    console.error('❌ [CreateAdmin] Erro ao criar usuário admin:', error);
-    throw error;
-  } finally {
-    await prisma.$disconnect();
+    console.log('✅ Usuário admin criado com sucesso!');
   }
+
+  console.log('\n📋 Credenciais:');
+  console.log(`   Email: ${email}`);
+  console.log(`   Senha: ${password}`);
+  console.log('\n⚠️  IMPORTANTE: Altere a senha após o primeiro login!\n');
 }
 
-// ❌ REMOVIDO: Função de criar contas padrão
-// O usuário deve criar suas próprias contas no primeiro acesso
-// Isso garante que cada usuário tenha controle total sobre seus dados
-
-// Executar se chamado diretamente
-if (require.main === module) {
-  createAdminUser();
-}
-
-export { createAdminUser };
+main()
+  .catch((e) => {
+    console.error('❌ Erro:', e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

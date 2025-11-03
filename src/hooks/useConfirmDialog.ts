@@ -16,12 +16,12 @@ interface UseConfirmDialogResult {
 
 /**
  * Hook para gerenciar diálogos de confirmação
- * 
+ *
  * @returns Objeto com estado do diálogo e funções de controle
- * 
+ *
  * @example
  * const { dialogState, confirm, closeDialog, handleConfirm } = useConfirmDialog();
- * 
+ *
  * // Abrir diálogo
  * confirm({
  *   title: 'Delete Transaction',

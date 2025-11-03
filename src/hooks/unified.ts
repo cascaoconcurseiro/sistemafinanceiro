@@ -52,7 +52,7 @@ export function useUnifiedState<T>(options: UnifiedHookOptions<T>): [UnifiedStat
       loadFunction()
         .then(data => {
           const transformedData = transformFunction ? transformFunction(data) : data;
-          
+
           if (!validateFunction || validateFunction(transformedData)) {
             setState(prev => ({
               ...prev,
@@ -119,7 +119,7 @@ export function useUnifiedState<T>(options: UnifiedHookOptions<T>): [UnifiedStat
   const update = useCallback((updater: (prev: T | null) => T) => {
     setState(prev => {
       const newData = updater(prev.data);
-      
+
       if (validateFunction && !validateFunction(newData)) {
         return {
           ...prev,
@@ -169,7 +169,7 @@ export function useUnifiedState<T>(options: UnifiedHookOptions<T>): [UnifiedStat
     try {
       const data = await loadFunction();
       const transformedData = transformFunction ? transformFunction(data) : data;
-      
+
       if (validateFunction && !validateFunction(transformedData)) {
         throw new Error('Dados carregados são inválidos');
       }
@@ -234,12 +234,12 @@ export function useUnifiedArray<T>(
       actions.update(prev => (prev || []).filter((item: any) => item.id !== id));
     },
     updateItem: (predicate: (item: T) => boolean, updater: (item: T) => T) => {
-      actions.update(prev => 
+      actions.update(prev =>
         (prev || []).map(item => predicate(item) ? updater(item) : item)
       );
     },
     updateById: (id: string | number, updater: (item: T) => T) => {
-      actions.update(prev => 
+      actions.update(prev =>
         (prev || []).map((item: any) => item.id === id ? updater(item) : item)
       );
     },
@@ -463,7 +463,7 @@ export function useUnifiedCache<T>(
     if (typeof window !== 'undefined') {
       // Cache é gerenciado apenas em memória, sem localStorage
       const isExpired = cacheInfo.expiresAt ? new Date() > new Date(cacheInfo.expiresAt) : false;
-      
+
       if (isExpired) {
         actions.clear();
         setCacheInfo({ expiresAt: null, isExpired: true });
@@ -540,7 +540,7 @@ export function useUnifiedDashboard() {
 
 export function useUnifiedCreateTransaction() {
   const transactions = useUnifiedTransactions();
-  
+
   const mutateAsync = useCallback(async (transaction: any) => {
     const newTransaction = {
       ...transaction,
@@ -558,7 +558,7 @@ export function useUnifiedCreateTransaction() {
 
 export function useUnifiedCreateAccount() {
   const accounts = useUnifiedAccounts();
-  
+
   const mutateAsync = useCallback(async (account: any) => {
     const newAccount = {
       ...account,

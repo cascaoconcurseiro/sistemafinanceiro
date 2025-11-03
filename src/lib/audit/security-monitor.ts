@@ -1,6 +1,6 @@
 /**
  * MONITOR DE SEGURANÇA
- * 
+ *
  * Monitora ativamente tentativas de uso de storage local
  * Trabalha de forma independente para garantir segurança
  */
@@ -64,10 +64,10 @@ class SecurityMonitor {
 
       // Timeout para evitar loops infinitos na inicialização
       const initPromise = this.initializeMonitoring();
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Timeout na inicialização do monitor')), 3000)
       );
-      
+
       await Promise.race([initPromise, timeoutPromise]);
 
       this._isActive = true;
@@ -81,8 +81,7 @@ class SecurityMonitor {
         timestamp: new Date().toISOString()
       });
 
-      console.log('✅ Monitor de segurança ativo');
-
+      
     } catch (error) {
       console.error('❌ Erro ao iniciar monitor de segurança:', error);
       // Não lança erro para não impedir o carregamento do sistema
@@ -139,8 +138,7 @@ class SecurityMonitor {
       timestamp: new Date().toISOString()
     });
 
-    console.log('✅ Monitor de segurança parado');
-  }
+      }
 
   /**
    * Inicia monitoramento em tempo real
@@ -273,11 +271,11 @@ class SecurityMonitor {
 
     const checkInterval = setInterval(() => {
       const currentProperties = new Set(Object.getOwnPropertyNames(window));
-      
+
       for (const prop of currentProperties) {
         if (!knownProperties.has(prop)) {
           knownProperties.add(prop);
-          
+
           // Verifica se é uma propriedade suspeita
           if (prop.toLowerCase().includes('storage') || prop.toLowerCase().includes('db')) {
             this.createAlert({
@@ -345,7 +343,7 @@ class SecurityMonitor {
           mutation.addedNodes.forEach((node) => {
             if (node.nodeType === Node.ELEMENT_NODE) {
               const element = node as Element;
-              
+
               if (element.tagName === 'SCRIPT') {
                 const scriptContent = element.textContent || '';
                 if (this.isSuspiciousScript(scriptContent)) {
@@ -381,7 +379,6 @@ class SecurityMonitor {
    */
   private startPeriodicChecks(): void {
     // localStorage foi removido do sistema - verificação não necessária
-    console.log('📊 localStorage removido - verificações periódicas adaptadas');
     
     // Log da adaptação
     console.log('Verificações periódicas adaptadas:', {
@@ -397,7 +394,7 @@ class SecurityMonitor {
     const checkActivity = setInterval(() => {
       // Simulação de detecção de atividade suspeita
       const suspiciousActivity = { hasSuspiciousActivity: false };
-      
+
       if (suspiciousActivity.hasSuspiciousActivity) {
         this.createAlert({
           severity: 'high',
@@ -549,7 +546,7 @@ class SecurityMonitor {
    */
   public updateConfig(newConfig: Partial<SecurityConfig>): void {
     this.config = { ...this.config, ...newConfig };
-    
+
     console.log('Configuração do monitor de segurança atualizada:', {
       type: 'system_event',
       level: 'info',

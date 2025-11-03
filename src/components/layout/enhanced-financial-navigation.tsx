@@ -136,21 +136,6 @@ const financialModules: FinancialModule[] = [
     ],
   },
   {
-    id: 'investments',
-    title: 'Investimentos',
-    description: 'Acompanhe sua carteira de investimentos',
-    icon: TrendingUp,
-    href: '/investments',
-    category: 'gestao',
-    status: 'ativo',
-    priority: 'media',
-    features: [
-      'Portfolio diversificado',
-      'Rentabilidade',
-      'Reserva de emergência',
-    ],
-  },
-  {
     id: 'goals',
     title: 'Metas Financeiras',
     description: 'Defina e acompanhe seus objetivos',
@@ -176,38 +161,7 @@ const financialModules: FinancialModule[] = [
       'Histórico de pagamentos',
     ],
   },
-  {
-    id: 'reminders',
-    title: 'Lembretes e Assinaturas',
-    description: 'Controle total de contas a pagar e assinaturas',
-    icon: Bell,
-    href: '/lembretes',
-    category: 'gestao',
-    status: 'novo',
-    priority: 'alta',
-    features: [
-      'Lembretes personalizados',
-      'Controle de assinaturas',
-      'Cálculo de gastos anuais',
-    ],
-  },
-
   // Análises Avançadas
-  {
-    id: 'reports',
-    title: 'Relatórios Avançados',
-    description: 'Análises detalhadas dos seus padrões financeiros',
-    icon: BarChart3,
-    href: '/reports',
-    category: 'analise',
-    status: 'ativo',
-    priority: 'media',
-    features: [
-      'Relatórios personalizados',
-      'Insights automáticos',
-      'Exportação de dados',
-    ],
-  },
   {
     id: 'cash-flow',
     title: 'Fluxo de Caixa',

@@ -56,31 +56,21 @@ export function GoalMoneyManager({
   const accountsData = useAccounts();
   const goalsData = useGoals();
   const { actions } = useUnifiedFinancial();
-  
+
   // Garantir que sempre temos arrays válidos
   // accountsData pode ser um objeto {accounts: [], loading: false} ou um array
-  console.log('🔍 [GoalMoneyManager] accountsData type:', typeof accountsData);
-  console.log('🔍 [GoalMoneyManager] accountsData isArray:', Array.isArray(accountsData));
-  console.log('🔍 [GoalMoneyManager] accountsData?.accounts:', accountsData?.accounts);
-  
-  const accounts = Array.isArray(accountsData) 
-    ? accountsData 
+  const accounts = Array.isArray(accountsData)
+    ? accountsData
     : (accountsData?.accounts || []);
   const goals = Array.isArray(goalsData) ? goalsData : [];
-  
+
   const [localAccounts, setLocalAccounts] = useState<Account[]>([]);
   const [localGoals, setLocalGoals] = useState<Goal[]>([]);
   const [transactions, setTransactions] = useState<GoalTransaction[]>([]);
   const [activeTab, setActiveTab] = useState('add');
-  
-  // Debug logs melhorados
-  console.log('🎯 [GoalMoneyManager] Raw accounts data:', accountsData);
-  console.log('🎯 [GoalMoneyManager] Raw goals data:', goalsData);
-  console.log('🎯 [GoalMoneyManager] Processed accounts:', accounts.length);
-  console.log('🎯 [GoalMoneyManager] Processed accounts array:', accounts);
-  console.log('🎯 [GoalMoneyManager] Processed goals:', goals.length);
-  console.log('🎯 [GoalMoneyManager] Current goal:', goal.name);
 
+  // Debug logs melhorados
+            
   const [addData, setAddData] = useState({
     amount: '',
     fromAccount: '',
@@ -112,18 +102,15 @@ export function GoalMoneyManager({
   };
 
   const loadGoalTransactions = async () => {
-    console.log('🎯 [loadGoalTransactions] Carregando transações para meta:', goal.id);
     
     try {
       const response = await fetch(`/api/transactions?goalId=${goal.id}`, {
         credentials: 'include',
       });
-      
-      console.log('🎯 [loadGoalTransactions] Resposta:', response.status);
+
       
       if (response.ok) {
         const result = await response.json();
-        console.log('🎯 [loadGoalTransactions] Dados recebidos:', result);
         
         const goalTransactions = (result.transactions || []).map((t: any) => ({
           id: t.id,
@@ -134,9 +121,8 @@ export function GoalMoneyManager({
           fromAccount: t.account?.name,
           toAccount: t.account?.name,
         }));
-        
-        console.log('🎯 [loadGoalTransactions] Transações processadas:', goalTransactions);
-        setTransactions(goalTransactions);
+
+                setTransactions(goalTransactions);
       } else {
         const errorData = await response.json();
         console.error('❌ [loadGoalTransactions] Erro:', errorData);
@@ -147,27 +133,15 @@ export function GoalMoneyManager({
   };
 
   useEffect(() => {
-    console.log('🎯 [useEffect] Carregando transações para meta:', goal.id);
-    loadGoalTransactions();
+        loadGoalTransactions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [goal.id]); // Apenas quando o goal.id mudar
 
   // Atualizar dados locais quando accounts ou goals mudarem
   useEffect(() => {
-    console.log('🎯 [useEffect] Atualizando dados locais...');
-    console.log('🎯 [useEffect] Accounts recebidas:', accounts.length);
-    console.log('🎯 [useEffect] Goals recebidas:', goals.length);
-    
     setLocalAccounts(accounts);
     setLocalGoals(goals.filter((g) => g.id !== goal.id));
-    
-    if (accounts.length > 0) {
-      console.log('✅ [GoalMoneyManager] Contas carregadas:', accounts.map(a => ({ id: a.id, name: a.name })));
-    }
-    if (goals.length > 0) {
-      console.log('✅ [GoalMoneyManager] Metas carregadas:', goals.map(g => ({ id: g.id, name: g.name })));
-    }
-  }, [accounts.length, goals.length]); // Usar apenas os comprimentos para evitar loops
+  }, [accounts, goals, goal.id]);
 
   /**
    * @deprecated localStorage não é mais usado - dados ficam no banco
@@ -187,53 +161,41 @@ export function GoalMoneyManager({
   };
 
   const handleAddMoney = async () => {
-    console.log('🎯 [handleAddMoney] Iniciando...', addData);
     
     try {
       const amount = Number.parseFloat(addData.amount);
-      console.log('🎯 [handleAddMoney] Amount parsed:', amount);
-
+      
       if (amount <= 0) {
-        console.log('❌ [handleAddMoney] Valor inválido');
-        toast.error('Valor deve ser maior que zero');
+                toast.error('Valor deve ser maior que zero');
         return;
       }
 
       if (!addData.fromAccount || addData.fromAccount === 'no-accounts') {
-        console.log('❌ [handleAddMoney] Conta não selecionada');
-        toast.error('Selecione uma conta de origem');
+                toast.error('Selecione uma conta de origem');
         return;
       }
 
       if (!addData.description.trim()) {
-        console.log('❌ [handleAddMoney] Descrição vazia');
         toast.error('Descrição é obrigatória');
         return;
       }
 
-      console.log('🎯 [handleAddMoney] Procurando conta:', addData.fromAccount);
-      console.log('🎯 [handleAddMoney] Contas disponíveis:', accounts.map(a => ({ id: a.id, name: a.name })));
-      
       const fromAccount = accounts.find(
         (a) => String(a.id) === addData.fromAccount
       );
-      
-      console.log('🎯 [handleAddMoney] Conta encontrada:', fromAccount);
+
       
       if (!fromAccount) {
-        console.log('❌ [handleAddMoney] Conta não encontrada');
-        toast.error('Conta de origem não encontrada');
+                toast.error('Conta de origem não encontrada');
         return;
       }
 
       if ((fromAccount.balance || 0) < amount) {
-        console.log('❌ [handleAddMoney] Saldo insuficiente:', fromAccount.balance, '<', amount);
-        toast.error('Saldo insuficiente na conta');
+                toast.error('Saldo insuficiente na conta');
         return;
       }
 
       // Criar transação de débito na conta
-      console.log('🎯 [handleAddMoney] Criando transação...');
       
       const transactionData = {
         accountId: fromAccount.id,
@@ -244,8 +206,7 @@ export function GoalMoneyManager({
         date: new Date().toISOString().split('T')[0],
         goalId: goal.id,
       };
-      
-      console.log('🎯 [handleAddMoney] Dados da transação:', transactionData);
+
       
       const transactionResponse = await fetch('/api/transactions', {
         method: 'POST',
@@ -254,8 +215,7 @@ export function GoalMoneyManager({
         body: JSON.stringify(transactionData),
       });
 
-      console.log('🎯 [handleAddMoney] Resposta da transação:', transactionResponse.status);
-
+      
       if (!transactionResponse.ok) {
         const errorData = await transactionResponse.json();
         console.error('❌ [handleAddMoney] Erro na transação:', errorData);
@@ -263,10 +223,8 @@ export function GoalMoneyManager({
       }
 
       // Atualizar meta
-      console.log('🎯 [handleAddMoney] Atualizando meta...');
       
       const newAmount = (Number(goal.currentAmount) || 0) + amount;
-      console.log('🎯 [handleAddMoney] Novo valor da meta:', goal.currentAmount, '+', amount, '=', newAmount);
       
       const goalResponse = await fetch(`/api/goals/${goal.id}`, {
         method: 'PUT',
@@ -277,8 +235,7 @@ export function GoalMoneyManager({
         }),
       });
 
-      console.log('🎯 [handleAddMoney] Resposta da meta:', goalResponse.status);
-
+      
       if (!goalResponse.ok) {
         const errorData = await goalResponse.json();
         console.error('❌ [handleAddMoney] Erro na meta:', errorData);
@@ -287,7 +244,7 @@ export function GoalMoneyManager({
 
       toast.success('Dinheiro adicionado à meta com sucesso!');
       setAddData({ amount: '', fromAccount: '', description: '' });
-      
+
       // Recarregar dados
       await loadGoalTransactions();
       onUpdate();
@@ -363,7 +320,7 @@ export function GoalMoneyManager({
 
       toast.success('Dinheiro retirado da meta com sucesso!');
       setWithdrawData({ amount: '', toAccount: '', description: '' });
-      
+
       // Recarregar dados
       await loadGoalTransactions();
       onUpdate();
@@ -433,7 +390,7 @@ export function GoalMoneyManager({
 
       toast.success('Transferência entre metas realizada com sucesso!');
       setTransferData({ amount: '', toGoal: '', description: '' });
-      
+
       // Recarregar dados
       await loadGoalTransactions();
       onUpdate();
@@ -448,9 +405,9 @@ export function GoalMoneyManager({
 
   // Verificar se os dados estão carregando
   const isLoading = accountsData?.loading || goalsData === undefined;
-  
-  console.log('🎯 [GoalMoneyManager] Loading state:', { 
-    isLoading, 
+
+  console.log('🎯 [GoalMoneyManager] Loading state:', {
+    isLoading,
     accountsData: accountsData,
     goalsData: goalsData,
     accountsLength: accounts.length,
@@ -598,9 +555,7 @@ export function GoalMoneyManager({
                   <Select
                     value={addData.fromAccount}
                     onValueChange={(value) => {
-                      console.log('🎯 [Select] Conta selecionada:', value);
-                      console.log('🎯 [Select] Contas disponíveis:', accounts);
-                      setAddData({ ...addData, fromAccount: value });
+                                                                  setAddData({ ...addData, fromAccount: value });
                     }}
                   >
                     <SelectTrigger>
@@ -615,8 +570,8 @@ export function GoalMoneyManager({
                         accounts
                           .filter(
                             (account) =>
-                              account && 
-                              account.id && 
+                              account &&
+                              account.id &&
                               String(account.id).trim() !== '' &&
                               account.type === 'ATIVO' // ✅ Apenas contas bancárias (não cartões)
                           )
@@ -642,8 +597,7 @@ export function GoalMoneyManager({
                     placeholder="0,00"
                     value={addData.amount}
                     onChange={(e) => {
-                      console.log('🎯 [Input] Valor digitado:', e.target.value);
-                      setAddData({ ...addData, amount: e.target.value });
+                                            setAddData({ ...addData, amount: e.target.value });
                     }}
                   />
                 </div>
@@ -655,18 +609,14 @@ export function GoalMoneyManager({
                     placeholder="Motivo da aplicação..."
                     value={addData.description}
                     onChange={(e) => {
-                      console.log('🎯 [Textarea] Descrição digitada:', e.target.value);
-                      setAddData({ ...addData, description: e.target.value });
+                                            setAddData({ ...addData, description: e.target.value });
                     }}
                   />
                 </div>
 
                 <Button
                   onClick={() => {
-                    console.log('🎯 [Button] Clique em Adicionar à Meta');
-                    console.log('🎯 [Button] Estado atual:', addData);
-                    console.log('🎯 [Button] Disabled?', !addData.fromAccount || !addData.amount || !addData.description);
-                    handleAddMoney();
+                                                                                handleAddMoney();
                   }}
                   className="w-full"
                   disabled={
@@ -725,8 +675,8 @@ export function GoalMoneyManager({
                         accounts
                           .filter(
                             (account) =>
-                              account && 
-                              account.id && 
+                              account &&
+                              account.id &&
                               String(account.id).trim() !== '' &&
                               account.type === 'ATIVO' // ✅ Apenas contas bancárias (não cartões)
                           )

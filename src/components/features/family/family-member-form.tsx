@@ -27,12 +27,12 @@ interface FamilyMemberFormProps {
   onOpenChange?: (open: boolean) => void;
 }
 
-export function FamilyMemberForm({ 
-  member, 
-  trigger, 
+export function FamilyMemberForm({
+  member,
+  trigger,
   onSuccess,
   open: controlledOpen,
-  onOpenChange: controlledOnOpenChange 
+  onOpenChange: controlledOnOpenChange
 }: FamilyMemberFormProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [formData, setFormData] = useState<CreateFamilyMemberInput>({

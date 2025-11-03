@@ -15,7 +15,7 @@ export function formatCurrency(amount: number, currency = 'BRL'): string {
 export function formatDate(date: string | Date): string {
   try {
     let dateObj: Date;
-    
+
     if (date instanceof Date) {
       dateObj = date;
     } else if (typeof date === 'string') {
@@ -24,18 +24,18 @@ export function formatDate(date: string | Date): string {
       console.warn('Formato de data inválido:', typeof date, date);
       return 'Data inválida';
     }
-    
+
     // Verificar se a data é válida
     if (isNaN(dateObj.getTime())) {
       console.warn('Data inválida detectada:', date);
       return 'Data inválida';
     }
-    
+
     // Usar formatação mais robusta para evitar problemas de timezone
     const year = dateObj.getFullYear();
     const month = String(dateObj.getMonth() + 1).padStart(2, '0');
     const day = String(dateObj.getDate()).padStart(2, '0');
-    
+
     return `${day}/${month}/${year}`;
   } catch (error) {
     console.warn('Erro ao formatar data:', error, date);

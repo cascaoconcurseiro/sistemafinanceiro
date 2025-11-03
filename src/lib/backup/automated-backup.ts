@@ -1,6 +1,6 @@
 /**
  * 🔄 SISTEMA DE BACKUP AUTOMATIZADO
- * 
+ *
  * Sistema robusto de backup com agendamento, verificação de integridade
  * e limpeza automática de backups antigos.
  */
@@ -103,14 +103,13 @@ export class AutomatedBackupService {
    * Executa backup agendado
    */
   private async performScheduledBackup(): Promise<void> {
-    console.log('🔄 Iniciando backup agendado...');
     
     try {
       const result = await this.createFullBackup();
-      
+
       if (result.success) {
         console.log(`✅ Backup agendado concluído: ${result.backupId}`);
-        
+
         // Limpar backups antigos
         await this.cleanupOldBackups();
       } else {
@@ -195,8 +194,8 @@ export class AutomatedBackupService {
           notifications
         },
         statistics: {
-          totalRecords: users.length + accounts.length + transactions.length + 
-                       goals.length + budgets.length + investments.length + 
+          totalRecords: users.length + accounts.length + transactions.length +
+                       goals.length + budgets.length + investments.length +
                        trips.length + categories.length + auditEvents.length +
                        auditLogs.length + securityEvents.length + systemEvents.length +
                        notifications.length,
@@ -252,7 +251,7 @@ export class AutomatedBackupService {
 
     } catch (error) {
       console.error(`❌ Erro ao criar backup ${backupId}:`, error);
-      
+
       // Tentar remover arquivo parcial
       try {
         await fs.unlink(filePath);
@@ -308,7 +307,7 @@ export class AutomatedBackupService {
       // Verificar estrutura JSON
       try {
         const backupData = JSON.parse(content);
-        
+
         if (!backupData.metadata || !backupData.data || !backupData.statistics) {
           errors.push('Estrutura do backup inválida');
         }
@@ -343,9 +342,9 @@ export class AutomatedBackupService {
     try {
       const files = await fs.readdir(backupConfig.path);
       const backupFiles = files.filter(file => file.startsWith('backup_') && file.endsWith('.json'));
-      
+
       const backups: BackupMetadata[] = [];
-      
+
       for (const file of backupFiles) {
         const backupId = file.replace('.json', '');
         const metadata = await this.getBackupMetadata(backupId);
@@ -414,10 +413,10 @@ export class AutomatedBackupService {
       const metadataPath = path.join(backupConfig.path, `${backupId}.metadata.json`);
       const content = await fs.readFile(metadataPath, 'utf8');
       const metadata = JSON.parse(content);
-      
+
       // Converter timestamp para Date
       metadata.timestamp = new Date(metadata.timestamp);
-      
+
       return metadata;
     } catch (error) {
       return null;
@@ -441,11 +440,11 @@ export class AutomatedBackupService {
    */
   private formatBytes(bytes: number): string {
     if (bytes === 0) return '0 Bytes';
-    
+
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    
+
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 }

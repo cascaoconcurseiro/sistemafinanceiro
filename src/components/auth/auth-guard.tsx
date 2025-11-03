@@ -7,7 +7,12 @@ interface AuthGuardProps {
   children: React.ReactNode;
 }
 
-// 🔒 AUTHGUARD SIMPLIFICADO - Sem loops
+/**
+ * 🔒 AUTHGUARD - Proteção de Rotas
+ *
+ * Componente que protege páginas verificando autenticação.
+ * Agora com validação mais robusta e melhor tratamento de erros.
+ */
 export default function AuthGuard({ children }: AuthGuardProps) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
@@ -15,28 +20,40 @@ export default function AuthGuard({ children }: AuthGuardProps) {
 
   useEffect(() => {
     let isMounted = true;
-    
+
     const checkAuth = async () => {
       try {
-        // Verificação simples de token
-        const hasToken = typeof document !== 'undefined' && document.cookie.includes('access_token');
-        
-        if (!hasToken) {
-          if (isMounted) {
-            console.log('❌ Sem token, redirecionando para login');
-            router.replace('/auth/login');
-          }
-          return;
-        }
+        // 🔒 SEGURANÇA: Verificar token via API (mais seguro que apenas checar cookie)
+        const response = await fetch('/api/auth/me', {
+          method: 'GET',
+          credentials: 'include',
+          cache: 'no-store',
+        });
 
-        // Token existe, considerar autenticado
-        if (isMounted) {
-          console.log('✅ Token encontrado, usuário autenticado');
-          setIsAuthenticated(true);
-          setLoading(false);
+        if (!isMounted) return;
+
+        if (response.ok) {
+          const data = await response.json();
+
+          if (data.user && data.user.id) {
+                        setIsAuthenticated(true);
+            setLoading(false);
+          } else {
+                        router.replace('/auth/login');
+          }
+        } else {
+          // Token inválido ou expirado
+          
+          // Limpar cookies antigos
+          if (typeof document !== 'undefined') {
+            document.cookie = 'access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            document.cookie = 'refresh_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+          }
+
+          router.replace('/auth/login');
         }
       } catch (error) {
-        console.error('Erro na verificação de autenticação:', error);
+        console.error('❌ [AuthGuard] Erro na verificação:', error);
         if (isMounted) {
           router.replace('/auth/login');
         }
@@ -44,7 +61,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     };
 
     checkAuth();
-    
+
     return () => {
       isMounted = false;
     };
@@ -55,7 +72,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Verificando acesso...</p>
+          <p className="mt-4 text-gray-600">🔒 Verificando acesso...</p>
         </div>
       </div>
     );
@@ -65,7 +82,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <p className="text-gray-600">Redirecionando...</p>
+          <p className="text-gray-600">Redirecionando para login...</p>
         </div>
       </div>
     );

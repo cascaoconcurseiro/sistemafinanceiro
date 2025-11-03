@@ -19,7 +19,7 @@ import {
   DollarSign,
   Calendar,
 } from 'lucide-react';
-import type { Trip } from '@/lib/storage';
+import type { Trip } from '@/lib/config/storage';
 import { toast } from 'sonner';
 
 interface QuickItineraryCreatorProps {
@@ -127,7 +127,7 @@ export function QuickItineraryCreator({
       const selectedDateObj = new Date(currentDate);
       const startDateObj = new Date(trip.startDate);
       const endDateObj = new Date(trip.endDate);
-      
+
       if (selectedDateObj < startDateObj || selectedDateObj > endDateObj) {
         toast.error('A data selecionada deve estar dentro do período da viagem');
         return;
@@ -160,7 +160,6 @@ export function QuickItineraryCreator({
       // Salvar cada item via API
       for (const item of newItems) {
         try {
-          console.log('📤 Enviando item para API:', item);
           
           const response = await fetch('/api/itinerary', {
             method: 'POST',
@@ -176,10 +175,9 @@ export function QuickItineraryCreator({
             console.error('❌ Erro da API:', errorData);
             throw new Error(errorData.error || 'Erro ao salvar item do roteiro');
           }
-          
+
           const savedItem = await response.json();
-          console.log('✅ Item salvo:', savedItem);
-        } catch (error) {
+                  } catch (error) {
           console.error('❌ Erro ao salvar item:', error);
           toast.error(`Erro ao salvar: ${item.title}`);
         }

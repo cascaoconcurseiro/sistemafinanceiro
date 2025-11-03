@@ -19,7 +19,7 @@ import {
   CreditCard,
   ShoppingCart,
 } from 'lucide-react';
-import type { Trip } from '@/lib/storage';
+import type { Trip } from '@/lib/config/storage';
 import TripChecklist from './trip-checklist';
 import { TripSettings } from './trip-settings';
 import { TripOverview } from './trip-overview';
@@ -27,7 +27,6 @@ import { TripItinerary } from './trip-itinerary';
 import { TripDocuments } from './trip-documents';
 import { TripExpenses } from './trip-expenses';
 import { TripReportsSimple } from './trip-reports-simple';
-import { TripSharing } from './trip-sharing';
 import { TripCurrencyExchange } from './trip-currency-exchange';
 import { TripShoppingList } from './trip-shopping-list';
 import { TripTransactionAnalytics } from './trip-transaction-analytics';
@@ -40,14 +39,13 @@ interface TripDetailsProps {
 export function TripDetails({ trip, onUpdate }: TripDetailsProps) {
   const tabs = [
     { id: 'overview', label: 'Visão Geral', icon: BarChart3 },
+    { id: 'checklist', label: 'Checklist', icon: CheckSquare },
     { id: 'itinerary', label: 'Roteiro', icon: Calendar },
     { id: 'documents', label: 'Documentos', icon: FileText },
     { id: 'expenses', label: 'Gastos', icon: DollarSign },
     { id: 'exchange', label: 'Câmbio', icon: CreditCard },
     { id: 'shopping', label: 'Compras', icon: ShoppingCart },
     { id: 'reports', label: 'Relatórios', icon: FileText },
-    { id: 'sharing', label: 'Compartilhar', icon: Share2 },
-    { id: 'checklist', label: 'Checklist', icon: CheckSquare },
     { id: 'settings', label: 'Configurações', icon: Settings },
   ];
 
@@ -64,13 +62,20 @@ export function TripDetails({ trip, onUpdate }: TripDetailsProps) {
       onValueChange={setActiveTab}
       className="w-full space-y-4"
     >
-      <TabsList className="grid w-full grid-cols-10 dark:bg-gray-800 dark:border-gray-700">
+      <TabsList className="grid w-full grid-cols-9 dark:bg-gray-800 dark:border-gray-700">
         <TabsTrigger
           value="overview"
           className="flex items-center gap-2 dark:text-gray-300 dark:hover:text-white dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white"
         >
           <BarChart3 className="w-4 h-4" />
           Visão Geral
+        </TabsTrigger>
+        <TabsTrigger
+          value="checklist"
+          className="flex items-center gap-2 dark:text-gray-300 dark:hover:text-white dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white"
+        >
+          <CheckSquare className="w-4 h-4" />
+          Checklist
         </TabsTrigger>
         <TabsTrigger
           value="itinerary"
@@ -115,20 +120,6 @@ export function TripDetails({ trip, onUpdate }: TripDetailsProps) {
           Relatórios
         </TabsTrigger>
         <TabsTrigger
-          value="sharing"
-          className="flex items-center gap-2 dark:text-gray-300 dark:hover:text-white dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white"
-        >
-          <Share2 className="w-4 h-4" />
-          Compartilhar
-        </TabsTrigger>
-        <TabsTrigger
-          value="checklist"
-          className="flex items-center gap-2 dark:text-gray-300 dark:hover:text-white dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white"
-        >
-          <CheckSquare className="w-4 h-4" />
-          Checklist
-        </TabsTrigger>
-        <TabsTrigger
           value="settings"
           className="flex items-center gap-2 dark:text-gray-300 dark:hover:text-white dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white"
         >
@@ -139,6 +130,9 @@ export function TripDetails({ trip, onUpdate }: TripDetailsProps) {
       <div className="rounded-md border dark:border-gray-700 dark:bg-gray-800">
         <TabsContent value="overview" className="space-y-4 p-4">
           <TripOverview trip={trip} onUpdate={onUpdate} />
+        </TabsContent>
+        <TabsContent value="checklist">
+          <TripChecklist trip={trip} onUpdate={handleUpdate} />
         </TabsContent>
         <TabsContent value="itinerary" className="space-y-4 p-4">
           <TripItinerary trip={trip} />
@@ -157,12 +151,6 @@ export function TripDetails({ trip, onUpdate }: TripDetailsProps) {
         </TabsContent>
         <TabsContent value="reports" className="space-y-4 p-4">
           <TripReportsSimple trip={trip} />
-        </TabsContent>
-        <TabsContent value="sharing" className="space-y-4 p-4">
-          <TripSharing trip={trip} onUpdate={onUpdate} />
-        </TabsContent>
-        <TabsContent value="checklist">
-          <TripChecklist trip={trip} onUpdate={handleUpdate} />
         </TabsContent>
         <TabsContent value="settings" className="space-y-4 p-4">
           <TripSettings trip={trip} onUpdate={() => onUpdate(trip)} />

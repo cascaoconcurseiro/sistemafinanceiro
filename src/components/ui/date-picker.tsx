@@ -91,7 +91,7 @@ export function DatePicker({
         const parsed = parse(dateString, 'dd/MM/yyyy', new Date());
         return isValid(parsed) ? parsed : null;
       }
-      
+
       // Formato ISO: yyyy-mm-dd
       if (dateString.includes('-') && dateString.length === 10) {
         const parsed = new Date(dateString + 'T00:00:00');
@@ -107,11 +107,11 @@ export function DatePicker({
   // Converte Date para string no formato especificado
   const formatDateToString = (date: Date): string => {
     if (!date || !isValid(date)) return '';
-    
+
     if (dateFormat === 'ISO') {
       return format(date, 'yyyy-MM-dd');
     }
-    
+
     return format(date, 'dd/MM/yyyy', { locale: ptBR });
   };
 
@@ -138,7 +138,7 @@ export function DatePicker({
   const getDisplayValue = (): string => {
     const currentDate = getCurrentDate();
     if (!currentDate) return placeholder;
-    
+
     return formatDateToString(currentDate);
   };
 
@@ -155,12 +155,12 @@ export function DatePicker({
     }
 
     const formattedDate = formatDateToString(date);
-    
+
     // Nova interface
     if (onSelect) {
       onSelect(date);
     }
-    
+
     // Interface legacy
     if (onChange) {
       onChange(formattedDate);
@@ -175,7 +175,7 @@ export function DatePicker({
     if (onSelect) {
       onSelect(undefined);
     }
-    
+
     if (onChange) {
       onChange('');
     }
@@ -187,12 +187,12 @@ export function DatePicker({
   // Manipula mudança no input
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let newValue = e.target.value;
-    
+
     // Formatação automática para formato BR
     if (dateFormat === 'BR') {
       // Remove caracteres não numéricos
       newValue = newValue.replace(/\D/g, '');
-      
+
       // Aplica máscara dd/mm/yyyy
       if (newValue.length >= 2) {
         newValue = newValue.substring(0, 2) + '/' + newValue.substring(2);
@@ -227,7 +227,7 @@ export function DatePicker({
       if (parsed && isValid(parsed)) {
         const formatted = formatDateToString(parsed);
         setInputValue(formatted);
-        
+
         if (onSelect) {
           onSelect(parsed);
         }
@@ -424,7 +424,7 @@ export function DatePicker({
 // Componente de compatibilidade
 export function DateInput(props: DatePickerProps & { showCalendar?: boolean }) {
   const { showCalendar = true, ...datePickerProps } = props;
-  
+
   return (
     <DatePicker
       {...datePickerProps}

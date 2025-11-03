@@ -24,23 +24,23 @@ export async function GET(request: NextRequest) {
       connections.add(controller);
 
       // Enviar evento inicial de conexão
-      const initialEvent = `data: ${JSON.stringify({ 
-        type: 'connection', 
+      const initialEvent = `data: ${JSON.stringify({
+        type: 'connection',
         data: { message: 'Conectado ao sistema de eventos em tempo real' },
         timestamp: new Date().toISOString()
       })}\n\n`;
-      
+
       controller.enqueue(new TextEncoder().encode(initialEvent));
 
       // Configurar heartbeat para manter conexão viva
       const heartbeat = setInterval(() => {
         try {
-          const heartbeatEvent = `data: ${JSON.stringify({ 
-            type: 'heartbeat', 
+          const heartbeatEvent = `data: ${JSON.stringify({
+            type: 'heartbeat',
             data: { timestamp: new Date().toISOString() },
             timestamp: new Date().toISOString()
           })}\n\n`;
-          
+
           controller.enqueue(new TextEncoder().encode(heartbeatEvent));
         } catch (error) {
           clearInterval(heartbeat);
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
         }
       });
     },
-    
+
     cancel() {
       // Cleanup quando stream é cancelado
       connections.delete(this as any);

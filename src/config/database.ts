@@ -64,7 +64,7 @@ export class DatabaseConnection {
    */
   private setupEventListeners(): void {
     this.pool.on('connect', (client) => {
-      console.log('✅ Nova conexão estabelecida com o banco de dados');
+      
       this.isConnected = true;
     });
 
@@ -87,7 +87,7 @@ export class DatabaseConnection {
       const result = await client.query('SELECT NOW()');
       client.release();
       
-      console.log('✅ Conexão com o banco de dados testada com sucesso');
+      
       console.log('🕐 Timestamp do servidor:', result.rows[0].now);
       
       this.isConnected = true;
@@ -191,7 +191,7 @@ export class DatabaseConnection {
    */
   public async initializeSchema(): Promise<void> {
     try {
-      console.log('🚀 Inicializando schema do banco de dados...');
+      
       
       // Aqui você pode executar o arquivo schema.sql
       // Por enquanto, vamos apenas verificar se as tabelas existem
@@ -203,7 +203,6 @@ export class DatabaseConnection {
       `;
       
       const tables = await this.query(tablesQuery);
-      console.log('📋 Tabelas encontradas:', tables.map(t => t.table_name));
       
       if (tables.length === 0) {
         console.log('⚠️  Nenhuma tabela encontrada. Execute o schema.sql primeiro.');
@@ -306,7 +305,7 @@ export class DatabaseConnection {
       // Atualizar estatísticas das tabelas
       await this.query('ANALYZE');
       
-      console.log('✅ Manutenção concluída');
+      
     } catch (error) {
       console.error('❌ Erro durante manutenção:', error);
       throw error;
@@ -418,7 +417,7 @@ export const db = DatabaseConnection.getInstance();
 // Função para inicializar o banco de dados
 export async function initializeDatabase(): Promise<void> {
   try {
-    console.log('🚀 Inicializando sistema de banco de dados...');
+    
     
     // Testar conexão
     const isConnected = await db.testConnection();
@@ -429,7 +428,7 @@ export async function initializeDatabase(): Promise<void> {
     // Inicializar schema
     await db.initializeSchema();
     
-    console.log('✅ Sistema de banco de dados inicializado com sucesso');
+    
   } catch (error) {
     console.error('❌ Erro ao inicializar banco de dados:', error);
     throw error;

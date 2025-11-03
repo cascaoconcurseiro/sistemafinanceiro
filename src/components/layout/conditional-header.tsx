@@ -31,7 +31,7 @@ export function ConditionalHeader() {
         const response = await fetch('/api/auth/me', {
           credentials: 'include',
         });
-        
+
         if (response.ok) {
           const data = await response.json();
           setUser(data.user);
@@ -61,9 +61,9 @@ export function ConditionalHeader() {
   }
 
   return (
-    <HeaderWithLogout 
-      userName={user?.name} 
-      userEmail={user?.email} 
+    <HeaderWithLogout
+      userName={user?.name}
+      userEmail={user?.email}
     />
   );
 }

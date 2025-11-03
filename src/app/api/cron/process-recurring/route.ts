@@ -14,8 +14,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('🔄 [Cron] Processando transações recorrentes...');
-
+    
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -53,7 +52,7 @@ export async function GET(request: NextRequest) {
 
         // Calcular próxima data de geração
         let nextDate = new Date(template.nextGeneration);
-        
+
         switch (template.frequency) {
           case 'DAILY':
             nextDate.setDate(nextDate.getDate() + 1);

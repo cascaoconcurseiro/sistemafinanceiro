@@ -1,12 +1,12 @@
 'use client';
 
-import { ModernAppLayout } from '@/components/modern-app-layout';
+import { ModernAppLayout } from '@/components/layout/modern-app-layout';
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useAccounts, useTransactions } from '@/contexts/unified-financial-context';
 
-import type { Trip } from '@/lib/storage';
-import { TripDetails } from '@/components/trip-details';
+import type { Trip } from '@/lib/config/storage';
+import { TripDetails } from '@/components/features/trips/trip-details';
 
 export default function TripPage() {
   const {
@@ -34,22 +34,22 @@ export default function TripPage() {
   useEffect(() => {
     const handleTripBudgetUpdate = (event: CustomEvent) => {
       const { tripId: updatedTripId, amountReturned } = event.detail;
-      
+
       if (trip && trip.id === updatedTripId) {
         console.log('🔄 [TripPage] Atualizando orçamento da viagem:', {
           tripId: updatedTripId,
           valorDevolvido: amountReturned,
           gastoAnterior: trip.spent
         });
-        
+
         // Atualizar o gasto da viagem (diminuir)
         const newSpent = Math.max(0, (trip.spent || 0) - amountReturned);
-        
+
         setTrip(prevTrip => prevTrip ? {
           ...prevTrip,
           spent: newSpent
         } : null);
-        
+
         // Também atualizar via API para persistir
         fetch(`/api/trips/${trip.id}`, {
           method: 'PUT',
@@ -65,7 +65,7 @@ export default function TripPage() {
     };
 
     window.addEventListener('tripBudgetUpdated', handleTripBudgetUpdate as EventListener);
-    
+
     return () => {
       window.removeEventListener('tripBudgetUpdated', handleTripBudgetUpdate as EventListener);
     };
@@ -74,7 +74,7 @@ export default function TripPage() {
   useEffect(() => {
     if (isMounted && params.id) {
       console.log('Carregando viagem com ID:', params.id);
-      
+
       // Primeiro tenta carregar da API
       fetch('/api/trips', { credentials: 'include' })
         .then(response => response.json())
@@ -83,7 +83,7 @@ export default function TripPage() {
           const trips = responseData.data?.trips || [];
           console.log('Viagens encontradas na API:', trips.length, trips);
           const foundTrip = trips.find((t) => t.id === params.id);
-          
+
           if (foundTrip) {
             console.log('Viagem encontrada na API:', foundTrip);
             setTrip(foundTrip);

@@ -15,9 +15,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { 
-  ArrowLeft, 
-  Key, 
+import {
+  ArrowLeft,
+  Key,
   Mail,
   RefreshCw,
   Search,
@@ -82,11 +82,11 @@ export default function PasswordResetManagement() {
       if (response.ok) {
         const data = await response.json();
         toast.success('Link de reset gerado!');
-        
+
         // Copiar link para clipboard
         navigator.clipboard.writeText(data.resetLink);
         toast.info('Link copiado para área de transferência');
-        
+
         loadRequests();
       } else {
         const error = await response.json();

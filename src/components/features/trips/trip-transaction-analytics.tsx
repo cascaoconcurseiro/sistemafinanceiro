@@ -114,18 +114,17 @@ export function TripTransactionAnalytics({ tripId, onAddTransaction }: TripTrans
       const params = new URLSearchParams();
       if (selectedCategory !== 'all') params.append('category', selectedCategory);
       if (selectedType !== 'all') params.append('type', selectedType);
-      
+
       const response = await fetch(`/api/trips/${tripId}/transactions?${params}`, { credentials: 'include' });
       if (!response.ok) {
         throw new Error('Erro ao carregar dados da viagem');
       }
-      
+
       const result = await response.json();
-      
+
       // ✅ AUTO-VINCULAR: Se não houver transações, tentar vincular automaticamente
       if (result.summary.totalTransactions === 0) {
-        console.log('🔗 [TripAnalytics] Nenhuma transação vinculada. Tentando vincular automaticamente...');
-        await autoLinkTransactions();
+                await autoLinkTransactions();
         // Recarregar após vincular
         const retryResponse = await fetch(`/api/trips/${tripId}/transactions?${params}`, { credentials: 'include' });
         if (retryResponse.ok) {
@@ -146,48 +145,47 @@ export function TripTransactionAnalytics({ tripId, onAddTransaction }: TripTrans
 
   const autoLinkTransactions = async () => {
     try {
-      console.log('🔍 [TripAnalytics] Buscando transações para vincular automaticamente...');
       
       // Buscar a viagem para pegar as datas
       const tripResponse = await fetch(`/api/trips/${tripId}`, { credentials: 'include' });
       if (!tripResponse.ok) return;
-      
+
       const tripData = await tripResponse.json();
       const trip = tripData.data || tripData;
-      
+
       // Buscar todas as transações
       const transactionsResponse = await fetch('/api/transactions', { credentials: 'include' });
       if (!transactionsResponse.ok) return;
-      
+
       const transactionsData = await transactionsResponse.json();
       const allTransactions = transactionsData.transactions || [];
-      
+
       // Filtrar transações sem tripId no período da viagem
       const startDate = new Date(trip.startDate);
       const endDate = new Date(trip.endDate);
-      
+
       const toLink = allTransactions
         .filter((t: any) => {
           const transDate = new Date(t.date);
           return (
-            !t.tripId && 
-            t.type === 'DESPESA' && 
-            transDate >= startDate && 
+            !t.tripId &&
+            t.type === 'DESPESA' &&
+            transDate >= startDate &&
             transDate <= endDate
           );
         })
         .map((t: any) => t.id);
-      
+
       if (toLink.length > 0) {
         console.log(`🔗 [TripAnalytics] Vinculando ${toLink.length} transações automaticamente...`);
-        
+
         const linkResponse = await fetch(`/api/trips/${tripId}/link-transactions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({ transactionIds: toLink }),
         });
-        
+
         if (linkResponse.ok) {
           const result = await linkResponse.json();
           console.log(`✅ [TripAnalytics] ${result.linkedCount} transações vinculadas automaticamente!`);
@@ -202,7 +200,7 @@ export function TripTransactionAnalytics({ tripId, onAddTransaction }: TripTrans
 
   const getBudgetStatus = () => {
     if (!data) return { color: 'gray', text: 'Carregando...' };
-    
+
     const utilization = data.summary.budgetUtilization;
     if (utilization <= 50) return { color: 'green', text: 'Dentro do orçamento' };
     if (utilization <= 80) return { color: 'yellow', text: 'Atenção ao orçamento' };
@@ -212,11 +210,11 @@ export function TripTransactionAnalytics({ tripId, onAddTransaction }: TripTrans
 
   const getTripStatus = () => {
     if (!data) return 'unknown';
-    
+
     const today = new Date();
     const startDate = new Date(data.trip.startDate);
     const endDate = new Date(data.trip.endDate);
-    
+
     if (today < startDate) return 'planned';
     if (today >= startDate && today <= endDate) return 'active';
     return 'completed';
@@ -275,15 +273,15 @@ export function TripTransactionAnalytics({ tripId, onAddTransaction }: TripTrans
             <p className="text-2xl font-bold">{formatCurrency(data.trip.budget)}</p>
           </div>
         </div>
-        
+
         {/* Progress do Orçamento */}
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
             <span>Utilização do Orçamento</span>
             <span>{data.summary.budgetUtilization.toFixed(1)}%</span>
           </div>
-          <Progress 
-            value={Math.min(data.summary.budgetUtilization, 100)} 
+          <Progress
+            value={Math.min(data.summary.budgetUtilization, 100)}
             className="h-2"
           />
           <div className="flex justify-between text-xs text-blue-100">
@@ -359,7 +357,7 @@ export function TripTransactionAnalytics({ tripId, onAddTransaction }: TripTrans
               <option key={cat.category} value={cat.category}>{cat.category}</option>
             ))}
           </select>
-          
+
           <select
             value={selectedType}
             onChange={(e) => setSelectedType(e.target.value)}
@@ -369,7 +367,7 @@ export function TripTransactionAnalytics({ tripId, onAddTransaction }: TripTrans
             <option value="expense">Despesas</option>
             <option value="income">Receitas</option>
           </select>
-          
+
           <LinkTransactionsToTrip
             tripId={data.trip.id}
             tripName={data.trip.name}
@@ -426,7 +424,7 @@ export function TripTransactionAnalytics({ tripId, onAddTransaction }: TripTrans
                       </span>
                     </div>
                   </div>
-                  
+
                   {data.summary.projectedOverBudget && (
                     <div className="p-4 rounded-lg bg-red-50 border border-red-200">
                       <p className="text-red-800 text-sm">

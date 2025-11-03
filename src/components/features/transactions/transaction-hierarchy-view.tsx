@@ -20,9 +20,9 @@ interface TransactionGroup {
   children: Transaction[];
 }
 
-export function TransactionHierarchyView({ 
-  transactions, 
-  onTransactionClick 
+export function TransactionHierarchyView({
+  transactions,
+  onTransactionClick
 }: TransactionHierarchyViewProps) {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
@@ -48,7 +48,7 @@ export function TransactionHierarchyView({
         const children = childrenMap.get(transaction.id)!;
         // Ordenar filhas por número da parcela
         children.sort((a, b) => (a.installmentNumber || 0) - (b.installmentNumber || 0));
-        
+
         groups.push({
           parent: transaction,
           children
@@ -66,7 +66,7 @@ export function TransactionHierarchyView({
   // Transações individuais (não fazem parte de grupos)
   const individualTransactions = useMemo(() => {
     const processedIds = new Set<string>();
-    
+
     // Marcar todas as transações que fazem parte de grupos
     transactionGroups.forEach(group => {
       processedIds.add(group.parent.id);
@@ -128,7 +128,7 @@ export function TransactionHierarchyView({
         const isExpanded = expandedGroups.has(group.parent.id);
         const totalAmount = group.children.reduce((sum, child) => sum + child.amount, 0);
         const completedCount = group.children.filter(child => child.status === 'completed').length;
-        
+
         return (
           <Card key={group.parent.id} className="border-l-4 border-l-purple-500">
             <CardHeader className="pb-3">
@@ -210,11 +210,11 @@ export function TransactionHierarchyView({
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge 
-                          variant="secondary" 
+                        <Badge
+                          variant="secondary"
                           className={`text-xs ${getStatusColor(child.status)}`}
                         >
-                          {child.status === 'completed' ? 'Paga' : 
+                          {child.status === 'completed' ? 'Paga' :
                            child.status === 'pending' ? 'Pendente' :
                            child.status === 'scheduled' ? 'Agendada' : 'Cancelada'}
                         </Badge>
@@ -262,11 +262,11 @@ export function TransactionHierarchyView({
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge 
-                      variant="secondary" 
+                    <Badge
+                      variant="secondary"
                       className={`text-xs ${getStatusColor(transaction.status)}`}
                     >
-                      {transaction.status === 'completed' ? 'Concluída' : 
+                      {transaction.status === 'completed' ? 'Concluída' :
                        transaction.status === 'pending' ? 'Pendente' :
                        transaction.status === 'scheduled' ? 'Agendada' : 'Cancelada'}
                     </Badge>

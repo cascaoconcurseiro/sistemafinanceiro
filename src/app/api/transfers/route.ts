@@ -59,8 +59,7 @@ export async function POST(request: NextRequest) {
       body.date ? new Date(body.date) : undefined
     );
 
-    console.log('✅ [API Transfers POST] Transferência criada:', transfer.from.id, '→', transfer.to.id);
-
+    
     // ✅ EMITIR EVENTOS
     const { broadcastEvent } = await import('../events/route');
     broadcastEvent('TRANSFER_CREATED', {

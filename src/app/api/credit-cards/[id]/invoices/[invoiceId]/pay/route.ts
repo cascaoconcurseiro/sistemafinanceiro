@@ -52,6 +52,14 @@ export async function POST(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 403 });
     }
 
+    // ✅ NOVO: Validar se fatura já foi paga
+    if (invoice.isPaid) {
+      return NextResponse.json({ 
+        error: 'Esta fatura já foi paga!',
+        message: 'A fatura já está marcada como paga. Se deseja fazer um novo pagamento, primeiro desmarque o pagamento anterior.'
+      }, { status: 400 });
+    }
+
     // Buscar conta
     const account = await prisma.account.findUnique({
       where: { id: accountId }
@@ -85,6 +93,7 @@ export async function POST(
       }
 
       // 2. Criar transação de DESPESA (saída de dinheiro da conta)
+      // ✅ CORREÇÃO: NÃO vincular ao cartão nem à fatura para não aparecer na fatura
       const transaction = await tx.transaction.create({
         data: {
           userId: auth.userId!,
@@ -94,8 +103,9 @@ export async function POST(
           type: 'DESPESA',
           date: new Date(paymentDate),
           status: 'cleared',
-          creditCardId: cardId,
-          invoiceId: invoiceId,
+          // ✅ NÃO vincular ao cartão nem à fatura
+          // creditCardId: cardId,  // REMOVIDO
+          // invoiceId: invoiceId,  // REMOVIDO
           categoryId: paymentCategory.id,
         }
       });
@@ -113,6 +123,22 @@ export async function POST(
           paidAt: isPaid ? new Date(paymentDate) : null
         }
       });
+
+      // 3.1. ✅ ATUALIZAR STATUS DAS TRANSAÇÕES DA FATURA
+      // Se pagamento total, marcar todas como cleared
+      // Se pagamento parcial, manter como pending
+      if (isPaid) {
+        await tx.transaction.updateMany({
+          where: {
+            invoiceId: invoiceId,
+            creditCardId: cardId,
+            deletedAt: null
+          },
+          data: {
+            status: 'cleared'
+          }
+        });
+      }
 
       // 4. Atualizar limite disponível do cartão (devolver o valor pago)
       const updatedCard = await tx.creditCard.update({
@@ -140,8 +166,8 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message: fullPayment 
-        ? 'Fatura paga com sucesso!' 
+      message: fullPayment
+        ? 'Fatura paga com sucesso!'
         : `Pagamento parcial de ${amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} registrado!`,
       data: result
     });
@@ -149,7 +175,7 @@ export async function POST(
   } catch (error) {
     console.error('❌ [Invoice Payment] Erro:', error);
     return NextResponse.json(
-      { 
+      {
         error: 'Erro ao registrar pagamento',
         details: error instanceof Error ? error.message : String(error)
       },

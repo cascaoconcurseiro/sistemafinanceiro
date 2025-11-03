@@ -58,24 +58,24 @@ export function useOfflineStorage(): OfflineStorageState & OfflineStorageActions
   const loadPendingData = useCallback(async () => {
     try {
       setState(prev => ({ ...prev, isLoading: true, error: null }));
-      
+
       const db = await initDB();
       const transaction = db.transaction([STORE_NAME], 'readonly');
       const store = transaction.objectStore(STORE_NAME);
       const index = store.index('synced');
-      
+
       const request = index.getAll(false); // Apenas não sincronizados
-      
+
       return new Promise<OfflineData[]>((resolve, reject) => {
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
       });
     } catch (error) {
       console.error('Erro ao carregar dados offline:', error);
-      setState(prev => ({ 
-        ...prev, 
+      setState(prev => ({
+        ...prev,
         error: 'Erro ao carregar dados offline',
-        isLoading: false 
+        isLoading: false
       }));
       return [];
     }
@@ -83,14 +83,14 @@ export function useOfflineStorage(): OfflineStorageState & OfflineStorageActions
 
   // Salvar dados offline
   const saveOfflineData = useCallback(async (
-    type: OfflineData['type'], 
+    type: OfflineData['type'],
     data: any
   ): Promise<void> => {
     try {
       const db = await initDB();
       const transaction = db.transaction([STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
-      
+
       const offlineData: OfflineData = {
         id: `${type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         type,
@@ -121,25 +121,25 @@ export function useOfflineStorage(): OfflineStorageState & OfflineStorageActions
   const syncPendingData = useCallback(async (): Promise<void> => {
     try {
       const pendingData = await loadPendingData();
-      
+
       for (const item of pendingData) {
         try {
           // Aqui você implementaria a lógica de sincronização com a API
           // Por exemplo, enviar para o servidor baseado no tipo
           await syncItemWithServer(item);
-          
+
           // Marcar como sincronizado
           const db = await initDB();
           const transaction = db.transaction([STORE_NAME], 'readwrite');
           const store = transaction.objectStore(STORE_NAME);
-          
+
           const updatedItem = { ...item, synced: true };
           await new Promise<void>((resolve, reject) => {
             const request = store.put(updatedItem);
             request.onsuccess = () => resolve();
             request.onerror = () => reject(request.error);
           });
-          
+
         } catch (error) {
           console.error(`Erro ao sincronizar item ${item.id}:`, error);
           // Continuar com os próximos itens mesmo se um falhar
@@ -171,9 +171,9 @@ export function useOfflineStorage(): OfflineStorageState & OfflineStorageActions
       const transaction = db.transaction([STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
       const index = store.index('synced');
-      
+
       const request = index.openCursor(true); // Apenas sincronizados
-      
+
       await new Promise<void>((resolve, reject) => {
         request.onsuccess = (event) => {
           const cursor = (event.target as IDBRequest).result;
@@ -203,7 +203,7 @@ export function useOfflineStorage(): OfflineStorageState & OfflineStorageActions
       try {
         // Verificar suporte ao IndexedDB
         const isSupported = 'indexedDB' in window;
-        
+
         if (!isSupported) {
           setState(prev => ({
             ...prev,
@@ -216,7 +216,7 @@ export function useOfflineStorage(): OfflineStorageState & OfflineStorageActions
 
         // Carregar dados pendentes
         const pendingData = await loadPendingData();
-        
+
         setState(prev => ({
           ...prev,
           isSupported: true,
@@ -249,10 +249,10 @@ export function useOfflineStorage(): OfflineStorageState & OfflineStorageActions
 // Função auxiliar para sincronizar item com servidor
 async function syncItemWithServer(item: OfflineData): Promise<void> {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
-  
+
   let endpoint = '';
   let method = 'POST';
-  
+
   switch (item.type) {
     case 'transaction':
       endpoint = `${baseUrl}/transactions`;

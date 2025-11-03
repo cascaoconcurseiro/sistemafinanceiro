@@ -59,10 +59,10 @@ export class OptimizedApiBase {
     try {
       // Import auth helpers dynamically
       const { authenticateRequest: authHelper } = await import('@/lib/utils/auth-helpers');
-      
+
       // Use existing auth helper for consistency
       const auth = await authHelper(request);
-      
+
       if (auth.success && auth.userId) {
         return {
           success: true,
@@ -71,9 +71,9 @@ export class OptimizedApiBase {
         };
       }
 
-      return { 
-        success: false, 
-        error: auth.error || 'Authentication failed' 
+      return {
+        success: false,
+        error: auth.error || 'Authentication failed'
       };
 
     } catch (error) {
@@ -87,7 +87,7 @@ export class OptimizedApiBase {
    */
   getCachedData<T>(key?: string): T | null {
     if (!this.options.cacheEnabled) return null;
-    
+
     const cacheKey = key || this.options.entity;
     return realTimeStore.getData(cacheKey);
   }
@@ -97,7 +97,7 @@ export class OptimizedApiBase {
    */
   setCachedData<T>(data: T, key?: string): void {
     if (!this.options.cacheEnabled) return;
-    
+
     const cacheKey = key || this.options.entity;
     realTimeStore.setData(cacheKey, data);
   }
@@ -117,7 +117,7 @@ export class OptimizedApiBase {
     }
 
     const cacheKey = key || this.options.entity;
-    
+
     return realTimeStore.createOptimisticUpdate(
       cacheKey,
       type,
@@ -395,7 +395,7 @@ export class OptimizedApiBase {
 
         // Get original data for rollback
         const currentData = this.getCachedData<TOutput[]>(cacheKey) || [];
-        const originalItem = Array.isArray(currentData) 
+        const originalItem = Array.isArray(currentData)
           ? currentData.find((item: any) => item.id === params.id)
           : currentData;
 
@@ -448,7 +448,7 @@ export class OptimizedApiBase {
 
           // Update cache
           if (Array.isArray(currentData)) {
-            const updated = currentData.map((item: any) => 
+            const updated = currentData.map((item: any) =>
               item.id === params.id ? result.data : item
             );
             this.setCachedData(updated, cacheKey);
@@ -487,7 +487,7 @@ export class OptimizedApiBase {
 
         // Get original data for rollback
         const currentData = this.getCachedData<TOutput[]>(cacheKey) || [];
-        const originalItem = Array.isArray(currentData) 
+        const originalItem = Array.isArray(currentData)
           ? currentData.find((item: any) => item.id === params.id)
           : currentData;
 

@@ -55,9 +55,6 @@ async function main() {
   try {
     await prisma.familyMember.deleteMany();
   } catch (e) {}
-  try {
-    await prisma.session.deleteMany();
-  } catch (e) {}
   await prisma.user.deleteMany();
 
   console.log('✅ Banco de dados limpo!');
@@ -67,7 +64,7 @@ async function main() {
   // Criar usuário admin
   const hashedPassword = await bcrypt.hash('admin123', 10);
   
-  const admin = await prisma.user.create({
+  await prisma.user.create({
     data: {
       email: 'admin@suagrana.com',
       name: 'Administrador',

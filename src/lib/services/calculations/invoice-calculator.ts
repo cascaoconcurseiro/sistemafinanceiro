@@ -256,7 +256,7 @@ export class InvoiceCalculator {
 
       // Criar fatura
       const dueDate = new Date(year, month, card.dueDay);
-      
+
       const invoice = await tx.invoice.create({
         data: {
           userId: card.userId,

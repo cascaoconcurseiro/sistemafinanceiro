@@ -60,26 +60,25 @@ export function TripModal({ isOpen, onClose, initialData }: TripModalProps) {
       other: '',
     },
   });
-  
+
   const [days, setDays] = useState(1);
-  
+
   // Forçar re-render quando o componente monta
   useEffect(() => {
-    console.log('🔍 Componente TripModal montado, days inicial:', days);
     
     // Se não há dados iniciais, definir datas padrão brasileiras
     if (!initialData && !formData.startDate && !formData.endDate) {
       const today = new Date();
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
-      
+
       const formatBRDate = (date: Date) => {
         const day = String(date.getDate()).padStart(2, '0');
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const year = date.getFullYear();
         return `${day}/${month}/${year}`;
       };
-      
+
       setFormData(prev => ({
         ...prev,
         startDate: formatBRDate(today),
@@ -90,44 +89,37 @@ export function TripModal({ isOpen, onClose, initialData }: TripModalProps) {
 
   // useEffect para atualizar dias quando datas mudarem - SEMPRE ATIVO
   useEffect(() => {
-    console.log('🔍 Calculando dias - Start:', formData.startDate, 'End:', formData.endDate);
     
     // Se ambas as datas estão completas (10 caracteres)
     if (formData.startDate && formData.endDate && formData.startDate.length === 10 && formData.endDate.length === 10) {
       try {
         const [d1, m1, y1] = formData.startDate.split('/');
         const [d2, m2, y2] = formData.endDate.split('/');
-        
+
         // Validar se as partes da data são válidas
         if (!d1 || !m1 || !y1 || !d2 || !m2 || !y2) {
-          console.log('🔍 Partes da data inválidas');
-          setDays(1);
+                    setDays(1);
           return;
         }
-        
+
         const start = new Date(parseInt(y1), parseInt(m1) - 1, parseInt(d1));
         const end = new Date(parseInt(y2), parseInt(m2) - 1, parseInt(d2));
-        
-        console.log('🔍 Datas convertidas - Start:', start, 'End:', end);
+
         
         if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
           const diffTime = end.getTime() - start.getTime();
           const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
           const calculatedDays = diffDays > 0 ? diffDays : 1;
-          console.log('🔍 Dias calculados:', calculatedDays);
-          setDays(calculatedDays);
+                    setDays(calculatedDays);
         } else {
-          console.log('🔍 Datas inválidas');
-          setDays(1);
+                    setDays(1);
         }
       } catch (error) {
-        console.log('❌ Erro ao calcular dias:', error);
-        setDays(1);
+                setDays(1);
       }
     } else {
       // Se as datas não estão completas, manter 1 dia como padrão
-      console.log('🔍 Datas incompletas, mantendo 1 dia');
-      setDays(1);
+            setDays(1);
     }
   }, [formData.startDate, formData.endDate]);
 
@@ -155,13 +147,13 @@ export function TripModal({ isOpen, onClose, initialData }: TripModalProps) {
         setLoading(false);
         return;
       }
-      
+
       if (!formData.destination.trim()) {
         toast.error('Destino é obrigatório');
         setLoading(false);
         return;
       }
-      
+
       // Validação básica - permitir criação mesmo com datas vazias
       console.log('🔍 Validando dados:', {
         name: formData.name,
@@ -169,30 +161,29 @@ export function TripModal({ isOpen, onClose, initialData }: TripModalProps) {
         startDate: formData.startDate,
         endDate: formData.endDate
       });
-      
+
       // Usar sempre datas padrão para simplificar
       const today = new Date();
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
-      
+
       let startISO = today.toISOString().split('T')[0];
       let endISO = tomorrow.toISOString().split('T')[0];
-      
+
       // Se as datas estão preenchidas e válidas, usar elas
-      if (formData.startDate && formData.endDate && 
+      if (formData.startDate && formData.endDate &&
           formData.startDate.length === 10 && formData.endDate.length === 10) {
         try {
           const [d1, m1, y1] = formData.startDate.split('/');
           const [d2, m2, y2] = formData.endDate.split('/');
-          
+
           const startDate = new Date(parseInt(y1), parseInt(m1) - 1, parseInt(d1));
           const endDate = new Date(parseInt(y2), parseInt(m2) - 1, parseInt(d2));
-          
+
           if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime()) && endDate >= startDate) {
             startISO = `${y1}-${m1.padStart(2,'0')}-${d1.padStart(2,'0')}`;
             endISO = `${y2}-${m2.padStart(2,'0')}-${d2.padStart(2,'0')}`;
-            console.log('✅ Usando datas do formulário');
-          } else {
+                      } else {
             console.log('⚠️ Datas inválidas, usando padrão');
           }
         } catch (error) {
@@ -201,7 +192,6 @@ export function TripModal({ isOpen, onClose, initialData }: TripModalProps) {
       } else {
         console.log('⚠️ Datas incompletas, usando padrão');
       }
-      
 
       // Preparar dados da viagem
       const tripData = {
@@ -218,18 +208,14 @@ export function TripModal({ isOpen, onClose, initialData }: TripModalProps) {
       };
 
       // Debug: Log dos dados da viagem
-      console.log('🔍 Dados da viagem a serem enviados:', tripData);
       
       // Salvar viagem usando o contexto unificado
       if (initialData?.id) {
-        console.log('🔍 Atualizando viagem existente:', initialData.id);
-        await updateTrip(initialData.id, tripData);
+                await updateTrip(initialData.id, tripData);
         toast.success('Viagem atualizada com sucesso!');
       } else {
-        console.log('🔍 Criando nova viagem');
-        const result = await createTrip(tripData);
-        console.log('✅ Viagem criada:', result);
-        toast.success('Viagem criada com sucesso!');
+                const result = await createTrip(tripData);
+                toast.success('Viagem criada com sucesso!');
       }
 
       onClose();
@@ -369,10 +355,6 @@ export function TripModal({ isOpen, onClose, initialData }: TripModalProps) {
                       Preencha as datas para calcular automaticamente
                     </p>
                   )}
-                  {/* Debug: Mostrar valores atuais */}
-                  <p className="text-xs text-gray-400 mt-1">
-                    Debug: Start="{formData.startDate}" End="{formData.endDate}" Days={days}
-                  </p>
                 </div>
               </div>
               {dailyBudget > 0 && (
@@ -616,5 +598,4 @@ export function TripModal({ isOpen, onClose, initialData }: TripModalProps) {
     </Dialog>
   );
 }
-
 

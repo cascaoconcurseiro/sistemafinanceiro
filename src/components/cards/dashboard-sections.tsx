@@ -11,42 +11,20 @@ import { formatCurrency } from '@/lib/utils/format-currency';
 import { SimpleCashFlow } from '../simple-cash-flow';
 import { CategoryAnalysisCard } from './category-analysis-card';
 
-// ✅ Helper para calcular o valor correto de uma transação
-// Se EU paguei uma despesa compartilhada, mostrar o valor TOTAL
-// Se OUTRO pagou, mostrar apenas minha parte (myShare)
+// ✅ Helper para calcular o valor correto de uma transação para resumos
+// Para transações compartilhadas, SEMPRE usar myShare (o que EU realmente gastei/recebi)
 const getTransactionAmount = (transaction: any): number => {
   const amount = Math.abs(transaction.amount);
-  
-  // Se não é compartilhada, retornar o valor total
-  if (!transaction.isShared) {
-    return amount;
+
+  // ✅ Para transações compartilhadas, SEMPRE usar myShare
+  // myShare representa o valor real que afeta MEU saldo
+  if ((transaction.isShared || transaction.type === 'shared') && 
+      transaction.myShare !== null && 
+      transaction.myShare !== undefined) {
+    return Math.abs(Number(transaction.myShare));
   }
-  
-  // Se é compartilhada e tem myShare
-  if (transaction.myShare !== undefined && transaction.myShare !== null) {
-    const myShare = Math.abs(Number(transaction.myShare));
-    
-    // Se myShare é igual ao amount, significa que EU paguei tudo
-    // Retornar o valor total
-    if (myShare === amount) {
-      return amount;
-    }
-    
-    // Se myShare é menor que amount, significa que foi dividido
-    // Verificar se EU paguei ou OUTRO pagou
-    const paidBy = transaction.paidBy;
-    const isPaidByOther = paidBy && paidBy !== 'current_user'; // TODO: comparar com ID real
-    
-    // Se outro pagou, retornar apenas minha parte
-    if (isPaidByOther) {
-      return myShare;
-    }
-    
-    // Se EU paguei, retornar o valor total
-    return amount;
-  }
-  
-  // Fallback: retornar o valor total
+
+  // Para transações não compartilhadas, usar o valor total
   return amount;
 };
 
@@ -78,21 +56,33 @@ export function CashFlowCard() {
 
   // ✅ CORREÇÃO: Calcular dados APENAS para o período selecionado
   const cashFlowData = useMemo(() => {
-    console.log('💰 [CashFlow] Calculando dados com', transactions.length, 'transações');
-    console.log('💰 [CashFlow] Período selecionado:', { selectedMonth, selectedYear });
-    
+        
     // ✅ CORREÇÃO: Filtrar transações APENAS do mês/ano selecionado
     const periodTransactions = transactions.filter(t => {
+      // ✅ NOVO: Excluir transações de dívidas (pago por outra pessoa)
+      if (t.paidBy) {
+        return false;
+      }
+      
+      // ✅ NOVO: Também verificar metadata.paidByName (formato antigo)
+      try {
+        const metadata = t.metadata ? JSON.parse(t.metadata) : null;
+        if (metadata && metadata.paidByName) {
+          return false;
+        }
+      } catch (e) {
+        // Ignorar erros de parse
+      }
+      
       const transactionDate = new Date(t.date);
-      const isInSelectedPeriod = transactionDate.getFullYear() === selectedYear && 
+      const isInSelectedPeriod = transactionDate.getFullYear() === selectedYear &&
                                  transactionDate.getMonth() === selectedMonth;
       const isValid = t.status !== 'cancelled' && !t.deletedAt;
       return isInSelectedPeriod && isValid;
     });
+
     
-    console.log('💰 [CashFlow] Transações no período:', periodTransactions.length);
-    
-    // Gerar dados para 12 meses de 2025 (para o gráfico)
+    // ✅ CORREÇÃO: Gerar dados para 12 meses do ANO SELECIONADO (para o gráfico)
     const months = [
       'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
       'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
@@ -100,12 +90,27 @@ export function CashFlowCard() {
 
     const monthlyData = months.map((month, index) => {
       const monthNumber = (index + 1).toString().padStart(2, '0');
-      const monthKey = `2025-${monthNumber}`;
-      
+      const monthKey = `${selectedYear}-${monthNumber}`;
+
       // Filtrar transações do mês específico
       const monthTransactions = transactions.filter(t => {
+        // ✅ NOVO: Excluir transações de dívidas (pago por outra pessoa)
+        if (t.paidBy) {
+          return false;
+        }
+        
+        // ✅ NOVO: Também verificar metadata.paidByName (formato antigo)
+        try {
+          const metadata = t.metadata ? JSON.parse(t.metadata) : null;
+          if (metadata && metadata.paidByName) {
+            return false;
+          }
+        } catch (e) {
+          // Ignorar erros de parse
+        }
+        
         const transactionDate = new Date(t.date);
-        const transactionMonth = transactionDate.getFullYear() === 2025 && 
+        const transactionMonth = transactionDate.getFullYear() === selectedYear &&
                                 transactionDate.getMonth() === index;
         const isValid = t.status !== 'cancelled' && !t.deletedAt;
         return transactionMonth && isValid;
@@ -117,11 +122,11 @@ export function CashFlowCard() {
 
       // Filtrar valores absurdos (acima de R$ 1 milhão)
       const MAX_REASONABLE_VALUE = 1000000;
-      
+
       const income = incomeTransactions
         .filter(t => t.amount > 0 && t.amount <= MAX_REASONABLE_VALUE)
         .reduce((sum, t) => sum + getTransactionAmount(t), 0);
-      
+
       const expenses = expenseTransactions
         .filter(t => Math.abs(t.amount) <= MAX_REASONABLE_VALUE)
         .reduce((sum, t) => sum + getTransactionAmount(t), 0);
@@ -150,26 +155,38 @@ export function CashFlowCard() {
       };
     });
 
-    // ✅ CORREÇÃO: Calcular totais APENAS do período selecionado
-    const totalIncome = periodTransactions
+    // ✅ CORREÇÃO: Calcular totais ANUAIS (para o gráfico) somando todos os meses
+    const totalAnnualIncome = monthlyData.reduce((sum, month) => sum + month.income, 0);
+    const totalAnnualExpenses = monthlyData.reduce((sum, month) => sum + month.expenses, 0);
+
+    // ✅ Calcular totais do período selecionado (para os cards do topo)
+    const periodIncome = periodTransactions
       .filter(t => t.type === 'income' || t.type === 'RECEITA')
-      .reduce((sum, t) => sum + Math.abs(t.amount), 0);
-    
-    const totalExpenses = periodTransactions
+      .reduce((sum, t) => sum + getTransactionAmount(t), 0);
+
+    const periodExpenses = periodTransactions
       .filter(t => t.type === 'expense' || t.type === 'DESPESA')
-      .reduce((sum, t) => sum + Math.abs(t.amount), 0);
-    
-    console.log('💰 [CashFlow] Totais do período selecionado:', {
-      totalIncome,
-      totalExpenses,
-      netBalance: totalIncome - totalExpenses,
-      transactionsCount: periodTransactions.length
+      .reduce((sum, t) => sum + getTransactionAmount(t), 0);
+
+    console.log('💰 [CashFlow] Totais calculados:', {
+      periodo: {
+        income: periodIncome,
+        expenses: periodExpenses,
+        balance: periodIncome - periodExpenses
+      },
+      anual: {
+        income: totalAnnualIncome,
+        expenses: totalAnnualExpenses,
+        balance: totalAnnualIncome - totalAnnualExpenses
+      }
     });
-    
+
     return {
       monthlyData,
-      totalIncome,
-      totalExpenses
+      totalIncome: totalAnnualIncome, // ✅ Usar totais anuais para o gráfico
+      totalExpenses: totalAnnualExpenses,
+      periodIncome, // ✅ Manter totais do período para os cards
+      periodExpenses
     };
   }, [transactions, selectedMonth, selectedYear]);
 
@@ -179,7 +196,7 @@ export function CashFlowCard() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Activity className="h-5 w-5" />
-            Fluxo de Caixa - 2025
+            Fluxo de Caixa - {selectedYear}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -205,7 +222,7 @@ export function CashFlowCard() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Activity className="h-5 w-5" />
-            Fluxo de Caixa - 2025
+            Fluxo de Caixa - {selectedYear}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -231,7 +248,7 @@ export function CashFlowCard() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Activity className="h-5 w-5" />
-          Fluxo de Caixa - 2025 (12 Meses)
+          Fluxo de Caixa - {selectedYear} (12 Meses)
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -402,18 +419,33 @@ export function CategoryBudgetCard() {
   // Calcular gastos por categoria do mês selecionado
   // ✅ CORREÇÃO: Aceitar ambos os formatos (minúsculo e maiúsculo)
   const expenseTransactions = Array.isArray(transactions) ? transactions.filter(t => {
+    // ✅ NOVO: Excluir transações de dívidas (pago por outra pessoa)
+    if (t.paidBy) {
+      return false;
+    }
+    
+    // ✅ NOVO: Também verificar metadata.paidByName (formato antigo)
+    try {
+      const metadata = t.metadata ? JSON.parse(t.metadata) : null;
+      if (metadata && metadata.paidByName) {
+        return false;
+      }
+    } catch (e) {
+      // Ignorar erros de parse
+    }
+    
     const transactionDate = new Date(t.date);
     const isExpense = t.type === 'expense' || t.type === 'DESPESA';
-    return isExpense && 
+    return isExpense &&
            transactionDate.getMonth() === selectedMonth &&
            transactionDate.getFullYear() === selectedYear;
   }) : [];
-  
+
   // ✅ CORREÇÃO: Não usar fallback - mostrar apenas o período selecionado
   const showingFallback = false;
-  
+
   const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-  
+
   console.log('📊 [CategoryBudget] Debug categorias:', {
     totalTransactions: transactions.length,
     selectedPeriod: `${monthNames[selectedMonth]} ${selectedYear}`,
@@ -434,25 +466,25 @@ export function CategoryBudgetCard() {
       return `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
     }))]
   });
-  
+
   // Agrupar por categoria
   const expensesByCategory: Record<string, { total: number; count: number }> = {};
   let totalExpenses = 0;
-  
+
   expenseTransactions.forEach(t => {
     // Usar a categoria como estava funcionando antes
     const category = t.category || 'Outros';
     const amount = Math.abs(t.amount);
-    
+
     if (!expensesByCategory[category]) {
       expensesByCategory[category] = { total: 0, count: 0 };
     }
-    
+
     expensesByCategory[category].total += amount;
     expensesByCategory[category].count += 1;
     totalExpenses += amount;
   });
-  
+
   // Converter para array e adicionar percentuais
   const categoryData = Object.entries(expensesByCategory).map(([category, data]) => ({
     category,
@@ -505,7 +537,7 @@ export function CategoryBudgetCard() {
                 Nenhuma categoria com gastos encontrada
               </p>
               <p className="text-sm text-gray-400">
-                {showingFallback 
+                {showingFallback
                   ? "Não há despesas nos últimos 30 dias"
                   : "Adicione transações para ver os gastos por categoria"}
               </p>
@@ -525,7 +557,7 @@ export function DashboardSections() {
       <div className="w-full">
         <CashFlowCard />
       </div>
-      
+
       {/* Metas e Gastos por Categoria - Layout lado a lado */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <GoalsProgressCard />

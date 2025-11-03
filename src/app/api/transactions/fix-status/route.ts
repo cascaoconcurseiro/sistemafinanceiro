@@ -13,8 +13,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
     }
 
-    console.log('🔧 [Fix Status] Iniciando correção de status...');
-
+    
     // Buscar transações pendentes que NÃO são "pago por outra pessoa"
     const pendingTransactions = await prisma.transaction.findMany({
       where: {
@@ -57,7 +56,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('❌ [Fix Status] Erro:', error);
     return NextResponse.json(
-      { 
+      {
         error: 'Erro ao atualizar status',
         details: error instanceof Error ? error.message : String(error)
       },

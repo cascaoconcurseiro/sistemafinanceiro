@@ -1,130 +1,191 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { authenticateRequest } from '@/lib/utils/auth-helpers';
+import { handleApiError } from '@/lib/utils/error-handler';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 /**
- * POST /api/shared-debts/pay
- * Marcar dívida como paga
+ * Processar pagamento de dívida compartilhada com atomicidade
+ * Garante que todas as transações sejam criadas ou nenhuma
  */
 export async function POST(request: NextRequest) {
   try {
     const auth = await authenticateRequest(request);
     if (!auth.success || !auth.userId) {
-      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+      return NextResponse.json({ error: auth.error }, { status: 401 });
     }
+    const userId = auth.userId!;
 
-    const { contactId, amount, paidDate, tripId } = await request.json();
+    const body = await request.json();
+    const {
+      debtId,
+      creditorId,
+      creditorAccountId,
+      debtorAccountId,
+      amount,
+      totalDebt,
+      totalCredit,
+      description,
+      category,
+      date,
+      isCompensation, // true quando netAmount = 0
+    } = body;
 
-    if (!contactId || !amount) {
-      return NextResponse.json(
-        { error: 'Campos obrigatórios: contactId, amount' },
-        { status: 400 }
-      );
-    }
-
-    console.log('💰 [Pay Debt] Marcando como pago:', { contactId, amount, paidDate });
-
-    // Buscar contato para obter o nome
-    const contact = await prisma.contact.findFirst({
-      where: { id: contactId, userId: auth.userId }
+    console.log('💰 Processando pagamento de dívida:', {
+      debtId,
+      amount,
+      isCompensation,
     });
 
-    if (!contact) {
-      return NextResponse.json(
-        { error: 'Contato não encontrado' },
-        { status: 404 }
-      );
-    }
+    // ✅ ATOMICIDADE: Usar transação do Prisma
+    const result = await prisma.$transaction(async (tx) => {
+      const transactions = [];
 
-    // Buscar dívidas ativas entre o usuário e o contato
-    const activeDebts = await prisma.sharedDebt.findMany({
-      where: {
-        OR: [
-          { creditor: 'user', debtor: contact.name, status: 'active' },
-          { creditor: contact.name, debtor: 'user', status: 'active' }
-        ]
-      },
-      orderBy: { createdAt: 'asc' }
-    });
+      if (isCompensation) {
+        // ✅ COMPENSAÇÃO TOTAL: Criar 4 transações
+        console.log('🔄 Compensação total detectada');
 
-    if (activeDebts.length === 0) {
-      return NextResponse.json(
-        { error: 'Nenhuma dívida ativa encontrada' },
-        { status: 404 }
-      );
-    }
+        // TRANSAÇÃO 1: RECEITA para o credor
+        const creditorReceita = await tx.transaction.create({
+          data: {
+            userId: creditorId,
+            accountId: creditorAccountId,
+            categoryId: 'reembolso',
+            amount: totalDebt,
+            description: `Recebimento - ${description} (Compensado)`,
+            type: 'RECEITA',
+            date: new Date(date),
+            status: 'cleared',
+            notes: `Compensação total. Recebido R$ ${totalDebt.toFixed(2)} e pago R$ ${totalCredit.toFixed(2)}`,
+          },
+        });
+        transactions.push(creditorReceita);
 
-    let remainingAmount = Number(amount);
-    const paidDebts = [];
+        // TRANSAÇÃO 2: DESPESA para o credor
+        const creditorDespesa = await tx.transaction.create({
+          data: {
+            userId: creditorId,
+            accountId: creditorAccountId,
+            categoryId: 'reembolso',
+            amount: -totalCredit,
+            description: `Pagamento - Compensação de dívidas`,
+            type: 'DESPESA',
+            date: new Date(date),
+            status: 'cleared',
+            notes: `Compensação total. Saldo líquido: R$ 0,00`,
+          },
+        });
+        transactions.push(creditorDespesa);
 
-    // Processar pagamento das dívidas (FIFO - First In, First Out)
-    for (const debt of activeDebts) {
-      if (remainingAmount <= 0) break;
+        // TRANSAÇÃO 3: RECEITA para o devedor
+        const debtorReceita = await tx.transaction.create({
+          data: {
+            userId,
+            accountId: debtorAccountId,
+            categoryId: 'reembolso',
+            amount: totalCredit,
+            description: `Recebimento - Compensação de dívidas`,
+            type: 'RECEITA',
+            date: new Date(date),
+            status: 'cleared',
+            notes: `Compensação total. Saldo líquido: R$ 0,00`,
+          },
+        });
+        transactions.push(debtorReceita);
 
-      const debtAmount = Number(debt.currentAmount);
-      const paymentAmount = Math.min(remainingAmount, debtAmount);
+        // TRANSAÇÃO 4: DESPESA para o devedor
+        const debtorDespesa = await tx.transaction.create({
+          data: {
+            userId,
+            accountId: debtorAccountId,
+            categoryId: category,
+            amount: -totalDebt,
+            description: `Pagamento - ${description} (Compensado)`,
+            type: 'DESPESA',
+            date: new Date(date),
+            status: 'cleared',
+            notes: `Compensação total. Recebido R$ ${totalCredit.toFixed(2)} e pago R$ ${totalDebt.toFixed(2)}`,
+          },
+        });
+        transactions.push(debtorDespesa);
+      } else {
+        // ✅ PAGAMENTO NORMAL: Criar 2 transações
+        console.log('💵 Pagamento normal');
 
-      if (paymentAmount >= debtAmount) {
-        // Quitar dívida completamente
-        await prisma.sharedDebt.update({
-          where: { id: debt.id },
+        // TRANSAÇÃO 1: RECEITA para o credor
+        const creditorReceita = await tx.transaction.create({
+          data: {
+            userId: creditorId,
+            accountId: creditorAccountId,
+            categoryId: 'reembolso',
+            amount: amount,
+            description: `Recebimento - ${description}`,
+            type: 'RECEITA',
+            date: new Date(date),
+            status: 'cleared',
+            notes: totalCredit > 0
+              ? `Recebido. Compensado R$ ${totalCredit.toFixed(2)} de créditos`
+              : `Recebido`,
+          },
+        });
+        transactions.push(creditorReceita);
+
+        // TRANSAÇÃO 2: DESPESA para o devedor
+        const debtorDespesa = await tx.transaction.create({
+          data: {
+            userId,
+            accountId: debtorAccountId,
+            categoryId: category,
+            amount: -amount,
+            description: `Pagamento - ${description}`,
+            type: 'DESPESA',
+            date: new Date(date),
+            status: 'cleared',
+            notes: totalCredit > 0
+              ? `Pago. Compensado R$ ${totalCredit.toFixed(2)} de créditos`
+              : `Pago`,
+          },
+        });
+        transactions.push(debtorDespesa);
+      }
+
+      // Atualizar saldos das contas
+      for (const transaction of transactions) {
+        await tx.account.update({
+          where: { id: transaction.accountId! },
+          data: {
+            balance: {
+              increment: Number(transaction.amount),
+            },
+          },
+        });
+      }
+
+      // Marcar dívida como paga
+      if (debtId) {
+        await tx.sharedDebt.update({
+          where: { id: debtId },
           data: {
             status: 'paid',
-            paidAmount: debtAmount,
-            paidAt: new Date(paidDate || new Date()),
-            updatedAt: new Date()
-          }
+            paidAt: new Date(),
+          },
         });
-        paidDebts.push({ ...debt, paidAmount: debtAmount, status: 'paid' });
-      } else {
-        // Pagamento parcial
-        await prisma.sharedDebt.update({
-          where: { id: debt.id },
-          data: {
-            currentAmount: debtAmount - paymentAmount,
-            paidAmount: Number(debt.paidAmount || 0) + paymentAmount,
-            updatedAt: new Date()
-          }
-        });
-        paidDebts.push({ ...debt, paidAmount: paymentAmount, status: 'partial' });
       }
 
-      remainingAmount -= paymentAmount;
-    }
-
-    // Criar registro de pagamento
-    const paymentRecord = await prisma.debtPayment.create({
-      data: {
-        id: `payment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        userId: auth.userId,
-        contactId,
-        contactName: contact.name,
-        amount: Number(amount),
-        paidDate: new Date(paidDate || new Date()),
-        description: tripId ? `Pagamento viagem - ${contact.name}` : `Pagamento para ${contact.name}`,
-        debtsAffected: paidDebts.map(d => d.id)
-      }
+      return { transactions, success: true };
     });
 
-    console.log('✅ [Pay Debt] Pagamento registrado:', paymentRecord.id);
+    console.log('✅ Pagamento processado com sucesso:', result.transactions.length, 'transações criadas');
 
     return NextResponse.json({
       success: true,
-      message: `Pagamento de R$ ${Number(amount).toFixed(2)} registrado com sucesso!`,
-      data: {
-        payment: paymentRecord,
-        debtsAffected: paidDebts,
-        remainingAmount
-      }
+      message: 'Pagamento processado com sucesso',
+      transactionsCreated: result.transactions.length,
     });
-
   } catch (error) {
-    console.error('❌ [Pay Debt] Erro:', error);
-    return NextResponse.json(
-      { error: 'Erro ao processar pagamento' },
-      { status: 500 }
-    );
+    console.error('❌ Erro ao processar pagamento:', error);
+    return handleApiError(error);
   }
 }

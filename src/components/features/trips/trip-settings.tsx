@@ -28,7 +28,7 @@ import {
   Upload,
   Plus,
 } from 'lucide-react';
-import { storage, type Trip, type Contact } from '@/lib/storage';
+import { storage, type Trip, type Contact } from '@/lib/config/storage';
 import { toast } from 'sonner';
 import { FamilySelector } from '@/components/features/family/family-selector';
 import {
@@ -75,10 +75,10 @@ export function TripSettings({ trip, onUpdate }: TripSettingsProps) {
   const loadFamilyMembers = async () => {
     try {
       if (typeof window === 'undefined') return;
-      
+
       const response = await fetch('/api/family', { credentials: 'include' });
       let allFamilyMembers = [];
-      
+
       if (response.ok) {
         allFamilyMembers = await response.json();
         setFamilyMembers(Array.isArray(allFamilyMembers) ? allFamilyMembers : []);
@@ -187,7 +187,7 @@ export function TripSettings({ trip, onUpdate }: TripSettingsProps) {
             });
           }
         }
-        
+
         // TODO: Implementar APIs para documentos, fotos e checklist
         // await deleteDocuments(trip.id);
         // await deletePhotos(trip.id);
@@ -660,5 +660,4 @@ export function TripSettings({ trip, onUpdate }: TripSettingsProps) {
     </>
   );
 }
-
 

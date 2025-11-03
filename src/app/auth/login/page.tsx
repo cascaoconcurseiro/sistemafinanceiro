@@ -10,7 +10,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [sessionExpired, setSessionExpired] = useState(false);
   const searchParams = useSearchParams();
-  
+
   useEffect(() => {
     // Verificar se foi redirecionado por sessão expirada
     if (searchParams.get('error') === 'session_expired') {
@@ -25,36 +25,38 @@ export default function LoginPage() {
     setError('');
 
     try {
-      // Usar NextAuth signIn
-      const { signIn } = await import('next-auth/react');
-      
-      const result = await signIn('credentials', {
-        email,
-        password,
-        redirect: false,
+      // Usar nossa API customizada de login
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+        credentials: 'include', // Importante para cookies
       });
 
-      if (result?.error) {
-        setError(result.error === 'Usuário inativo' ? 'Usuário inativo' : 'Email ou senha incorretos');
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Email ou senha incorretos');
         setLoading(false);
         return;
       }
 
-      if (result?.ok) {
-        // Buscar a sessão para verificar o role
-        const { getSession } = await import('next-auth/react');
-        const session = await getSession();
-        
-        console.log('✅ Login bem-sucedido:', session?.user);
+      if (data.success && data.data?.user) {
+        console.log('✅ Login bem-sucedido:', data.data.user);
         
         // Redirecionar baseado no role
-        if (session?.user?.role === 'ADMIN') {
+        if (data.data.user.role === 'ADMIN') {
           console.log('🔐 Redirecionando ADMIN para /admin');
           window.location.href = '/admin';
         } else {
           console.log('👤 Redirecionando USER para /dashboard');
           window.location.href = '/dashboard';
         }
+      } else {
+        setError('Erro ao processar login');
+        setLoading(false);
       }
     } catch (err) {
       console.error('Erro no login:', err);
@@ -74,7 +76,7 @@ export default function LoginPage() {
             Sistema Financeiro
           </p>
         </div>
-        
+
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
@@ -90,7 +92,7 @@ export default function LoginPage() {
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               />
             </div>
-            
+
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                 Senha

@@ -78,30 +78,29 @@ async function fetchTransactions(userId: string) {
 
 // Create transaction in database
 async function createTransaction(userId: string, data: z.infer<typeof createTransactionSchema>) {
-  console.log('🔍 [createTransaction] Iniciando criação:', { userId, data });
   
   // ✅ CASO ESPECIAL: Pago por outra pessoa
   if (data.paidBy) {
     console.log('💳 [createTransaction] PAGO POR OUTRA PESSOA detectado');
     console.log('💳 [createTransaction] Pagador:', data.paidBy);
-    
+
     // Calcular divisão automática
-    const participants = data.sharedWith ? 
-      (Array.isArray(data.sharedWith) ? data.sharedWith : JSON.parse(data.sharedWith)) : 
+    const participants = data.sharedWith ?
+      (Array.isArray(data.sharedWith) ? data.sharedWith : JSON.parse(data.sharedWith)) :
       [];
-    
+
     // Adicionar o usuário atual e o pagador aos participantes
     const allParticipants = [userId, ...participants];
     const uniqueParticipants = [...new Set(allParticipants)];
     const totalParticipants = uniqueParticipants.length;
     const sharePerPerson = data.amount / totalParticipants;
-    
+
     console.log('💳 [createTransaction] Divisão:', {
       totalParticipants,
       sharePerPerson,
       participants: uniqueParticipants
     });
-    
+
     // NÃO criar transação ainda - apenas registrar dívida
     // Criar dívida para cada participante (exceto quem pagou)
     for (const participantId of uniqueParticipants) {
@@ -119,7 +118,7 @@ async function createTransaction(userId: string, data: z.infer<typeof createTran
             transactionId: null, // Será preenchido quando pagar
           },
         });
-        
+
         console.log('✅ [createTransaction] Dívida criada:', {
           debtor: participantId,
           creditor: data.paidBy,
@@ -127,7 +126,7 @@ async function createTransaction(userId: string, data: z.infer<typeof createTran
         });
       }
     }
-    
+
     return {
       id: 'debt-created',
       description: data.description,
@@ -142,73 +141,62 @@ async function createTransaction(userId: string, data: z.infer<typeof createTran
       message: `Dívida de R$ ${sharePerPerson.toFixed(2)} registrada com ${data.paidBy}`,
     };
   }
-  
+
   // ✅ FLUXO NORMAL: EU paguei
   // Process account ID and credit card ID
   let accountId = data.accountId || data.account;
   let creditCardId = data.creditCardId || null;
-  
-  console.log('🔍 [createTransaction] accountId original:', accountId);
-  console.log('🔍 [createTransaction] creditCardId original:', creditCardId);
-  
+
+    
   // Remove prefixes
   if (accountId?.startsWith('account-')) {
     accountId = accountId.replace('account-', '');
-    console.log('🔍 [createTransaction] accountId após remover prefixo:', accountId);
-  } else if (accountId?.startsWith('card-')) {
+      } else if (accountId?.startsWith('card-')) {
     creditCardId = accountId.replace('card-', '');
     accountId = null; // Cartão não tem accountId
-    console.log('🔍 [createTransaction] É cartão de crédito:', creditCardId);
-  }
-  
+      }
+
   // Se creditCardId também tem prefixo, remover
   if (creditCardId?.startsWith('card-')) {
     creditCardId = creditCardId.replace('card-', '');
-    console.log('🔍 [createTransaction] creditCardId após remover prefixo:', creditCardId);
-  }
+      }
 
   // Validate account or credit card exists
   if (accountId) {
-    console.log('🔍 [createTransaction] Validando conta...');
-    const account = await prisma.account.findFirst({
-      where: { 
+        const account = await prisma.account.findFirst({
+      where: {
         id: accountId,
-        userId 
+        userId
       }
     });
 
     if (!account) {
-      console.log('❌ [createTransaction] Conta não encontrada:', accountId);
-      throw new Error('Account not found');
+            throw new Error('Account not found');
     }
-    console.log('✅ [createTransaction] Conta validada:', account.name);
-  } else if (creditCardId) {
-    console.log('🔍 [createTransaction] Validando cartão de crédito...');
-    const creditCard = await prisma.creditCard.findFirst({
-      where: { 
+      } else if (creditCardId) {
+        const creditCard = await prisma.creditCard.findFirst({
+      where: {
         id: creditCardId,
-        userId 
+        userId
       }
     });
 
     if (!creditCard) {
-      console.log('❌ [createTransaction] Cartão não encontrado:', creditCardId);
-      throw new Error('Credit card not found');
+            throw new Error('Credit card not found');
     }
-    console.log('✅ [createTransaction] Cartão validado:', creditCard.name);
-  }
+      }
 
   // Create transaction
   console.log('💾 [createTransaction] Criando transação no banco...');
   console.log('💾 [createTransaction] Dados:', { accountId, creditCardId, tripId: data.tripId });
-  
+
   // ✅ CORREÇÃO: Normalizar tipo de transação
   let transactionType = data.type;
   if (transactionType === 'income') transactionType = 'RECEITA';
   if (transactionType === 'expense') transactionType = 'DESPESA';
-  
+
   console.log('💾 [createTransaction] Tipo normalizado:', transactionType);
-  
+
   const newTransaction = await prisma.transaction.create({
     data: {
       description: data.description,
@@ -241,15 +229,13 @@ async function createTransaction(userId: string, data: z.infer<typeof createTran
       trip: { select: { id: true, name: true, destination: true } } // ✅ NOVO: Incluir viagem
     }
   });
-  
-  console.log('✅ [createTransaction] Transação criada:', newTransaction.id);
+
   
   // ✅ Se for despesa compartilhada (EU paguei), criar dívidas
   if (data.isShared && data.sharedWith) {
     const participants = Array.isArray(data.sharedWith) ? data.sharedWith : JSON.parse(data.sharedWith);
     const sharePerPerson = data.myShare || (data.amount / (participants.length + 1));
-    
-    console.log('💰 [createTransaction] Criando dívidas para participantes:', participants);
+
     
     for (const participantId of participants) {
       await prisma.sharedDebt.create({
@@ -265,9 +251,8 @@ async function createTransaction(userId: string, data: z.infer<typeof createTran
           transactionId: newTransaction.id,
         },
       });
-      
-      console.log('✅ [createTransaction] Dívida criada para:', participantId);
-    }
+
+          }
   }
 
   return {
@@ -297,22 +282,18 @@ async function createTransaction(userId: string, data: z.infer<typeof createTran
 
 // Simple GET handler
 export async function GET(request: NextRequest) {
-  console.log('📊 [Transactions API] Iniciando busca de transações...');
   
   try {
     const auth = await authenticateRequest(request);
     if (!auth.success || !auth.userId) {
-      console.log('❌ [Transactions API] Não autenticado');
-      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+            return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
     }
 
     const userId = auth.userId;
-    console.log('✅ [Transactions API] Usuário autenticado:', userId);
-
-    const transactions = await fetchTransactions(userId);
     
-    console.log('✅ [Transactions API] Transações encontradas:', transactions.length);
+    const transactions = await fetchTransactions(userId);
 
+    
     return NextResponse.json(transactions);
   } catch (error) {
     console.error('❌ [Transactions API] Erro:', error);
@@ -325,42 +306,36 @@ export async function GET(request: NextRequest) {
 
 // Simple POST handler
 export async function POST(request: NextRequest) {
-  console.log('📝 [Transactions API] Criando nova transação...');
   
   try {
     const auth = await authenticateRequest(request);
     if (!auth.success || !auth.userId) {
-      console.log('❌ [Transactions API] Não autenticado');
-      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+            return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
     }
 
     const userId = auth.userId;
     const body = await request.json();
-    
+
     console.log('📦 [Transactions API] Dados recebidos:', JSON.stringify(body, null, 2));
 
     // Validate data
     const validation = createTransactionSchema.safeParse(body);
     if (!validation.success) {
-      console.log('❌ [Transactions API] Dados inválidos:', validation.error.errors);
-      return NextResponse.json(
-        { 
-          error: 'Dados inválidos', 
+            return NextResponse.json(
+        {
+          error: 'Dados inválidos',
           details: validation.error.errors.map(e => `${e.path.join('.')}: ${e.message}`)
         },
         { status: 400 }
       );
     }
 
-    console.log('✅ [Transactions API] Dados validados com sucesso');
     
     const newTransaction = await createTransaction(userId, validation.data);
-    
-    console.log('✅ [Transactions API] Transação criada:', newTransaction.id);
+
     
     // ✅ CORREÇÃO: Invalidar cache do contexto unificado
-    console.log('🔄 [Transactions API] Invalidando cache...');
-
+    
     return NextResponse.json({
       ...newTransaction,
       _meta: {
@@ -372,9 +347,9 @@ export async function POST(request: NextRequest) {
     console.error('❌ [Transactions API] ERRO COMPLETO:', error);
     console.error('❌ [Transactions API] Mensagem:', error instanceof Error ? error.message : 'Unknown');
     console.error('❌ [Transactions API] Stack:', error instanceof Error ? error.stack : 'N/A');
-    
+
     return NextResponse.json(
-      { 
+      {
         error: 'Erro interno do servidor',
         message: error instanceof Error ? error.message : 'Unknown error',
         details: error instanceof Error ? error.stack : undefined

@@ -1,28 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'sua-grana-secret-key-dev-only';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session || !session.user) {
+    // Buscar token do cookie
+    const accessToken = request.cookies.get('access_token')?.value;
+
+    if (!accessToken) {
       return NextResponse.json(
-        { error: 'Não autenticado' },
+        { success: false, error: 'Não autenticado' },
         { status: 401 }
       );
     }
 
+    // Verificar e decodificar token JWT
+    const decoded = jwt.verify(accessToken, JWT_SECRET) as {
+      userId: string;
+      email: string;
+      name: string;
+    };
+
     return NextResponse.json({
-      id: session.user.id,
-      name: session.user.name,
-      email: session.user.email,
+      success: true,
+      user: {
+        id: decoded.userId,
+        name: decoded.name,
+        email: decoded.email,
+      }
     });
   } catch (error) {
-    console.error('Erro ao buscar usuário:', error);
+    console.error('Erro ao verificar token:', error);
     return NextResponse.json(
-      { error: 'Erro ao buscar dados do usuário' },
-      { status: 500 }
+      { success: false, error: 'Token inválido ou expirado' },
+      { status: 401 }
     );
   }
 }

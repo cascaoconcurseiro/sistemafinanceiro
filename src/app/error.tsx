@@ -48,14 +48,14 @@ export default function Error({
               )}
             </div>
           )}
-          
+
           <div className="flex flex-col gap-2">
             <Button onClick={reset} className="w-full">
               <RefreshCw className="h-4 w-4 mr-2" />
               Tentar Novamente
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => router.push('/')}
               className="w-full"
             >

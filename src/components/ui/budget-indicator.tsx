@@ -58,8 +58,8 @@ export function BudgetIndicator({
         </div>
       </div>
 
-      <Progress 
-        value={Math.min(percentage, 100)} 
+      <Progress
+        value={Math.min(percentage, 100)}
         className="h-2"
       />
 

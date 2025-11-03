@@ -932,4 +932,3 @@ const FinancialSettingsManager: React.FC<SettingsManagerProps> = ({
 
 export default FinancialSettingsManager;
 
-

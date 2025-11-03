@@ -26,7 +26,7 @@ import {
   ChevronRight,
   Settings,
 } from 'lucide-react';
-import type { Trip } from '@/lib/storage';
+import type { Trip } from '@/lib/config/storage';
 import { QuickItineraryCreator } from './quick-itinerary-creator';
 import { ItineraryProgress } from './itinerary-progress';
 
@@ -56,20 +56,18 @@ export function TripItinerary({ trip, onUpdate }: TripItineraryProps) {
   const [showQuickCreator, setShowQuickCreator] = useState(false);
   const [currentViewDate, setCurrentViewDate] = useState(() => {
     if (trip.startDate) {
-      const startDateStr = typeof trip.startDate === 'string' 
-        ? trip.startDate.split('T')[0] 
+      const startDateStr = typeof trip.startDate === 'string'
+        ? trip.startDate.split('T')[0]
         : new Date(trip.startDate).toISOString().split('T')[0];
-      console.log('🎯 [TripItinerary] Data inicial definida:', startDateStr);
-      return startDateStr;
+            return startDateStr;
     }
     const today = new Date().toISOString().split('T')[0];
-    console.log('🎯 [TripItinerary] Usando data atual:', today);
-    return today;
+        return today;
   });
   const [selectedDate, setSelectedDate] = useState(() => {
     if (trip.startDate) {
-      const startDateStr = typeof trip.startDate === 'string' 
-        ? trip.startDate.split('T')[0] 
+      const startDateStr = typeof trip.startDate === 'string'
+        ? trip.startDate.split('T')[0]
         : new Date(trip.startDate).toISOString().split('T')[0];
       return startDateStr;
     }
@@ -92,29 +90,27 @@ export function TripItinerary({ trip, onUpdate }: TripItineraryProps) {
 
   const loadItinerary = async () => {
     if (typeof window === 'undefined') return;
-    
+
     try {
-      console.log('🔄 [TripItinerary] Carregando itinerário para trip:', trip.id);
-      const response = await fetch(`/api/itinerary?tripId=${trip.id}`, { credentials: 'include' });
+            const response = await fetch(`/api/itinerary?tripId=${trip.id}`, { credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ [TripItinerary] Itinerário carregado:', data.length, 'itens');
         
         // Verificar se há dados locais salvos
         const localKey = `itinerary_${trip.id}`;
         const localData = localStorage.getItem(localKey);
-        
+
         if (localData) {
           try {
             const localItinerary = JSON.parse(localData);
             console.log('📱 [TripItinerary] Dados locais encontrados, mesclando...');
-            
+
             // Mesclar dados da API com alterações locais
             const mergedData = data.map((apiItem: ItineraryItem) => {
               const localItem = localItinerary.find((local: ItineraryItem) => local.id === apiItem.id);
               return localItem || apiItem;
             });
-            
+
             setItinerary(mergedData);
           } catch (parseError) {
             console.error('❌ Erro ao parsear dados locais:', parseError);
@@ -171,13 +167,13 @@ export function TripItinerary({ trip, onUpdate }: TripItineraryProps) {
     // Se há datas de início e fim da viagem, usar esse período
     if (trip.startDate && trip.endDate) {
       // Converter as datas corretamente
-      const startDate = typeof trip.startDate === 'string' 
-        ? trip.startDate.split('T')[0] 
+      const startDate = typeof trip.startDate === 'string'
+        ? trip.startDate.split('T')[0]
         : new Date(trip.startDate).toISOString().split('T')[0];
-      const endDate = typeof trip.endDate === 'string' 
-        ? trip.endDate.split('T')[0] 
+      const endDate = typeof trip.endDate === 'string'
+        ? trip.endDate.split('T')[0]
         : new Date(trip.endDate).toISOString().split('T')[0];
-        
+
       const start = new Date(startDate + 'T00:00:00');
       const end = new Date(endDate + 'T00:00:00');
       const dates = [];
@@ -185,23 +181,23 @@ export function TripItinerary({ trip, onUpdate }: TripItineraryProps) {
       for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
         dates.push(new Date(d).toISOString().split('T')[0]);
       }
-      
+
       return dates;
     }
-    
+
     // Caso contrário, usar as datas dos itens existentes
     if (itinerary.length === 0) {
       return [];
     }
-    
+
     // Extrair datas únicas dos itens
     const uniqueDates = [...new Set(itinerary.map(item => {
-      const itemDate = typeof item.date === 'string' 
-        ? item.date.split('T')[0] 
+      const itemDate = typeof item.date === 'string'
+        ? item.date.split('T')[0]
         : new Date(item.date).toISOString().split('T')[0];
       return itemDate;
     }))].sort();
-    
+
     return uniqueDates;
   }, [trip.startDate, trip.endDate, itinerary.length]);
 
@@ -218,13 +214,13 @@ export function TripItinerary({ trip, onUpdate }: TripItineraryProps) {
   const getItemsByDate = (date: string) => {
     const items = itinerary.filter((item) => {
       // Normalizar as datas para comparação
-      const itemDate = typeof item.date === 'string' 
-        ? item.date.split('T')[0] 
+      const itemDate = typeof item.date === 'string'
+        ? item.date.split('T')[0]
         : new Date(item.date).toISOString().split('T')[0];
-      
+
       return itemDate === date;
     });
-    
+
     return items.sort((a, b) => {
       // Primeiro ordena por order, depois por time
       if (a.order !== b.order) {
@@ -417,22 +413,21 @@ export function TripItinerary({ trip, onUpdate }: TripItineraryProps) {
       });
 
       // Atualizar estado local imediatamente
-      const updatedItinerary = itinerary.map(i => 
-        i.id === itemId 
-          ? { 
-              ...i, 
-              completed: newCompletedStatus, 
-              completedAt: newCompletedStatus ? new Date().toISOString() : undefined 
+      const updatedItinerary = itinerary.map(i =>
+        i.id === itemId
+          ? {
+              ...i,
+              completed: newCompletedStatus,
+              completedAt: newCompletedStatus ? new Date().toISOString() : undefined
             }
           : i
       );
       setItinerary(updatedItinerary);
-      
+
       // Salvar no localStorage para persistir
       const localKey = `itinerary_${trip.id}`;
       localStorage.setItem(localKey, JSON.stringify(updatedItinerary));
-      
-      console.log('✅ [Frontend] Estado local e localStorage atualizados');
+
       
       // Chamar onUpdate para atualizar outros componentes
       onUpdate?.();
@@ -452,8 +447,7 @@ export function TripItinerary({ trip, onUpdate }: TripItineraryProps) {
         });
 
         if (response.ok) {
-          console.log('✅ [Frontend] Sincronizado com API');
-          // Limpar dados locais após sincronização bem-sucedida
+                    // Limpar dados locais após sincronização bem-sucedida
           localStorage.removeItem(localKey);
         } else {
           console.log('⚠️ [Frontend] API falhou, mantendo dados locais');
@@ -461,7 +455,7 @@ export function TripItinerary({ trip, onUpdate }: TripItineraryProps) {
       } catch (apiError) {
         console.log('⚠️ [Frontend] Erro de API, mantendo dados locais:', apiError);
       }
-      
+
     } catch (error) {
       console.error('❌ [Frontend] Erro no toggle local:', error);
     }
@@ -469,7 +463,7 @@ export function TripItinerary({ trip, onUpdate }: TripItineraryProps) {
 
   const navigateDate = (direction: 'prev' | 'next') => {
     const currentIndex = getDatesInRange.indexOf(currentViewDate);
-    
+
     if (direction === 'prev' && currentIndex > 0) {
       setCurrentViewDate(getDatesInRange[currentIndex - 1]);
     } else if (direction === 'next' && currentIndex < getDatesInRange.length - 1) {
@@ -490,17 +484,15 @@ export function TripItinerary({ trip, onUpdate }: TripItineraryProps) {
     return currentIndex < getDatesInRange.length - 1;
   };
 
-
-
   return (
     <div className="space-y-6">
       {/* Componente de Progresso */}
-      <ItineraryProgress 
+      <ItineraryProgress
         itinerary={itinerary}
         tripStartDate={trip.startDate}
         tripEndDate={trip.endDate}
       />
-      
+
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
@@ -576,7 +568,7 @@ export function TripItinerary({ trip, onUpdate }: TripItineraryProps) {
                     </select>
                   </div>
                 </div>
-                
+
                 {getDatesInRange.length > 1 && (
                   <div className="flex gap-2">
                     <Button
@@ -589,7 +581,7 @@ export function TripItinerary({ trip, onUpdate }: TripItineraryProps) {
                       <ChevronLeft className="w-4 h-4" />
                       Anterior
                     </Button>
-                    
+
                     <Button
                       variant="outline"
                       size="sm"
@@ -603,7 +595,7 @@ export function TripItinerary({ trip, onUpdate }: TripItineraryProps) {
                   </div>
                 )}
               </div>
-              
+
               {/* Título do Dia Atual */}
               <div className="text-center">
                 <div className="flex items-center justify-center gap-2">
@@ -625,7 +617,7 @@ export function TripItinerary({ trip, onUpdate }: TripItineraryProps) {
           <div className="space-y-6">
             {(() => {
               const dayItems = getItemsByDate(currentViewDate);
-              
+
               return (
                 <div className="space-y-3">
                   <div className="flex items-center justify-end">
@@ -678,10 +670,10 @@ export function TripItinerary({ trip, onUpdate }: TripItineraryProps) {
                                 className="h-6 w-6 p-0 mt-1"
                                 disabled={loadingItems.has(item.id)}
                                 title={
-                                  loadingItems.has(item.id) 
-                                    ? "Processando..." 
-                                    : item.completed 
-                                      ? "Marcar como não concluído" 
+                                  loadingItems.has(item.id)
+                                    ? "Processando..."
+                                    : item.completed
+                                      ? "Marcar como não concluído"
                                       : "Marcar como concluído"
                                 }
                               >
@@ -807,7 +799,6 @@ export function TripItinerary({ trip, onUpdate }: TripItineraryProps) {
           </div>
           </>
           )}
-
 
         </CardContent>
       </Card>

@@ -28,12 +28,12 @@ export function useAutoInvalidateCache() {
   // Função para invalidar queries baseada no evento
   const invalidateQueriesForEvent = (eventType: string) => {
     const queriesToInvalidate = EVENT_TO_QUERIES_MAP[eventType as keyof typeof EVENT_TO_QUERIES_MAP];
-    
+
     if (queriesToInvalidate) {
       console.log(`🔄 Invalidando cache para evento: ${eventType}`, queriesToInvalidate);
-      
+
       queriesToInvalidate.forEach(queryKey => {
-        queryClient.invalidateQueries({ 
+        queryClient.invalidateQueries({
           queryKey: [queryKey],
           exact: false // Invalida todas as queries que começam com essa chave
         });

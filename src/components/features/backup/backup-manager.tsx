@@ -126,16 +126,16 @@ export function BackupManager() {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
               <Clock className="h-5 w-5 text-green-500" />
               <div>
                 <p className="text-sm font-medium">Último Backup</p>
                 <p className="text-xs text-muted-foreground">
-                  {lastBackup 
-                    ? formatDistanceToNow(new Date(lastBackup), { 
-                        addSuffix: true, 
-                        locale: ptBR 
+                  {lastBackup
+                    ? formatDistanceToNow(new Date(lastBackup), {
+                        addSuffix: true,
+                        locale: ptBR
                       })
                     : 'Nunca'
                   }
@@ -258,7 +258,7 @@ export function BackupManager() {
             onChange={handleFileSelect}
             className="hidden"
           />
-          
+
           <Button
             onClick={handleImportClick}
             disabled={isImporting}
@@ -298,7 +298,7 @@ export function BackupManager() {
                   Atenção:
                 </p>
                 <p className="text-yellow-700 dark:text-yellow-300">
-                  A importação irá substituir os dados existentes. Recomendamos 
+                  A importação irá substituir os dados existentes. Recomendamos
                   fazer um backup antes de importar novos dados.
                 </p>
               </div>

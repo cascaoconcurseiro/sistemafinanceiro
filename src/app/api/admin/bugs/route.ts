@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/db';
+import { authOptions } from '@/lib/auth/auth';
+import { prisma } from '@/lib/prisma';
 
 export async function GET() {
   try {
@@ -12,7 +12,7 @@ export async function GET() {
     }
 
     // Buscar bugs do banco de dados
-    const bugs = await db.bugReport.findMany({
+    const bugs = await prisma.bugReport.findMany({
       orderBy: {
         createdAt: 'desc',
       },
@@ -21,7 +21,7 @@ export async function GET() {
     // Buscar informações dos usuários
     const bugsWithUserInfo = await Promise.all(
       bugs.map(async (bug) => {
-        const user = await db.user.findUnique({
+        const user = await prisma.user.findUnique({
           where: { id: bug.userId },
           select: { name: true, email: true },
         });
@@ -54,9 +54,9 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const { title, description, severity, category, stackTrace, userAgent, url } = body;
-    
+
     // Salvar bug no banco
-    const bug = await db.bugReport.create({
+    const bug = await prisma.bugReport.create({
       data: {
         userId: session.user.id,
         title,
@@ -69,9 +69,8 @@ export async function POST(request: Request) {
       },
     });
 
-    console.log('✅ Bug reportado:', bug.id);
-
-    return NextResponse.json({ 
+    
+    return NextResponse.json({
       success: true,
       message: 'Bug reportado com sucesso',
       bugId: bug.id,

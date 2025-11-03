@@ -33,7 +33,7 @@ import {
   Package,
   Tag,
 } from 'lucide-react';
-import type { Trip } from '@/lib/storage';
+import type { Trip } from '@/lib/config/storage';
 import { toast } from 'sonner';
 
 interface ShoppingItem {
@@ -92,15 +92,13 @@ export function TripShoppingList({ trip, onUpdate }: TripShoppingListProps) {
 
   const loadShoppingList = async () => {
     try {
-      console.log('🔄 [ShoppingList] Carregando lista para trip:', trip.id);
-      const response = await fetch(`/api/shopping-items?tripId=${trip.id}`, {
+            const response = await fetch(`/api/shopping-items?tripId=${trip.id}`, {
         credentials: 'include'
       });
-      
+
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ [ShoppingList] Lista carregada:', data.length, 'itens');
-        setItems(data);
+                setItems(data);
       } else {
         console.error('❌ [ShoppingList] Erro ao carregar:', response.statusText);
         setItems([]);
@@ -131,12 +129,12 @@ export function TripShoppingList({ trip, onUpdate }: TripShoppingListProps) {
     };
 
     try {
-      const url = editingItem 
+      const url = editingItem
         ? '/api/shopping-items'
         : '/api/shopping-items';
-      
+
       const method = editingItem ? 'PUT' : 'POST';
-      const body = editingItem 
+      const body = editingItem
         ? { ...itemData, id: editingItem.id }
         : itemData;
 
@@ -446,7 +444,7 @@ export function TripShoppingList({ trip, onUpdate }: TripShoppingListProps) {
         <div className="text-sm text-blue-800">
           <p className="font-medium mb-1">Como funciona:</p>
           <p>
-            Ao marcar um item como comprado (✓), você poderá informar o <strong>valor real pago</strong> e 
+            Ao marcar um item como comprado (✓), você poderá informar o <strong>valor real pago</strong> e
             o local da compra. Isso permite comparar o valor estimado com o real e acompanhar seus gastos.
           </p>
         </div>

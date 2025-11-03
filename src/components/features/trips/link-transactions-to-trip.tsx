@@ -41,30 +41,27 @@ export function LinkTransactionsToTrip({
   const loadUnlinkedTransactions = async () => {
     setLoading(true);
     try {
-      console.log('🔍 [LinkTransactions] Buscando transações...');
-      console.log('📅 [LinkTransactions] Período da viagem:', tripStartDate, '-', tripEndDate);
-      
+            
       // Buscar transações sem tripId no período da viagem
       const response = await fetch('/api/transactions', {
         credentials: 'include',
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         const allTransactions = data.transactions || [];
         console.log(`📊 [LinkTransactions] Total de transações no sistema: ${allTransactions.length}`);
-        
+
         // Filtrar transações sem tripId e dentro do período da viagem
         const startDate = new Date(tripStartDate);
         const endDate = new Date(tripEndDate);
-        
-        console.log('🔍 [LinkTransactions] Filtrando transações...');
-        const unlinked = allTransactions.filter((t: Transaction) => {
+
+                const unlinked = allTransactions.filter((t: Transaction) => {
           const transDate = new Date(t.date);
           const hasNoTripId = !t.tripId;
           const isDespesa = t.type === 'DESPESA';
           const isInPeriod = transDate >= startDate && transDate <= endDate;
-          
+
           if (hasNoTripId && isDespesa && isInPeriod) {
             console.log('✅ [LinkTransactions] Transação encontrada:', {
               id: t.id,
@@ -75,22 +72,22 @@ export function LinkTransactionsToTrip({
               tripId: t.tripId
             });
           }
-          
+
           return hasNoTripId && isDespesa && isInPeriod;
         });
-        
+
         setTransactions(unlinked);
         console.log(`✅ [LinkTransactions] ${unlinked.length} transações não vinculadas encontradas no período`);
-        
+
         if (unlinked.length === 0) {
           console.warn('⚠️ [LinkTransactions] Nenhuma transação encontrada. Verificando motivos...');
-          
+
           const withoutTripId = allTransactions.filter((t: Transaction) => !t.tripId);
           console.log(`  - Transações sem tripId: ${withoutTripId.length}`);
-          
+
           const despesas = allTransactions.filter((t: Transaction) => t.type === 'DESPESA');
           console.log(`  - Transações do tipo DESPESA: ${despesas.length}`);
-          
+
           const inPeriod = allTransactions.filter((t: Transaction) => {
             const transDate = new Date(t.date);
             return transDate >= startDate && transDate <= endDate;
@@ -138,8 +135,6 @@ export function LinkTransactionsToTrip({
 
     setLinking(true);
     try {
-      console.log('🔗 [LinkTransactions] Vinculando transações:', Array.from(selectedIds));
-      
       const response = await fetch(`/api/trips/${tripId}/link-transactions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -149,8 +144,7 @@ export function LinkTransactionsToTrip({
 
       if (response.ok) {
         const result = await response.json();
-        console.log('✅ [LinkTransactions] Resultado:', result);
-        toast.success(result.message || `${result.linkedCount} transação(ões) vinculada(s) à viagem!`);
+                toast.success(result.message || `${result.linkedCount} transação(ões) vinculada(s) à viagem!`);
         onLinked();
         setOpen(false);
         setSelectedIds(new Set());

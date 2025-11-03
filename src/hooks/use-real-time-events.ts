@@ -26,7 +26,7 @@ export function useRealTimeEvents(options: UseRealTimeEventsOptions = {}) {
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [lastEvent, setLastEvent] = useState<RealTimeEvent | null>(null);
-  
+
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -54,8 +54,7 @@ export function useRealTimeEvents(options: UseRealTimeEventsOptions = {}) {
       eventSourceRef.current = eventSource;
 
       eventSource.onopen = () => {
-        console.log('🔗 Conectado ao sistema de eventos em tempo real');
-        setIsConnected(true);
+                setIsConnected(true);
         setConnectionError(null);
         reconnectAttemptsRef.current = 0;
       };
@@ -67,9 +66,8 @@ export function useRealTimeEvents(options: UseRealTimeEventsOptions = {}) {
 
           // Propagar evento através do event emitter local
           eventEmitter.emit(eventData.type, eventData.data, 'server');
-          
-          console.log('📡 Evento recebido:', eventData.type, eventData.data);
-        } catch (error) {
+
+                  } catch (error) {
           console.warn('Erro ao processar evento SSE:', error);
         }
       };
@@ -77,7 +75,7 @@ export function useRealTimeEvents(options: UseRealTimeEventsOptions = {}) {
       eventSource.onerror = (error) => {
         console.warn('Conexão SSE interrompida (normal em desenvolvimento)');
         setIsConnected(false);
-        
+
         // Fechar conexão atual
         eventSource.close();
         eventSourceRef.current = null;
@@ -86,7 +84,7 @@ export function useRealTimeEvents(options: UseRealTimeEventsOptions = {}) {
         if (shouldConnect() && reconnectAttemptsRef.current < maxReconnectAttempts) {
           reconnectAttemptsRef.current++;
           console.log(`🔄 Tentativa de reconexão ${reconnectAttemptsRef.current}/${maxReconnectAttempts}`);
-          
+
           reconnectTimeoutRef.current = setTimeout(() => {
             connect();
           }, reconnectInterval);
@@ -107,12 +105,12 @@ export function useRealTimeEvents(options: UseRealTimeEventsOptions = {}) {
       eventSourceRef.current.close();
       eventSourceRef.current = null;
     }
-    
+
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = null;
     }
-    
+
     setIsConnected(false);
     setConnectionError(null);
     reconnectAttemptsRef.current = 0;

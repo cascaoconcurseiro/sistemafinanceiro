@@ -11,7 +11,7 @@ import { useTransactions } from './use-transactions-query';
 export function useSearchTransactions(initialFilters?: Record<string, any>) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState(initialFilters || {});
-  
+
   // Debounce de 500ms - só busca após usuário parar de digitar
   const [debouncedSearchTerm] = useDebounce(searchTerm, 500);
   const [debouncedFilters] = useDebounce(filters, 300);
@@ -31,7 +31,7 @@ export function useSearchTransactions(initialFilters?: Record<string, any>) {
     setSearchTerm,
     filters,
     setFilters,
-    isSearching: searchTerm !== debouncedSearchTerm || 
+    isSearching: searchTerm !== debouncedSearchTerm ||
                  JSON.stringify(filters) !== JSON.stringify(debouncedFilters),
   };
 }

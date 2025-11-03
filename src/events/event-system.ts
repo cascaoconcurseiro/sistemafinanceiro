@@ -113,7 +113,7 @@ export class EventSystem {
   private isEnabled: boolean = true;
 
   private constructor() {
-    console.log('🎯 Sistema de eventos inicializado');
+    
   }
 
   /**
@@ -513,13 +513,13 @@ let alertObserver: AlertObserver;
  * Inicializa o sistema de eventos com observers padrão
  */
 export function initializeEventSystem(): void {
-  console.log('🚀 Inicializando sistema de eventos...');
+  
   
   // Inicializar observers
   balanceObserver = new BalanceObserver();
   alertObserver = new AlertObserver();
   
-  console.log('✅ Sistema de eventos inicializado com sucesso');
+  
 }
 
 /**
@@ -532,7 +532,7 @@ export function shutdownEventSystem(): void {
   eventSystem.setEnabled(false);
   eventSystem.clearHistory();
   
-  console.log('✅ Sistema de eventos finalizado');
+  
 }
 
 // =====================================================

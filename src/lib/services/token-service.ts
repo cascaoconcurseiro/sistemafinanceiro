@@ -28,13 +28,13 @@ export function generateTokenPair(userId: string, email: string): {
     JWT_SECRET,
     { expiresIn: ACCESS_TOKEN_EXPIRY }
   );
-  
+
   const refreshToken = jwt.sign(
     { userId, email, type: 'refresh' } as TokenPayload,
     JWT_SECRET,
     { expiresIn: REFRESH_TOKEN_EXPIRY }
   );
-  
+
   return { accessToken, refreshToken };
 }
 
@@ -61,32 +61,32 @@ export async function rotateTokens(refreshToken: string): Promise<{
 }> {
   // Verificar refresh token
   const decoded = verifyToken(refreshToken);
-  
+
   if (!decoded || decoded.type !== 'refresh') {
     return { success: false, error: 'Invalid refresh token' };
   }
-  
+
   // Verificar se token está na blacklist
   const isBlacklisted = await isTokenBlacklisted(refreshToken);
   if (isBlacklisted) {
     return { success: false, error: 'Token has been revoked' };
   }
-  
+
   // Verificar se usuário ainda existe e está ativo
   const user = await prisma.user.findUnique({
     where: { id: decoded.userId }
   });
-  
+
   if (!user || !user.isActive) {
     return { success: false, error: 'User not found or inactive' };
   }
-  
+
   // Adicionar token antigo à blacklist
   await addToBlacklist(refreshToken, 7 * 24 * 60 * 60); // 7 dias
-  
+
   // Gerar novos tokens
   const newTokens = generateTokenPair(user.id, user.email);
-  
+
   return {
     success: true,
     ...newTokens
@@ -98,7 +98,7 @@ export async function rotateTokens(refreshToken: string): Promise<{
  */
 async function addToBlacklist(token: string, expiresInSeconds: number): Promise<void> {
   const expiresAt = new Date(Date.now() + expiresInSeconds * 1000);
-  
+
   try {
     // Criar tabela se não existir (migration deve fazer isso)
     await prisma.$executeRaw`
@@ -109,7 +109,7 @@ async function addToBlacklist(token: string, expiresInSeconds: number): Promise<
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `;
-    
+
     await prisma.$executeRaw`
       INSERT INTO token_blacklist (id, token, expires_at)
       VALUES (${generateId()}, ${token}, ${expiresAt.toISOString()})
@@ -130,7 +130,7 @@ async function isTokenBlacklisted(token: string): Promise<boolean> {
       WHERE token = ${token}
       AND expires_at > ${new Date().toISOString()}
     `;
-    
+
     return result[0]?.count > 0;
   } catch {
     return false;

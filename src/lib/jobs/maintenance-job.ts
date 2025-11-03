@@ -7,7 +7,7 @@ import { prisma } from '@/lib/prisma';
 import { BasicAuditService } from '@/lib/services/audit-service-basic';
 
 export class MaintenanceJob {
-  
+
   /**
    * Reconcilia saldos das contas
    */
@@ -15,7 +15,6 @@ export class MaintenanceJob {
     updated: number;
     total: number;
   }> {
-    console.log('🔄 [Maintenance] Iniciando reconciliação de saldos...');
     
     const accounts = await prisma.account.findMany({
       where: { deletedAt: null },
@@ -27,7 +26,7 @@ export class MaintenanceJob {
     });
 
     let updatedCount = 0;
-    
+
     for (const account of accounts) {
       const calculatedBalance = account.transactions.reduce((sum, transaction) => {
         const amount = Number(transaction.amount);
@@ -45,7 +44,7 @@ export class MaintenanceJob {
       if (difference > 0.01) {
         await prisma.account.update({
           where: { id: account.id },
-          data: { 
+          data: {
             reconciledBalance: calculatedBalance,
             updatedAt: new Date()
           }
@@ -63,7 +62,7 @@ export class MaintenanceJob {
     }
 
     console.log(`✅ [Maintenance] Reconciliação concluída: ${updatedCount}/${accounts.length} contas atualizadas`);
-    
+
     return {
       updated: updatedCount,
       total: accounts.length
@@ -78,18 +77,18 @@ export class MaintenanceJob {
     groups: number;
   }> {
     console.log('🧹 [Maintenance] Limpando transações duplicadas...');
-    
+
     const allTransactions = await prisma.transaction.findMany({
       where: { deletedAt: null },
       orderBy: { createdAt: 'asc' }
     });
 
     const transactionGroups: Record<string, any[]> = {};
-    
+
     allTransactions.forEach(transaction => {
       const dateKey = new Date(transaction.date).toISOString().split('T')[0];
       const key = `${transaction.description}-${transaction.amount}-${dateKey}-${transaction.accountId}`;
-      
+
       if (!transactionGroups[key]) {
         transactionGroups[key] = [];
       }
@@ -98,14 +97,14 @@ export class MaintenanceJob {
 
     const duplicateGroups = Object.values(transactionGroups).filter(group => group.length > 1);
     let totalRemoved = 0;
-    
+
     for (const group of duplicateGroups) {
       const [keep, ...remove] = group;
-      
+
       for (const transaction of remove) {
         await prisma.transaction.update({
           where: { id: transaction.id },
-          data: { 
+          data: {
             deletedAt: new Date(),
             updatedAt: new Date()
           }
@@ -116,13 +115,13 @@ export class MaintenanceJob {
           reason: 'Duplicate transaction removed by maintenance job',
           keptTransactionId: keep.id
         });
-        
+
         totalRemoved++;
       }
     }
 
     console.log(`✅ [Maintenance] Duplicatas removidas: ${totalRemoved} em ${duplicateGroups.length} grupos`);
-    
+
     return {
       removed: totalRemoved,
       groups: duplicateGroups.length
@@ -137,7 +136,7 @@ export class MaintenanceJob {
     kept: number;
   }> {
     console.log('🧹 [Maintenance] Limpando categorias órfãs...');
-    
+
     const allCategories = await prisma.category.findMany({
       where: { isActive: true },
       include: {
@@ -151,7 +150,7 @@ export class MaintenanceJob {
       }
     });
 
-    const orphanCategories = allCategories.filter(category => 
+    const orphanCategories = allCategories.filter(category =>
       category._count.transactions === 0
     );
 
@@ -164,7 +163,7 @@ export class MaintenanceJob {
     let keptCount = 0;
 
     for (const category of orphanCategories) {
-      const isEssential = essentialCategories.some(essential => 
+      const isEssential = essentialCategories.some(essential =>
         category.name.toLowerCase().includes(essential.toLowerCase())
       );
 
@@ -173,7 +172,7 @@ export class MaintenanceJob {
       } else {
         await prisma.category.update({
           where: { id: category.id },
-          data: { 
+          data: {
             isActive: false,
             updatedAt: new Date()
           }
@@ -190,13 +189,13 @@ export class MaintenanceJob {
             categoryName: category.name
           }
         });
-        
+
         deactivatedCount++;
       }
     }
 
     console.log(`✅ [Maintenance] Categorias órfãs: ${deactivatedCount} desativadas, ${keptCount} mantidas`);
-    
+
     return {
       deactivated: deactivatedCount,
       kept: keptCount
@@ -212,10 +211,9 @@ export class MaintenanceJob {
     categories: { deactivated: number; kept: number };
     executedAt: Date;
   }> {
-    console.log('🔧 [Maintenance] Iniciando manutenção completa...');
     
     const startTime = new Date();
-    
+
     try {
       const balances = await this.reconcileAccountBalances();
       const duplicates = await this.cleanDuplicateTransactions();
@@ -235,12 +233,11 @@ export class MaintenanceJob {
         details: result
       });
 
-      console.log('✅ [Maintenance] Manutenção completa concluída com sucesso!');
       
       return result;
     } catch (error) {
       console.error('❌ [Maintenance] Erro durante manutenção:', error);
-      
+
       await BasicAuditService.log({
         action: 'MAINTENANCE_FAILED',
         userId: 'system',
@@ -250,7 +247,7 @@ export class MaintenanceJob {
           executedAt: startTime
         }
       });
-      
+
       throw error;
     }
   }

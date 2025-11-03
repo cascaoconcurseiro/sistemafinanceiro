@@ -28,11 +28,17 @@ export function formatDateInput(date: Date | string): string {
 
 /**
  * Converte data brasileira (DD/MM/AAAA) para ISO (AAAA-MM-DD)
+ * ✅ CORREÇÃO: Usa meio-dia para evitar problemas de timezone
  */
 export function convertBRDateToISO(brDate: string): string {
   try {
+    // Parse a data no formato brasileiro
     const parsed = parse(brDate, 'dd/MM/yyyy', new Date());
     if (!isValid(parsed)) return '';
+    
+    // Definir horário para meio-dia para evitar problemas de timezone
+    parsed.setHours(12, 0, 0, 0);
+    
     return format(parsed, 'yyyy-MM-dd');
   } catch {
     return '';
@@ -41,10 +47,18 @@ export function convertBRDateToISO(brDate: string): string {
 
 /**
  * Converte data ISO (AAAA-MM-DD) para formato brasileiro (DD/MM/AAAA)
+ * ✅ CORREÇÃO: Usa parseISO para evitar problemas de timezone
  */
 export function convertISODateToBR(isoDate: string): string {
   try {
-    // Adiciona horário para evitar problemas de timezone
+    // Se já tem horário, usar diretamente
+    if (isoDate.includes('T')) {
+      const parsed = new Date(isoDate);
+      if (!isValid(parsed)) return '';
+      return format(parsed, 'dd/MM/yyyy', { locale: ptBR });
+    }
+    
+    // Se é apenas data (YYYY-MM-DD), adicionar horário ao meio-dia
     const parsed = new Date(isoDate + 'T12:00:00');
     if (!isValid(parsed)) return '';
     return format(parsed, 'dd/MM/yyyy', { locale: ptBR });
@@ -112,22 +126,22 @@ export function subtractDaysFromDate(date: Date | string, days: number): Date {
 export function formatDateFriendly(date: Date | string): string {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   if (!isValid(dateObj)) return '';
-  
+
   const today = new Date();
   const yesterday = subDays(today, 1);
   const tomorrow = addDays(today, 1);
-  
+
   if (format(dateObj, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd')) {
     return 'Hoje';
   }
-  
+
   if (format(dateObj, 'yyyy-MM-dd') === format(yesterday, 'yyyy-MM-dd')) {
     return 'Ontem';
   }
-  
+
   if (format(dateObj, 'yyyy-MM-dd') === format(tomorrow, 'yyyy-MM-dd')) {
     return 'Amanhã';
   }
-  
+
   return format(dateObj, 'dd/MM/yyyy', { locale: ptBR });
 }

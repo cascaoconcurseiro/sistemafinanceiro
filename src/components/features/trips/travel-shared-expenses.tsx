@@ -8,7 +8,7 @@ interface TravelSharedExpensesProps {
 
 /**
  * Componente de Despesas Compartilhadas de Viagem
- * 
+ *
  * Este componente é apenas um wrapper que usa o SharedExpensesBilling
  * em modo 'trip' para garantir que a lógica de pagamento seja a mesma
  * em todas as páginas.

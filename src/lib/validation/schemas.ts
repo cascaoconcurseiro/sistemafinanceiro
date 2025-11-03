@@ -52,7 +52,7 @@ export const TransactionSchema = z.object({
   amount: z.number().or(z.string().transform(Number)),
   description: z.string().min(1, 'Descrição é obrigatória').max(500),
   type: TransactionType,
-  date: z.string().or(z.date()).transform(val => 
+  date: z.string().or(z.date()).transform(val =>
     typeof val === 'string' ? new Date(val) : val
   ),
   status: TransactionStatus.default('cleared'),
@@ -159,7 +159,7 @@ export const InvoiceSchema = z.object({
   year: z.number().int().min(2000),
   totalAmount: z.number().or(z.string().transform(Number)).default(0),
   paidAmount: z.number().or(z.string().transform(Number)).default(0),
-  dueDate: z.string().or(z.date()).transform(val => 
+  dueDate: z.string().or(z.date()).transform(val =>
     typeof val === 'string' ? new Date(val) : val
   ),
   isPaid: z.boolean().default(false),
@@ -179,7 +179,7 @@ export const InstallmentSchema = z.object({
   installmentNumber: z.number().int().positive(),
   totalInstallments: z.number().int().positive(),
   amount: z.union([z.number(), z.string().transform(Number)]).pipe(z.number().positive()),
-  dueDate: z.string().or(z.date()).transform(val => 
+  dueDate: z.string().or(z.date()).transform(val =>
     typeof val === 'string' ? new Date(val) : val
   ),
   status: z.enum(['pending', 'paid', 'cancelled', 'overdue']).default('pending'),
@@ -259,10 +259,10 @@ export const BudgetSchema = z.object({
   amount: z.union([z.number(), z.string().transform(Number)]).pipe(z.number().positive()),
   spent: z.number().or(z.string().transform(Number)).default(0),
   period: z.enum(['daily', 'weekly', 'monthly', 'yearly']),
-  startDate: z.string().or(z.date()).transform(val => 
+  startDate: z.string().or(z.date()).transform(val =>
     typeof val === 'string' ? new Date(val) : val
   ),
-  endDate: z.string().or(z.date()).transform(val => 
+  endDate: z.string().or(z.date()).transform(val =>
     typeof val === 'string' ? new Date(val) : val
   ),
   isActive: z.boolean().default(true),
@@ -281,7 +281,7 @@ export const GoalSchema = z.object({
   description: z.string().optional(),
   currentAmount: z.number().or(z.string().transform(Number)).default(0),
   targetAmount: z.union([z.number(), z.string().transform(Number)]).pipe(z.number().positive()),
-  deadline: z.string().or(z.date()).transform(val => 
+  deadline: z.string().or(z.date()).transform(val =>
     typeof val === 'string' ? new Date(val) : val
   ).optional(),
   priority: z.enum(['low', 'medium', 'high']).optional(),
@@ -299,10 +299,10 @@ export const TripSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório').max(100),
   destination: z.string().min(1, 'Destino é obrigatório').max(200),
   description: z.string().optional(),
-  startDate: z.string().or(z.date()).transform(val => 
+  startDate: z.string().or(z.date()).transform(val =>
     typeof val === 'string' ? new Date(val) : val
   ),
-  endDate: z.string().or(z.date()).transform(val => 
+  endDate: z.string().or(z.date()).transform(val =>
     typeof val === 'string' ? new Date(val) : val
   ),
   budget: z.number().or(z.string().transform(Number)).default(0),
@@ -320,6 +320,23 @@ export const TripSchema = z.object({
 
 export type TripInput = z.infer<typeof TripSchema>;
 
+/**
+ * SHARED EXPENSE SCHEMA (para API)
+ */
+export const SharedExpenseSchema = z.object({
+  id: z.string().cuid().optional(),
+  transactionId: z.string().cuid(),
+  userId: z.string().cuid(),
+  accountId: z.string().cuid(),
+  shareAmount: z.union([z.number(), z.string().transform(Number)]).pipe(z.number().positive()),
+  sharePercentage: z.union([z.number(), z.string().transform(Number)]).pipe(z.number().min(0).max(100)),
+  status: z.enum(['PENDING', 'PAID', 'CANCELLED']).default('PENDING'),
+  paidAt: z.date().optional(),
+  notes: z.string().optional(),
+});
+
+export type SharedExpenseInput = z.infer<typeof SharedExpenseSchema>;
+
 // ============================================
 // HELPER FUNCTIONS
 // ============================================
@@ -332,11 +349,11 @@ export function validateAndTransform<T>(
   data: unknown
 ): { success: true; data: T } | { success: false; error: z.ZodError } {
   const result = schema.safeParse(data);
-  
+
   if (result.success) {
     return { success: true, data: result.data };
   }
-  
+
   return { success: false, error: result.error };
 }
 

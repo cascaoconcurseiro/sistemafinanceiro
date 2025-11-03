@@ -48,11 +48,11 @@ class SmartCachePlugin {
     try {
       const modulePath = module.resource;
       const dependencies = this.extractDependencies(module);
-      
+
       // Check if we have cached version
       if (module._source && module._source._value) {
         const content = module._source._value;
-        
+
         if (!moduleCache.needsRecompilation(modulePath, content, dependencies)) {
           const cached = moduleCache.getCachedModule(modulePath);
           if (cached) {
@@ -71,7 +71,7 @@ class SmartCachePlugin {
 
   extractDependencies(module) {
     const dependencies = [];
-    
+
     if (module.dependencies) {
       for (const dep of module.dependencies) {
         if (dep.module && dep.module.resource) {
@@ -79,7 +79,7 @@ class SmartCachePlugin {
         }
       }
     }
-    
+
     return dependencies;
   }
 }

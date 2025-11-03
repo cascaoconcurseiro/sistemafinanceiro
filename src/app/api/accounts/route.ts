@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { authenticateRequest } from '@/lib/utils/auth-helpers';
 import { calculateAllBalances } from '@/lib/utils/financial-calculations';
-import { handleApiError } from '@/lib/error-handler';
+import { handleApiError } from '@/lib/utils/error-handler';
 import { z } from 'zod';
 
 // Schema de validação para criação de conta (permissivo)
@@ -17,8 +17,8 @@ const createAccountSchema = z.object({
   isActive: z.boolean().optional().default(true),
 });
 
-// Tipos válidos de conta para usuários
-const VALID_ACCOUNT_TYPES = ['checking', 'savings', 'investment', 'credit_card', 'cash'] as const;
+// Tipos válidos de conta para usuários (cartões de crédito têm API própria)
+const VALID_ACCOUNT_TYPES = ['checking', 'savings', 'investment', 'cash'] as const;
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -31,44 +31,53 @@ export async function GET(request: NextRequest) {
     }
     const userId = auth.userId!;
 
-    console.log('📊 [API Accounts] Buscando contas...');
-    
-    // ✅ CORREÇÃO: Filtrar apenas contas válidas do usuário
+    // ✅ NOVO: Permitir buscar contas de outro usuário (para despesas compartilhadas)
+    const { searchParams } = new URL(request.url);
+    const targetUserId = searchParams.get('userId') || userId;
+    const includeCards = searchParams.get('includeCards') === 'true';
+
+    // ✅ CORREÇÃO: Filtrar contas do usuário (com ou sem cartões)
+    const whereClause: any = {
+      userId: targetUserId,
+      deletedAt: null,
+    };
+
+    // Se não incluir cartões, filtrar apenas tipos válidos
+    if (!includeCards) {
+      whereClause.type = { in: VALID_ACCOUNT_TYPES };
+    }
+
     const [accounts, allTransactions] = await Promise.all([
       prisma.account.findMany({
-        where: { 
-          userId, 
-          deletedAt: null,
-          type: { in: VALID_ACCOUNT_TYPES } // ✅ Apenas tipos válidos
-        },
+        where: whereClause,
         orderBy: { name: 'asc' }
       }),
       prisma.transaction.findMany({
-        where: { userId, deletedAt: null }
+        where: { userId: targetUserId, deletedAt: null }
       })
     ]);
-    
+
     // ✅ CORREÇÃO: Usar saldo armazenado (mais eficiente)
     // Obter mês e ano atual para filtrar transações
     const now = new Date();
     const currentMonth = now.getMonth() + 1; // getMonth() retorna 0-11
     const currentYear = now.getFullYear();
-    
+
     const accountsWithBalance = accounts.map(account => {
       // Usar saldo armazenado no banco (partida dobrada garante consistência)
       const balance = Number(account.balance);
-      
+
       // Filtrar transações do mês atual para esta conta
       const currentMonthTransactions = allTransactions.filter(t => {
         if (t.accountId !== account.id) return false;
-        
+
         const transactionDate = new Date(t.date);
         const transactionMonth = transactionDate.getMonth() + 1;
         const transactionYear = transactionDate.getFullYear();
-        
+
         return transactionMonth === currentMonth && transactionYear === currentYear;
       });
-      
+
       return {
         ...account,
         balance: balance, // ✅ CORREÇÃO: Usar saldo armazenado
@@ -77,12 +86,10 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    console.log('✅ [API Accounts] Retornando', accounts.length, 'contas');
-    console.log('🔍 [API Accounts] Debug transações por conta:');
-    accountsWithBalance.forEach(account => {
+            accountsWithBalance.forEach(account => {
       console.log(`  ${account.name}: ${account.transactionCount} transações no mês atual (${account.totalTransactions} total)`);
     });
-    
+
     return NextResponse.json(accountsWithBalance);
   } catch (error) {
     return handleApiError(error);
@@ -96,19 +103,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: auth.error }, { status: 401 });
     }
     const userId = auth.userId!;
-    
-    console.log('🔍 API Accounts - UserId autenticado:', userId);
+
     
     // Validar se o userId existe no banco
     const userExists = await prisma.user.findUnique({
       where: { id: userId },
       select: { id: true }
     });
-    
+
     if (!userExists) {
-      console.log('❌ API Accounts - UserId não existe no banco:', userId);
-      return NextResponse.json(
-        { 
+            return NextResponse.json(
+        {
           error: 'Usuário não encontrado no banco de dados',
           details: 'Seu token de autenticação está desatualizado. Faça logout e login novamente.'
         },
@@ -117,19 +122,15 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    console.log('🔍 API Accounts - Body recebido:', JSON.stringify(body, null, 2));
-    console.log('🔍 API Accounts - Tipo do campo type:', typeof body.type, body.type);
     
     // Validar dados de entrada com Zod
     try {
       const validatedData = createAccountSchema.parse(body);
-      console.log('✅ [API Accounts] Dados validados com sucesso');
     } catch (error) {
       if (error instanceof z.ZodError) {
-        console.log('❌ [API Accounts] Erro de validação:', JSON.stringify(error.errors, null, 2));
         return NextResponse.json(
-          { 
-            error: 'Dados inválidos', 
+          {
+            error: 'Dados inválidos',
             details: error.errors.map(e => `${e.path.join('.')}: ${e.message}`)
           },
           { status: 400 }
@@ -137,10 +138,9 @@ export async function POST(request: NextRequest) {
       }
       throw error;
     }
-    
-    const { name, type, initialBalance = 0, description, isActive = true } = body;
-    console.log('🔍 API Accounts - Dados extraídos:', { name, type, initialBalance, description, isActive });
 
+    const { name, type, initialBalance = 0, description, isActive = true } = body;
+    
     // Verificar se já existe conta com mesmo nome
     const existingAccount = await prisma.account.findFirst({
       where: {
@@ -152,15 +152,13 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingAccount) {
-      console.log('❌ API Accounts - Conta já existe:', existingAccount.name);
-      return NextResponse.json(
+            return NextResponse.json(
         { error: 'Já existe uma conta com este nome' },
         { status: 400 }
       );
     }
-    
-    console.log('✅ API Accounts - Nome da conta disponível');
-    console.log('🔍 API Accounts - Dados para criar conta:', {
+
+        console.log('🔍 API Accounts - Dados para criar conta:', {
       name,
       type,
       currency: 'BRL',
@@ -168,7 +166,7 @@ export async function POST(request: NextRequest) {
       isActive,
       balance: initialBalance || 0
     });
-    
+
     const account = await prisma.account.create({
       data: {
         name,
@@ -179,9 +177,8 @@ export async function POST(request: NextRequest) {
         balance: initialBalance || 0 // ✅ Definir saldo inicial diretamente
       },
     });
-    
-    console.log('✅ API Accounts - Conta criada com sucesso:', account.id);
 
+    
     // ✅ Se há saldo inicial, criar transação de depósito inicial
     if (initialBalance && initialBalance > 0) {
       try {
@@ -207,7 +204,7 @@ export async function POST(request: NextRequest) {
         // Não falhar a criação da conta se houver erro na transação
       }
     }
-    
+
     return NextResponse.json({
       ...account,
       balance: Number(account.balance) || 0
@@ -215,18 +212,18 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('❌ [API Accounts POST] Erro:', error);
     console.error('Stack:', error instanceof Error ? error.stack : 'N/A');
-    
+
     // Erro específico de foreign key
     if (error && typeof error === 'object' && 'code' in error && error.code === 'P2003') {
       return NextResponse.json(
-        { 
+        {
           error: 'Erro ao criar conta: usuário não encontrado no banco de dados',
           details: 'O ID do usuário autenticado não existe no banco. Tente fazer logout e login novamente.'
         },
         { status: 400 }
       );
     }
-    
+
     return handleApiError(error);
   }
 }
@@ -267,19 +264,19 @@ export async function DELETE(request: NextRequest) {
 
     // ✅ CORREÇÃO: Deletar PERMANENTEMENTE do banco de dados
     console.log('🗑️ Deletando conta permanentemente:', accountId);
-    
+
     // 1. Deletar lançamentos contábeis
     const deletedEntries = await prisma.journalEntry.deleteMany({
       where: { accountId }
     });
     console.log(`   ✅ Deletados ${deletedEntries.count} lançamentos contábeis`);
-    
+
     // 2. Deletar transações
     const deletedTransactions = await prisma.transaction.deleteMany({
       where: { accountId, userId }
     });
     console.log(`   ✅ Deletadas ${deletedTransactions.count} transações`);
-    
+
     // 3. Deletar conta
     await prisma.account.delete({
       where: { id: accountId }

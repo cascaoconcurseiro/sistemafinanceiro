@@ -101,8 +101,7 @@ export class UserService {
         { user_id: result.id, source: 'user-service' }
       );
 
-      console.log('✅ Usuário criado com sucesso:', result.id);
-
+      
       return {
         success: true,
         data: result,
@@ -128,9 +127,9 @@ export class UserService {
   public async findById(userId: UUID): Promise<UserProfile | null> {
     try {
       const query = `
-        SELECT id, email, first_name, last_name, phone, avatar_url, 
+        SELECT id, email, first_name, last_name, phone, avatar_url,
                is_active, email_verified, created_at, updated_at
-        FROM users 
+        FROM users
         WHERE id = $1 AND is_active = true
       `;
 
@@ -147,7 +146,7 @@ export class UserService {
   public async findByEmail(email: string): Promise<User | null> {
     try {
       const query = `
-        SELECT * FROM users 
+        SELECT * FROM users
         WHERE email = $1 AND is_active = true
       `;
 
@@ -173,9 +172,9 @@ export class UserService {
 
       // Query para buscar dados
       const dataQuery = `
-        SELECT id, email, first_name, last_name, phone, avatar_url, 
+        SELECT id, email, first_name, last_name, phone, avatar_url,
                is_active, email_verified, created_at, updated_at
-        FROM users 
+        FROM users
         WHERE is_active = true
         ORDER BY created_at DESC
         LIMIT $1 OFFSET $2
@@ -213,13 +212,13 @@ export class UserService {
   public async searchByName(searchTerm: string, limit: number = 10): Promise<UserProfile[]> {
     try {
       const query = `
-        SELECT id, email, first_name, last_name, phone, avatar_url, 
+        SELECT id, email, first_name, last_name, phone, avatar_url,
                is_active, email_verified, created_at, updated_at
-        FROM users 
-        WHERE is_active = true 
+        FROM users
+        WHERE is_active = true
         AND (
-          LOWER(first_name) LIKE LOWER($1) OR 
-          LOWER(last_name) LIKE LOWER($1) OR 
+          LOWER(first_name) LIKE LOWER($1) OR
+          LOWER(last_name) LIKE LOWER($1) OR
           LOWER(first_name || ' ' || last_name) LIKE LOWER($1)
         )
         ORDER BY first_name, last_name
@@ -310,10 +309,10 @@ export class UserService {
       values.push(userId);
 
       const query = `
-        UPDATE users 
+        UPDATE users
         SET ${updateFields.join(', ')}
         WHERE id = $${paramIndex}
-        RETURNING id, email, first_name, last_name, phone, avatar_url, 
+        RETURNING id, email, first_name, last_name, phone, avatar_url,
                   is_active, email_verified, created_at, updated_at
       `;
 
@@ -331,15 +330,14 @@ export class UserService {
         EventType.USER_UPDATED,
         'user',
         userId,
-        { 
+        {
           old_data: existingUser,
-          new_data: result 
+          new_data: result
         },
         { user_id: userId, source: 'user-service' }
       );
 
-      console.log('✅ Usuário atualizado com sucesso:', userId);
-
+      
       return {
         success: true,
         data: result,
@@ -391,15 +389,14 @@ export class UserService {
 
       // Atualizar senha no banco
       const query = `
-        UPDATE users 
+        UPDATE users
         SET password_hash = $1, updated_at = CURRENT_TIMESTAMP
         WHERE id = $2
       `;
 
       await db.query(query, [newPasswordHash, userId]);
 
-      console.log('✅ Senha atualizada com sucesso:', userId);
-
+      
       return {
         success: true,
         message: 'Senha atualizada com sucesso'
@@ -432,7 +429,7 @@ export class UserService {
       }
 
       const query = `
-        UPDATE users 
+        UPDATE users
         SET is_active = false, updated_at = CURRENT_TIMESTAMP
         WHERE id = $1
       `;
@@ -448,8 +445,7 @@ export class UserService {
         { user_id: userId, source: 'user-service' }
       );
 
-      console.log('✅ Usuário desativado com sucesso:', userId);
-
+      
       return {
         success: true,
         message: 'Usuário desativado com sucesso'
@@ -470,10 +466,10 @@ export class UserService {
   public async reactivateUser(userId: UUID): Promise<ApiResponse<UserProfile>> {
     try {
       const query = `
-        UPDATE users 
+        UPDATE users
         SET is_active = true, updated_at = CURRENT_TIMESTAMP
         WHERE id = $1
-        RETURNING id, email, first_name, last_name, phone, avatar_url, 
+        RETURNING id, email, first_name, last_name, phone, avatar_url,
                   is_active, email_verified, created_at, updated_at
       `;
 
@@ -486,8 +482,7 @@ export class UserService {
         };
       }
 
-      console.log('✅ Usuário reativado com sucesso:', userId);
-
+      
       return {
         success: true,
         data: result,

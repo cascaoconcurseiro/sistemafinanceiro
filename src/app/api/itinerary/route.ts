@@ -9,14 +9,12 @@ declare global {
 
 function getPrismaClient() {
   if (!global.__prisma) {
-    console.log('🔧 [Itinerary API] Criando cliente Prisma...');
-    global.__prisma = new PrismaClient({
+        global.__prisma = new PrismaClient({
       log: ['error', 'warn'],
     });
   }
   return global.__prisma;
 }
-
 
 export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
@@ -61,7 +59,7 @@ export async function GET(request: NextRequest) {
       startOfDay.setHours(0, 0, 0, 0);
       const endOfDay = new Date(date);
       endOfDay.setHours(23, 59, 59, 999);
-      
+
       whereClause.date = {
         gte: startOfDay,
         lte: endOfDay
@@ -88,7 +86,7 @@ export async function GET(request: NextRequest) {
     console.error('Erro ao buscar itinerário:', error);
     return NextResponse.json(
       { error: 'Erro interno do servidor' },
-      { 
+      {
         status: 500,
         headers: {
           'Access-Control-Allow-Origin': '*',
@@ -109,9 +107,9 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    
+
     console.log('📥 [Itinerary API] Recebendo POST:', body);
-    
+
     // Validação dos campos obrigatórios
     if (!body.tripId || !body.date || !body.title || !body.type) {
       console.error('❌ [Itinerary API] Campos obrigatórios faltando:', {
@@ -141,12 +139,12 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       );
     }
-    
+
     // Location pode ser vazio, mas não pode ser undefined
     if (body.location === undefined || body.location === null || body.location === '') {
       body.location = 'A definir';
     }
-    
+
     // Preparar dados com validação
     const itemData = {
       tripId: String(body.tripId),
@@ -163,8 +161,7 @@ export async function POST(request: NextRequest) {
       completed: Boolean(body.completed || false),
       completedAt: body.completed ? new Date() : null,
     };
-    
-    console.log('📝 [Itinerary API] Dados preparados para criação:', itemData);
+
     
     const itineraryItem = await prismaClient.itinerary.create({
       data: itemData
@@ -182,7 +179,7 @@ export async function POST(request: NextRequest) {
     console.error('Erro ao criar item do itinerário:', error);
     return NextResponse.json(
       { error: 'Erro interno do servidor', details: error instanceof Error ? error.message : 'Erro desconhecido' },
-      { 
+      {
         status: 500,
         headers: {
           'Access-Control-Allow-Origin': '*',
@@ -195,11 +192,10 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
-  console.log('🚀 [Itinerary API] PUT iniciado');
   
   let body: any;
   let prismaClient: PrismaClient;
-  
+
   try {
     // ✅ CORREÇÃO CRÍTICA: Adicionar autenticação
     const auth = await authenticateRequest(request);
@@ -230,11 +226,9 @@ export async function PUT(request: NextRequest) {
     }
 
     // 3. Obter cliente Prisma
-    console.log('🔧 [Itinerary API] Obtendo cliente Prisma...');
-    try {
+        try {
       prismaClient = getPrismaClient();
-      console.log('✅ [Itinerary API] Cliente Prisma obtido');
-    } catch (prismaError) {
+          } catch (prismaError) {
       console.error('❌ [Itinerary API] Erro ao obter cliente Prisma:', prismaError);
       return NextResponse.json(
         { error: 'Erro de conexão com banco de dados', details: prismaError instanceof Error ? prismaError.message : 'Erro desconhecido' },
@@ -242,12 +236,11 @@ export async function PUT(request: NextRequest) {
       );
     }
     // 4. Verificar se item existe e pertence ao usuário
-    console.log('🔍 [Itinerary API] Verificando se item existe...');
-    let existingItem;
+        let existingItem;
     try {
       existingItem = await prismaClient.itinerary.findFirst({
-        where: { 
-          id: body.id 
+        where: {
+          id: body.id
         },
         include: {
           trip: {
@@ -257,8 +250,7 @@ export async function PUT(request: NextRequest) {
           }
         }
       });
-      console.log('📋 [Itinerary API] Item encontrado:', existingItem ? 'Sim' : 'Não');
-    } catch (findError) {
+          } catch (findError) {
       console.error('❌ [Itinerary API] Erro ao buscar item:', findError);
       return NextResponse.json(
         { error: 'Erro ao buscar item no banco', details: findError instanceof Error ? findError.message : 'Erro desconhecido' },
@@ -275,9 +267,8 @@ export async function PUT(request: NextRequest) {
     }
 
     // 5. Preparar dados de atualização
-    console.log('🔧 [Itinerary API] Preparando dados de atualização...');
-    const updateData: any = {};
-    
+        const updateData: any = {};
+
     if (body.completed !== undefined) {
       updateData.completed = body.completed;
       updateData.completedAt = body.completed ? new Date() : null;
@@ -299,8 +290,6 @@ export async function PUT(request: NextRequest) {
     if (body.cost !== undefined) updateData.cost = body.cost ? parseFloat(body.cost) : 0;
     if (body.notes !== undefined) updateData.notes = body.notes;
     if (body.order !== undefined) updateData.order = body.order;
-
-    console.log('📝 [Itinerary API] Dados para atualização:', JSON.stringify(updateData, null, 2));
 
     // 6. Executar atualização
     console.log('💾 [Itinerary API] Executando atualização no banco...');
@@ -335,15 +324,15 @@ export async function PUT(request: NextRequest) {
     console.error('❌ [Itinerary API] Stack trace:', error instanceof Error ? error.stack : 'Sem stack trace');
     console.error('❌ [Itinerary API] Tipo do erro:', typeof error);
     console.error('❌ [Itinerary API] Erro completo:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
-    
+
     return NextResponse.json(
-      { 
-        error: 'Erro interno do servidor', 
+      {
+        error: 'Erro interno do servidor',
         details: error instanceof Error ? error.message : 'Erro desconhecido',
         stack: error instanceof Error ? error.stack : undefined,
         type: typeof error
       },
-      { 
+      {
         status: 500,
         headers: {
           'Access-Control-Allow-Origin': '*',
@@ -374,7 +363,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const prismaClient = getPrismaClient();
-    
+
     // ✅ CORREÇÃO CRÍTICA: Verificar se o item pertence ao usuário
     const existingItem = await prismaClient.itinerary.findFirst({
       where: { id },
@@ -412,7 +401,7 @@ export async function DELETE(request: NextRequest) {
     console.error('Erro ao excluir item do itinerário:', error);
     return NextResponse.json(
       { error: 'Erro interno do servidor', details: error instanceof Error ? error.message : 'Erro desconhecido' },
-      { 
+      {
         status: 500,
         headers: {
           'Access-Control-Allow-Origin': '*',

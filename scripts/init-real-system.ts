@@ -151,6 +151,7 @@ async function initRealSystem() {
     await prisma.category.createMany({
       data: categories.map(cat => ({
         ...cat,
+        userId: adminUser.id,
         isDefault: true,
         isActive: true,
         sortOrder: 0

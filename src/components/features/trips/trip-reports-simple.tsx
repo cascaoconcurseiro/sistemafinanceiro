@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar, DollarSign, User, TrendingUp, PieChart, Download, AlertCircle, BarChart3 } from 'lucide-react';
-import type { Trip } from '@/lib/storage';
+import type { Trip } from '@/lib/config/storage';
 import {
   BarChart,
   Bar,
@@ -40,7 +40,7 @@ export function TripReportsSimple({ trip }: TripReportsSimpleProps) {
       const response = await fetch(`/api/transactions?tripId=${trip.id}`, {
         credentials: 'include',
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         // Filtrar apenas DESPESAS
@@ -103,19 +103,19 @@ export function TripReportsSimple({ trip }: TripReportsSimpleProps) {
       if (!acc['Você']) {
         acc['Você'] = { total: 0, count: 0 };
       }
-      
+
       // Para compartilhadas, SEMPRE usar myShare (nunca amount total)
       const myAmount = expense.myShare !== null && expense.myShare !== undefined
         ? Math.abs(Number(expense.myShare))
         : Math.abs(Number(expense.amount)) / 2; // Fallback: dividir por 2 se não tiver myShare
-      
+
       console.log('💰 [Reports] Minha parte:', {
         description: expense.description,
         myShare: expense.myShare,
         amount: expense.amount,
         calculatedMyAmount: myAmount
       });
-      
+
       acc['Você'].total += myAmount;
       acc['Você'].count += 1;
 
@@ -141,15 +141,14 @@ export function TripReportsSimple({ trip }: TripReportsSimpleProps) {
             shared = expense.sharedWith;
           }
 
-          console.log('📋 [Reports] sharedWith parseado:', shared);
-
+          
           if (Array.isArray(shared)) {
             shared.forEach((person: any) => {
               const name = person.name || person.contactName || person.contact || null;
               const personAmount = person.amount || person.share || person.value || 0;
-              
+
               console.log('👤 [Reports] Pessoa encontrada:', { name, personAmount });
-              
+
               // Não adicionar "Você" novamente
               if (name && name !== 'Você' && name !== 'você') {
                 if (!acc[name]) {
@@ -163,7 +162,7 @@ export function TripReportsSimple({ trip }: TripReportsSimpleProps) {
             // Se for um objeto único
             const name = shared.name || shared.contactName || shared.contact || null;
             const personAmount = shared.amount || shared.share || shared.value || 0;
-            
+
             if (name && name !== 'Você' && name !== 'você') {
               if (!acc[name]) {
                 acc[name] = { total: 0, count: 0 };
@@ -206,8 +205,8 @@ export function TripReportsSimple({ trip }: TripReportsSimpleProps) {
       return sum + Math.abs(Number(e.amount));
     }
   }, 0);
-  const averageDaily = Object.keys(expensesByDay).length > 0 
-    ? totalExpenses / Object.keys(expensesByDay).length 
+  const averageDaily = Object.keys(expensesByDay).length > 0
+    ? totalExpenses / Object.keys(expensesByDay).length
     : 0;
 
   // Preparar dados para gráficos

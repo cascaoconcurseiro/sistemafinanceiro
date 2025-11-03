@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ModernAppLayout } from '@/components/modern-app-layout';
+import { ModernAppLayout } from '@/components/layout/modern-app-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,12 +10,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  CreditCard, 
-  Plus, 
-  Calendar, 
-  DollarSign, 
-  TrendingUp, 
+import {
+  CreditCard,
+  Plus,
+  Calendar,
+  DollarSign,
+  TrendingUp,
   AlertTriangle,
   Edit,
   Trash2,
@@ -68,9 +68,8 @@ export default function CreditCardsPage() {
       setLoading(true);
       const response = await fetch('/api/credit-cards', { credentials: 'include' });
       if (!response.ok) throw new Error('Erro ao buscar cartões');
-      
+
       const result = await response.json();
-      console.log('📊 Resultado da API:', result);
       
       if (result.success) {
         setCreditCards(result.data || []);
@@ -86,7 +85,7 @@ export default function CreditCardsPage() {
   // Create credit card
   const handleCreateCard = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       const response = await fetch('/api/credit-cards', {
         method: 'POST',
@@ -101,7 +100,7 @@ export default function CreditCardsPage() {
       });
 
       if (!response.ok) throw new Error('Erro ao criar cartão');
-      
+
       const result = await response.json();
       if (result.success) {
         toast.success('Cartão criado com sucesso!');
@@ -119,7 +118,7 @@ export default function CreditCardsPage() {
   const handleUpdateCard = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingCard) return;
-    
+
     try {
       const response = await fetch('/api/credit-cards', {
         method: 'PUT',
@@ -135,7 +134,7 @@ export default function CreditCardsPage() {
       });
 
       if (!response.ok) throw new Error('Erro ao atualizar cartão');
-      
+
       const result = await response.json();
       if (result.success) {
         toast.success('Cartão atualizado com sucesso!');
@@ -153,14 +152,14 @@ export default function CreditCardsPage() {
   // Delete credit card
   const handleDeleteCard = async (cardId: string) => {
     if (!confirm('Tem certeza que deseja excluir este cartão?')) return;
-    
+
     try {
       const response = await fetch(`/api/credit-cards?id=${cardId}`, {
         method: 'DELETE'
       });
 
       if (!response.ok) throw new Error('Erro ao excluir cartão');
-      
+
       const result = await response.json();
       if (result.success) {
         toast.success(result.message || 'Cartão excluído com sucesso!');
@@ -189,13 +188,13 @@ export default function CreditCardsPage() {
     const today = new Date();
     const currentMonth = today.getMonth();
     const currentYear = today.getFullYear();
-    
+
     let dueDate = new Date(currentYear, currentMonth, dueDay);
-    
+
     if (dueDate <= today) {
       dueDate = new Date(currentYear, currentMonth + 1, dueDay);
     }
-    
+
     return dueDate.toLocaleDateString('pt-BR');
   };
 
@@ -287,7 +286,7 @@ export default function CreditCardsPage() {
               </Badge>
             )}
           </div>
-          
+
           <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
             <DialogTrigger asChild>
               <Button>

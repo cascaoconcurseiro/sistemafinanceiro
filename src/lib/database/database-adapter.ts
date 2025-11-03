@@ -42,8 +42,7 @@ class DatabaseAdapter {
 
       await prisma.$connect();
       this.connected = true;
-      console.log('✅ Conectado ao banco PostgreSQL/Neon');
-    } catch (error) {
+          } catch (error) {
       this.connected = false;
       console.error('❌ Erro de conexão com banco:', error);
       throw error;
@@ -147,7 +146,7 @@ class DatabaseAdapter {
   public async getTransactions(accountId?: string): Promise<Transaction[]> {
     try {
       const where = accountId ? { accountId } : {};
-      
+
       const transactions = await prisma.transaction.findMany({
         where,
         orderBy: { date: 'desc' }
@@ -191,7 +190,7 @@ class DatabaseAdapter {
   public async updateTransaction(id: string, updates: Partial<Transaction>): Promise<Transaction> {
     try {
       const oldTransaction = await prisma.transaction.findUnique({ where: { id } });
-      
+
       const transaction = await prisma.transaction.update({
         where: { id },
         data: {
@@ -222,7 +221,7 @@ class DatabaseAdapter {
   public async deleteTransaction(id: string): Promise<void> {
     try {
       const transaction = await prisma.transaction.findUnique({ where: { id } });
-      
+
       await prisma.transaction.delete({ where: { id } });
 
       // Atualiza saldo da conta
@@ -332,7 +331,7 @@ class DatabaseAdapter {
 
       await prisma.account.update({
         where: { id: accountId },
-        data: { 
+        data: {
           balance: newBalance,
           updatedAt: new Date()
         }
@@ -368,19 +367,19 @@ class DatabaseAdapter {
     try {
       // Buscar todas as contas antes de limpar para recalcular saldos
       const accounts = await prisma.account.findMany({ select: { id: true } });
-      
+
       await prisma.transaction.deleteMany();
       await prisma.budget.deleteMany();
       await prisma.creditCard.deleteMany();
-      
+
       // Recalcular saldos de todas as contas (que devem ficar zerados)
       const { recalculateAccountBalance } = await import('@/lib/transaction-audit');
       for (const account of accounts) {
         await recalculateAccountBalance(account.id);
       }
-      
+
       await prisma.account.deleteMany();
-      
+
       eventBus.emit('data:all:cleared', {});
       console.log('🧹 Todos os dados foram limpos do banco');
     } catch (error) {

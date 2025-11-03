@@ -23,14 +23,14 @@ export async function GET(request: NextRequest) {
 
     // Buscar categorias do banco (apenas do usuário autenticado)
     const categories = await databaseService.getCategories();
-    
+
     // ✅ Filtrar apenas categorias do usuário
     let filteredCategories = categories.filter(cat => cat.userId === auth.userId);
-    
+
     if (type) {
       filteredCategories = filteredCategories.filter(cat => cat.type === type);
     }
-    
+
     if (active !== null) {
       const isActive = active === 'true';
       filteredCategories = filteredCategories.filter(cat => cat.isActive === isActive);
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    
+
     // Validar dados obrigatórios
     if (!body.name || !body.type) {
       return NextResponse.json(
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     // Verificar se já existe categoria com mesmo nome e tipo
     const existingCategories = await databaseService.getCategories();
     const duplicate = existingCategories.find(
-      cat => cat.name.toLowerCase() === body.name.toLowerCase() && 
+      cat => cat.name.toLowerCase() === body.name.toLowerCase() &&
              cat.type === body.type &&
              cat.isActive
     );
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
     };
 
     const newCategory = await databaseService.createCategory(categoryData);
-    
+
     return NextResponse.json(newCategory, { status: 201 });
   } catch (error) {
     console.error('Erro ao criar categoria:', error);
@@ -118,7 +118,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    
+
     if (!Array.isArray(body)) {
       return NextResponse.json(
         { error: 'Esperado array de categorias para atualização em lote' },
@@ -127,12 +127,12 @@ export async function PUT(request: NextRequest) {
     }
 
     const updatedCategories = [];
-    
+
     for (const categoryUpdate of body) {
       if (!categoryUpdate.id) {
         continue; // Pular itens sem ID
       }
-      
+
       try {
         const updated = await databaseService.updateCategory(categoryUpdate.id, categoryUpdate);
         updatedCategories.push(updated);
@@ -141,7 +141,7 @@ export async function PUT(request: NextRequest) {
         // Continuar com as outras categorias
       }
     }
-    
+
     return NextResponse.json(updatedCategories);
   } catch (error) {
     console.error('Erro ao atualizar categorias:', error);
@@ -166,7 +166,7 @@ export async function DELETE(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    
+
     if (!id) {
       return NextResponse.json(
         { error: 'ID da categoria é obrigatório' },
@@ -177,7 +177,7 @@ export async function DELETE(request: NextRequest) {
     // Verificar se categoria existe
     const categories = await databaseService.getCategories();
     const category = categories.find(cat => cat.id === id);
-    
+
     if (!category) {
       return NextResponse.json(
         { error: 'Categoria não encontrada' },
@@ -188,7 +188,7 @@ export async function DELETE(request: NextRequest) {
     // Verificar se categoria está sendo usada em transações
     const transactions = await databaseService.getTransactions();
     const isUsed = transactions.some(transaction => transaction.categoryId === id);
-    
+
     if (isUsed) {
       // Soft delete - apenas desativar
       const updatedCategory = await databaseService.updateCategory(id, { isActive: false });

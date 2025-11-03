@@ -33,7 +33,7 @@ class SmartModuleCache {
     this.maxCacheSize = 100 * 1024 * 1024; // 100MB
     this.maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
     this.stats = { hits: 0, misses: 0, evictions: 0, totalSize: 0 };
-    
+
     this.ensureCacheDir();
   }
 
@@ -66,7 +66,7 @@ class SmartModuleCache {
    */
   needsRecompilation(modulePath: string, content: string, dependencies: string[]): boolean {
     const cacheFile = this.getCacheFilePath(modulePath);
-    
+
     if (!existsSync(cacheFile)) {
       this.stats.misses++;
       return true;
@@ -75,7 +75,7 @@ class SmartModuleCache {
     try {
       const cached: CacheEntry = JSON.parse(readFileSync(cacheFile, 'utf-8'));
       const currentHash = this.generateHash(content, dependencies);
-      
+
       // Check if hash matches
       if (cached.hash !== currentHash) {
         this.stats.misses++;
@@ -114,7 +114,7 @@ class SmartModuleCache {
   cacheCompiledModule(modulePath: string, content: string, compiled: any, dependencies: string[]): void {
     const cacheFile = this.getCacheFilePath(modulePath);
     const hash = this.generateHash(content, dependencies);
-    
+
     const entry: CacheEntry = {
       hash,
       timestamp: Date.now(),
@@ -126,7 +126,7 @@ class SmartModuleCache {
     try {
       writeFileSync(cacheFile, JSON.stringify(entry, null, 2));
       this.stats.totalSize += entry.size;
-      
+
       // Clean up if cache is too large
       this.cleanupIfNeeded();
     } catch (error) {
@@ -139,7 +139,7 @@ class SmartModuleCache {
    */
   getCachedModule(modulePath: string): any | null {
     const cacheFile = this.getCacheFilePath(modulePath);
-    
+
     if (!existsSync(cacheFile)) {
       return null;
     }
@@ -194,7 +194,7 @@ class SmartModuleCache {
 
       for (const entry of entries) {
         if (currentSize <= targetSize) break;
-        
+
         try {
           require('fs').unlinkSync(entry.file);
           currentSize -= entry.size;
@@ -216,7 +216,7 @@ class SmartModuleCache {
   getStats(): CacheStats & { hitRate: number } {
     const total = this.stats.hits + this.stats.misses;
     const hitRate = total > 0 ? (this.stats.hits / total) * 100 : 0;
-    
+
     return {
       ...this.stats,
       hitRate: Math.round(hitRate * 100) / 100
@@ -243,8 +243,7 @@ class SmartModuleCache {
    */
   printStats(): void {
     const stats = this.getStats();
-    console.log('📊 Module Cache Statistics:');
-    console.log(`   Hits: ${stats.hits}`);
+        console.log(`   Hits: ${stats.hits}`);
     console.log(`   Misses: ${stats.misses}`);
     console.log(`   Hit Rate: ${stats.hitRate}%`);
     console.log(`   Evictions: ${stats.evictions}`);

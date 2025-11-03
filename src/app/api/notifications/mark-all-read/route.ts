@@ -19,8 +19,8 @@ export async function PATCH(request: NextRequest) {
       data: { isRead: true }
     });
 
-    return NextResponse.json({ 
-      message: 'Todas as notificações foram marcadas como lidas' 
+    return NextResponse.json({
+      message: 'Todas as notificações foram marcadas como lidas'
     });
   } catch (error) {
     console.error('Erro ao marcar todas as notificações como lidas:', error);

@@ -54,7 +54,7 @@ export function SharedDebtsDisplay({ className }: SharedDebtsDisplayProps) {
 
   const handleMarkAsPaid = async (debt: SharedDebt) => {
     try {
-      await 
+      await
       await loadDebts();
       toast.success(`Dívida com ${debt.creditor} marcada como paga!`);
     } catch (error) {
@@ -65,7 +65,7 @@ export function SharedDebtsDisplay({ className }: SharedDebtsDisplayProps) {
 
   const handleCancelDebt = async (debt: SharedDebt) => {
     try {
-      await 
+      await
       await loadDebts();
       toast.success(`Dívida com ${debt.creditor} cancelada!`);
     } catch (error) {
@@ -243,5 +243,4 @@ export function SharedDebtsDisplay({ className }: SharedDebtsDisplayProps) {
     </Card>
   );
 }
-
 

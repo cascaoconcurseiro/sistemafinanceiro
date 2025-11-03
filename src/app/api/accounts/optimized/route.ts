@@ -87,9 +87,9 @@ async function createAccount(userId: string, data: z.infer<typeof createAccountS
 // Update account in database
 async function updateAccount(userId: string, id: string, data: z.infer<typeof updateAccountSchema>) {
   const updatedAccount = await prisma.account.update({
-    where: { 
+    where: {
       id,
-      userId 
+      userId
     },
     data,
     include: {
@@ -117,9 +117,9 @@ async function updateAccount(userId: string, id: string, data: z.infer<typeof up
 async function deleteAccount(userId: string, id: string) {
   // Check if account has transactions
   const transactionCount = await prisma.transaction.count({
-    where: { 
+    where: {
       accountId: id,
-      userId 
+      userId
     }
   });
 
@@ -128,9 +128,9 @@ async function deleteAccount(userId: string, id: string) {
   }
 
   await prisma.account.delete({
-    where: { 
+    where: {
       id,
-      userId 
+      userId
     }
   });
 }
@@ -149,7 +149,7 @@ export async function PUT(request: NextRequest) {
   const url = new URL(request.url);
   const pathParts = url.pathname.split('/');
   const id = pathParts[pathParts.length - 1];
-  
+
   if (id && id !== 'optimized') {
     const handler = api.createPutHandler(
       updateAccountSchema,
@@ -158,7 +158,7 @@ export async function PUT(request: NextRequest) {
     );
     return handler(request, { params: { id } });
   }
-  
+
   return api.errorResponse('Invalid request', 400);
 }
 
@@ -166,7 +166,7 @@ export async function DELETE(request: NextRequest) {
   const url = new URL(request.url);
   const pathParts = url.pathname.split('/');
   const id = pathParts[pathParts.length - 1];
-  
+
   if (id && id !== 'optimized') {
     const handler = api.createDeleteHandler(
       deleteAccount,
@@ -174,6 +174,6 @@ export async function DELETE(request: NextRequest) {
     );
     return handler(request, { params: { id } });
   }
-  
+
   return api.errorResponse('Invalid request', 400);
 }

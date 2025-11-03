@@ -14,12 +14,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
     }
 
-    console.log('🔍 [Integrity Check] Verificando integridade para usuário:', auth.userId);
-
+    
     const result = await FinancialAuditService.checkIntegrity(auth.userId);
 
-    console.log('✅ [Integrity Check] Resultado:', result);
-
+    
     return NextResponse.json({
       success: true,
       integrity: result

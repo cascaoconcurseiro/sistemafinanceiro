@@ -238,15 +238,14 @@ export class AuditReportService {
     try {
       // Criar tabelas de relatórios
       await this.createReportTables();
-      
+
       // Carregar configurações de relatórios
       await this.loadReportConfigs();
-      
+
       // Agendar relatórios automáticos
       await this.scheduleAutomaticReports();
-      
-      console.log('✅ AuditReportService inicializado com sucesso');
-    } catch (error) {
+
+          } catch (error) {
       console.error('❌ Erro ao inicializar AuditReportService:', error);
       throw error;
     }
@@ -397,7 +396,7 @@ export class AuditReportService {
 
     // Buscar logs de auditoria
     let query = `
-      SELECT * FROM audit_logs 
+      SELECT * FROM audit_logs
       WHERE timestamp BETWEEN $1 AND $2
     `;
     const params: any[] = [dateRange.start, dateRange.end];
@@ -469,7 +468,7 @@ export class AuditReportService {
   private async collectConsistencyData(config: AuditReportConfig): Promise<any> {
     // Executar testes de consistência
     const consistencyReport = await dataConsistencyService.runAllConsistencyTests();
-    
+
     // Buscar histórico de relatórios de consistência
     const historicalReports = await dataConsistencyService.getConsistencyReports(30);
 
@@ -489,14 +488,14 @@ export class AuditReportService {
 
     // Buscar violações de segurança
     const securityViolations = await db.query(`
-      SELECT * FROM security_violations 
+      SELECT * FROM security_violations
       WHERE timestamp BETWEEN $1 AND $2
       ORDER BY timestamp DESC
     `, [dateRange.start, dateRange.end]);
 
     // Buscar tentativas de acesso não autorizado
     const unauthorizedAccess = await db.query(`
-      SELECT * FROM audit_logs 
+      SELECT * FROM audit_logs
       WHERE timestamp BETWEEN $1 AND $2
         AND (violation_type = 'unauthorized_access' OR violation_type = 'privilege_escalation')
       ORDER BY timestamp DESC
@@ -513,7 +512,7 @@ export class AuditReportService {
   private async collectPerformanceData(config: AuditReportConfig): Promise<any> {
     // Coletar métricas de performance do banco
     const dbStats = await db.query(`
-      SELECT 
+      SELECT
         schemaname,
         tablename,
         n_tup_ins as inserts,
@@ -528,10 +527,10 @@ export class AuditReportService {
 
     // Métricas de conexões
     const connectionStats = await db.query(`
-      SELECT 
+      SELECT
         state,
         COUNT(*) as count
-      FROM pg_stat_activity 
+      FROM pg_stat_activity
       WHERE datname = current_database()
       GROUP BY state
     `);
@@ -550,17 +549,17 @@ export class AuditReportService {
   private generateExecutiveSummary(auditData: any, consistencyData: any, securityData: any): ExecutiveSummary {
     // Calcular score de saúde geral (0-100)
     let healthScore = 100;
-    
+
     // Penalizar por violações críticas
     healthScore -= Math.min(auditData.criticalIssues * 10, 50);
-    
+
     // Penalizar por falhas de consistência
     const failedTests = consistencyData.currentReport.summary.failed;
     healthScore -= Math.min(failedTests * 5, 30);
-    
+
     // Penalizar por violações de segurança
     healthScore -= Math.min(securityData.criticalViolations * 15, 40);
-    
+
     healthScore = Math.max(0, healthScore);
 
     // Determinar status de integridade
@@ -632,7 +631,7 @@ export class AuditReportService {
 
   private generateConsistencyAnalysisSection(consistencyData: any): ConsistencyAnalysisSection {
     const report = consistencyData.currentReport;
-    
+
     // Calcular score de consistência
     const totalTests = report.summary.total_tests;
     const passedTests = report.summary.passed;
@@ -681,7 +680,7 @@ export class AuditReportService {
     // Calcular score de segurança
     const totalViolations = securityData.totalViolations;
     const criticalViolations = securityData.criticalViolations;
-    
+
     let securityScore = 100;
     securityScore -= Math.min(totalViolations * 2, 50);
     securityScore -= Math.min(criticalViolations * 10, 50);
@@ -742,7 +741,7 @@ export class AuditReportService {
 
   private generatePerformanceMetricsSection(performanceData: any): PerformanceMetricsSection {
     // Calcular métricas de performance do banco
-    const totalOperations = performanceData.tableStats.reduce((sum: number, table: any) => 
+    const totalOperations = performanceData.tableStats.reduce((sum: number, table: any) =>
       sum + table.inserts + table.updates + table.deletes, 0);
 
     const avgQueryTime = 50; // Placeholder - seria calculado de métricas reais
@@ -893,7 +892,7 @@ export class AuditReportService {
 
   private async loadReportConfigs(): Promise<void> {
     const result = await db.query(`
-      SELECT * FROM audit_report_configs 
+      SELECT * FROM audit_report_configs
       WHERE is_active = true
     `);
 
@@ -955,24 +954,24 @@ export class AuditReportService {
 
   private async generateOverviewData(): Promise<DashboardData['overview']> {
     const today = new Date().toISOString().split('T')[0];
-    
+
     // Buscar operações de hoje
     const todayOperations = await db.query(`
-      SELECT COUNT(*) as count FROM audit_logs 
+      SELECT COUNT(*) as count FROM audit_logs
       WHERE DATE(timestamp) = $1
     `, [today]);
 
     // Buscar violações de hoje
     const todayViolations = await db.query(`
-      SELECT COUNT(*) as count FROM audit_logs 
-      WHERE DATE(timestamp) = $1 
+      SELECT COUNT(*) as count FROM audit_logs
+      WHERE DATE(timestamp) = $1
         AND (severity = 'high' OR severity = 'critical')
     `, [today]);
 
     // Buscar problemas críticos
     const criticalIssues = await db.query(`
-      SELECT COUNT(*) as count FROM audit_logs 
-      WHERE severity = 'critical' 
+      SELECT COUNT(*) as count FROM audit_logs
+      WHERE severity = 'critical'
         AND DATE(timestamp) >= $1
     `, [new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]]);
 
@@ -993,11 +992,11 @@ export class AuditReportService {
 
   private async generateOperationsTimeline(startDate: string, endDate: string): Promise<DashboardData['charts']['operations_timeline']> {
     const result = await db.query(`
-      SELECT 
+      SELECT
         DATE(timestamp) as date,
         COUNT(*) as operations,
         COUNT(CASE WHEN severity IN ('high', 'critical') THEN 1 END) as violations
-      FROM audit_logs 
+      FROM audit_logs
       WHERE DATE(timestamp) BETWEEN $1 AND $2
       GROUP BY DATE(timestamp)
       ORDER BY date
@@ -1012,10 +1011,10 @@ export class AuditReportService {
 
   private async generateOperationsByType(date: string): Promise<DashboardData['charts']['operations_by_type']> {
     const result = await db.query(`
-      SELECT 
+      SELECT
         operation,
         COUNT(*) as count
-      FROM audit_logs 
+      FROM audit_logs
       WHERE DATE(timestamp) = $1
       GROUP BY operation
       ORDER BY count DESC
@@ -1032,19 +1031,19 @@ export class AuditReportService {
 
   private async generateViolationsBySeverity(date: string): Promise<DashboardData['charts']['violations_by_severity']> {
     const result = await db.query(`
-      SELECT 
+      SELECT
         severity,
         COUNT(*) as count
-      FROM audit_logs 
-      WHERE DATE(timestamp) = $1 
+      FROM audit_logs
+      WHERE DATE(timestamp) = $1
         AND severity IN ('low', 'medium', 'high', 'critical')
       GROUP BY severity
-      ORDER BY 
-        CASE severity 
-          WHEN 'critical' THEN 1 
-          WHEN 'high' THEN 2 
-          WHEN 'medium' THEN 3 
-          WHEN 'low' THEN 4 
+      ORDER BY
+        CASE severity
+          WHEN 'critical' THEN 1
+          WHEN 'high' THEN 2
+          WHEN 'medium' THEN 3
+          WHEN 'low' THEN 4
         END
     `, [date]);
 
@@ -1064,11 +1063,11 @@ export class AuditReportService {
 
   private async generateTopTablesActivity(startDate: string, endDate: string): Promise<DashboardData['charts']['top_tables_activity']> {
     const result = await db.query(`
-      SELECT 
+      SELECT
         table_name as table,
         COUNT(*) as operations,
         COUNT(CASE WHEN severity IN ('high', 'critical') THEN 1 END) as violations
-      FROM audit_logs 
+      FROM audit_logs
       WHERE DATE(timestamp) BETWEEN $1 AND $2
       GROUP BY table_name
       ORDER BY operations DESC
@@ -1088,8 +1087,8 @@ export class AuditReportService {
 
     // Verificar problemas críticos recentes
     const criticalIssues = await db.query(`
-      SELECT * FROM audit_logs 
-      WHERE severity = 'critical' 
+      SELECT * FROM audit_logs
+      WHERE severity = 'critical'
         AND timestamp > NOW() - INTERVAL '24 hours'
       ORDER BY timestamp DESC
       LIMIT 5
@@ -1111,17 +1110,17 @@ export class AuditReportService {
 
   private async getRecentActivities(limit: number): Promise<DashboardData['recent_activities']> {
     const result = await db.query(`
-      SELECT 
+      SELECT
         timestamp,
         operation,
         table_name,
         user_id,
-        CASE 
+        CASE
           WHEN severity = 'critical' THEN 'blocked'
           WHEN severity IN ('high', 'medium') THEN 'violation'
           ELSE 'success'
         END as status
-      FROM audit_logs 
+      FROM audit_logs
       ORDER BY timestamp DESC
       LIMIT $1
     `, [limit]);
@@ -1137,7 +1136,7 @@ export class AuditReportService {
 
   private async updateReportStatus(reportId: UUID, status: 'generating' | 'completed' | 'failed'): Promise<void> {
     await db.query(`
-      UPDATE audit_reports 
+      UPDATE audit_reports
       SET status = $1, updated_at = NOW()
       WHERE id = $2
     `, [status, reportId]);
@@ -1146,7 +1145,7 @@ export class AuditReportService {
   private async saveReport(report: AuditReport): Promise<void> {
     await db.query(`
       INSERT INTO audit_reports (
-        id, config_id, report_name, report_type, generation_time, 
+        id, config_id, report_name, report_type, generation_time,
         execution_time_ms, status, summary, sections, metadata
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
     `, [
@@ -1168,10 +1167,10 @@ export class AuditReportService {
     // Por simplicidade, retornamos um caminho fictício
     const fileName = `audit-report-${report.id}.${format}`;
     const filePath = `./reports/${fileName}`;
-    
+
     // Aqui seria implementada a geração real do arquivo
     console.log(`📄 Gerando arquivo de relatório: ${filePath}`);
-    
+
     return filePath;
   }
 
@@ -1205,7 +1204,7 @@ export class AuditReportService {
   public async createReportConfig(config: Omit<AuditReportConfig, 'id' | 'created_at' | 'updated_at'>): Promise<AuditReportConfig> {
     const id = this.generateUUID();
     const now = new Date().toISOString();
-    
+
     const fullConfig: AuditReportConfig = {
       ...config,
       id,
@@ -1215,7 +1214,7 @@ export class AuditReportService {
 
     await db.query(`
       INSERT INTO audit_report_configs (
-        id, name, description, report_type, schedule_cron, 
+        id, name, description, report_type, schedule_cron,
         filters, format, recipients, is_active
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     `, [
@@ -1236,8 +1235,8 @@ export class AuditReportService {
 
   public async getReports(limit: number = 20): Promise<AuditReport[]> {
     const result = await db.query(`
-      SELECT * FROM audit_reports 
-      ORDER BY generation_time DESC 
+      SELECT * FROM audit_reports
+      ORDER BY generation_time DESC
       LIMIT $1
     `, [limit]);
 

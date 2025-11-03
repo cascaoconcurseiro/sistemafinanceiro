@@ -69,7 +69,7 @@ export function AutomationRulesManager({
     try {
       // Dados agora vêm do banco de dados, não do localStorage
       console.warn('automation-rules-manager - localStorage removido, use banco de dados');
-      
+
       // Default rules até implementar banco de dados
       const defaultRules: AutomationRule[] = [
           {

@@ -14,7 +14,6 @@ const createDebtSchema = z.object({
 
 // GET - Listar dívidas
 export async function GET(request: NextRequest) {
-  console.log('📊 [Debts API] Buscando dívidas...');
   
   try {
     const auth = await authenticateRequest(request);
@@ -38,8 +37,7 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     });
 
-    console.log('✅ [Debts API] Dívidas encontradas:', debts.length);
-
+    
     return NextResponse.json({
       success: true,
       debts: debts.map(d => ({
@@ -52,6 +50,7 @@ export async function GET(request: NextRequest) {
         description: d.description,
         status: d.status,
         transactionId: d.transactionId,
+        tripId: d.tripId, // ✅ NOVO: Retornar tripId
         paidAt: d.paidAt,
         createdAt: d.createdAt,
         updatedAt: d.updatedAt,
@@ -68,7 +67,6 @@ export async function GET(request: NextRequest) {
 
 // POST - Criar dívida
 export async function POST(request: NextRequest) {
-  console.log('📝 [Debts API] Criando dívida...');
   
   try {
     const auth = await authenticateRequest(request);
@@ -78,16 +76,15 @@ export async function POST(request: NextRequest) {
 
     const userId = auth.userId;
     const body = await request.json();
-    
+
     console.log('📦 [Debts API] Dados recebidos:', body);
 
     // Validar dados
     const validation = createDebtSchema.safeParse(body);
     if (!validation.success) {
-      console.log('❌ [Debts API] Dados inválidos:', validation.error.errors);
-      return NextResponse.json(
-        { 
-          error: 'Dados inválidos', 
+            return NextResponse.json(
+        {
+          error: 'Dados inválidos',
           details: validation.error.errors.map(e => `${e.path.join('.')}: ${e.message}`)
         },
         { status: 400 }
@@ -111,8 +108,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log('✅ [Debts API] Dívida criada:', debt.id);
-
+    
     return NextResponse.json({
       success: true,
       debt: {

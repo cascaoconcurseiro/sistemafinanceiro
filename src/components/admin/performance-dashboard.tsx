@@ -11,12 +11,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  Activity, 
-  Database, 
-  Clock, 
-  AlertTriangle, 
-  CheckCircle, 
+import {
+  Activity,
+  Database,
+  Clock,
+  AlertTriangle,
+  CheckCircle,
   XCircle,
   RefreshCw,
   Download,
@@ -83,7 +83,7 @@ export default function PerformanceDashboard() {
   const loadDashboardData = async () => {
     try {
       setRefreshing(true);
-      
+
       const [dashboardRes, healthRes, cacheRes] = await Promise.all([
         fetch('/api/admin/performance?type=dashboard', { credentials: 'include' }),
         fetch('/api/admin/performance?type=health', { credentials: 'include' }),
@@ -99,7 +99,7 @@ export default function PerformanceDashboard() {
       if (dashboard.success) setDashboardData(dashboard.data);
       if (healthData.success) setHealth(healthData.data);
       if (cache.success) setCacheStats(cache.data);
-      
+
       setLoading(false);
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
@@ -114,12 +114,12 @@ export default function PerformanceDashboard() {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           action: 'clear-cache',
-          pattern 
+          pattern
         }),
       });
-      
+
       if (response.ok) {
         await loadDashboardData();
       }
@@ -155,7 +155,7 @@ export default function PerformanceDashboard() {
     const minutes = Math.floor(seconds / 60);
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
-    
+
     if (days > 0) return `${days}d ${hours % 24}h`;
     if (hours > 0) return `${hours}h ${minutes % 60}m`;
     if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
@@ -192,18 +192,18 @@ export default function PerformanceDashboard() {
           <p className="text-muted-foreground">Monitor database performance and system health</p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={loadDashboardData}
             disabled={refreshing}
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => exportMetrics('csv')}
           >
             <Download className="w-4 h-4 mr-2" />
@@ -214,8 +214,8 @@ export default function PerformanceDashboard() {
 
       {/* Health Status */}
       {health && (
-        <Alert className={health.status === 'critical' ? 'border-red-200 bg-red-50' : 
-                         health.status === 'warning' ? 'border-yellow-200 bg-yellow-50' : 
+        <Alert className={health.status === 'critical' ? 'border-red-200 bg-red-50' :
+                         health.status === 'warning' ? 'border-yellow-200 bg-yellow-50' :
                          'border-green-200 bg-green-50'}>
           <Database className="h-4 w-4" />
           <AlertDescription className="flex items-center justify-between">
@@ -262,7 +262,7 @@ export default function PerformanceDashboard() {
                   <CardContent>
                     <div className="text-2xl font-bold">{dashboardData.realTime.successRate.toFixed(1)}%</div>
                     <p className="text-xs text-muted-foreground">
-                      {dashboardData.realTime.successRate >= 95 ? 'Excellent' : 
+                      {dashboardData.realTime.successRate >= 95 ? 'Excellent' :
                        dashboardData.realTime.successRate >= 90 ? 'Good' : 'Needs attention'}
                     </p>
                   </CardContent>
@@ -276,7 +276,7 @@ export default function PerformanceDashboard() {
                   <CardContent>
                     <div className="text-2xl font-bold">{formatDuration(dashboardData.realTime.avgResponseTime)}</div>
                     <p className="text-xs text-muted-foreground">
-                      {dashboardData.realTime.avgResponseTime < 100 ? 'Fast' : 
+                      {dashboardData.realTime.avgResponseTime < 100 ? 'Fast' :
                        dashboardData.realTime.avgResponseTime < 500 ? 'Moderate' : 'Slow'}
                     </p>
                   </CardContent>
@@ -290,7 +290,7 @@ export default function PerformanceDashboard() {
                   <CardContent>
                     <div className="text-2xl font-bold">{dashboardData.realTime.slowQueries}</div>
                     <p className="text-xs text-muted-foreground">
-                      {dashboardData.realTime.criticalQueries > 0 && 
+                      {dashboardData.realTime.criticalQueries > 0 &&
                         `${dashboardData.realTime.criticalQueries} critical`}
                     </p>
                   </CardContent>
@@ -385,7 +385,7 @@ export default function PerformanceDashboard() {
                   <CardContent>
                     <div className="text-2xl font-bold">{(cacheStats.stats.hitRate * 100).toFixed(1)}%</div>
                     <p className="text-xs text-muted-foreground">
-                      {cacheStats.stats.hitRate > 0.8 ? 'Excellent' : 
+                      {cacheStats.stats.hitRate > 0.8 ? 'Excellent' :
                        cacheStats.stats.hitRate > 0.6 ? 'Good' : 'Poor'}
                     </p>
                   </CardContent>
@@ -408,9 +408,9 @@ export default function PerformanceDashboard() {
                     <Zap className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent className="space-y-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => clearCache()}
                       className="w-full"
                     >

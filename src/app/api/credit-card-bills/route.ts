@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma';
 import { authenticateRequest } from '@/lib/utils/auth-helpers';
 
-
 export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
@@ -24,7 +23,7 @@ export async function GET(request: NextRequest) {
 
     // ✅ CORREÇÃO CRÍTICA: Buscar apenas cartões do usuário autenticado
     const creditCards = await prisma.creditCard.findMany({
-      where: { 
+      where: {
         userId: auth.userId, // ✅ Isolamento de dados
         ...(cardId && { id: cardId })
       },
@@ -48,20 +47,20 @@ export async function GET(request: NextRequest) {
     const bills = creditCards.map(card => {
       const transactions = card.transactions;
       const totalAmount = transactions.reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0);
-      
+
       // Calcular data de fechamento e vencimento
       const closingDay = card.closingDay || 5; // Dia 5 por padrão
       const dueDay = card.dueDay || 15; // Dia 15 por padrão
-      
+
       const [year, month] = targetMonth.split('-').map(Number);
       const closingDate = new Date(year, month - 1, closingDay);
       const dueDate = new Date(year, month, dueDay); // Próximo mês
-      
+
       // Se já passou do fechamento, a fatura está fechada
       const today = new Date();
       const isClosed = today > closingDate;
       const isOverdue = today > dueDate;
-      
+
       let status: 'open' | 'closed' | 'overdue' = 'open';
       if (isOverdue) {
         status = 'overdue';
@@ -165,12 +164,12 @@ export async function POST(request: NextRequest) {
       case 'pay_bill':
         // Marcar fatura como paga
         const { paymentDate, paymentAccount } = data;
-        
+
         // Buscar transações da fatura
         const [year, monthNum] = month.split('-').map(Number);
         const startDate = `${month}-01`;
         const endDate = `${year}-${String(monthNum + 1).padStart(2, '0')}-01`;
-        
+
         // ✅ CORREÇÃO CRÍTICA: Buscar apenas transações do usuário
         const transactions = await prisma.transaction.findMany({
           where: {
@@ -186,7 +185,7 @@ export async function POST(request: NextRequest) {
 
         // Criar transação de pagamento da fatura
         const totalAmount = transactions.reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0);
-        
+
         // ✅ CORREÇÃO CRÍTICA: Criar transação com userId
         await prisma.transaction.create({
           data: {

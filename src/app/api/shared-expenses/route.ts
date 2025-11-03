@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
 
     const { prisma } = await import('@/lib/prisma');
-    
+
     const where: any = { userId: auth.userId };
     if (status) where.status = status;
 
@@ -103,8 +103,7 @@ export async function POST(request: NextRequest) {
       auth.userId
     );
 
-    console.log('✅ [API Shared Expenses POST] Despesa compartilhada criada:', expense.id);
-
+    
     // ✅ EMITIR EVENTOS
     const { broadcastEvent } = await import('../events/route');
     broadcastEvent('SHARED_EXPENSE_CREATED', {

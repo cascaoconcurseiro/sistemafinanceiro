@@ -26,7 +26,6 @@ const TripSchema = z.object({
   participants: z.array(z.string()).optional(),
 });
 
-
 export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
@@ -44,8 +43,7 @@ export async function GET(request: NextRequest) {
     // Buscar viagens do usuário com tratamento de erro
     let trips = [];
     try {
-      console.log('🔍 [API Trips GET] Buscando viagens para userId:', userId);
-      trips = await prisma.trip.findMany({
+            trips = await prisma.trip.findMany({
         where: {
           userId
         },
@@ -76,17 +74,15 @@ export async function GET(request: NextRequest) {
         },
         orderBy: { createdAt: 'desc' }
       });
-      console.log('✅ [API Trips GET] Viagens encontradas:', trips.length);
-      console.log('📋 [API Trips GET] Viagens:', trips.map(t => ({ 
-        id: t.id, 
-        name: t.name, 
+            console.log('📋 [API Trips GET] Viagens:', trips.map(t => ({
+        id: t.id,
+        name: t.name,
         userId: t.userId,
         startDate: t.startDate,
-        endDate: t.endDate 
+        endDate: t.endDate
       })));
     } catch (error) {
-      console.log('❌ [API Trips GET] Erro na consulta:', error);
-      // Retornar dados vazios se a tabela não existir
+            // Retornar dados vazios se a tabela não existir
       trips = [];
     }
 
@@ -101,9 +97,9 @@ export async function GET(request: NextRequest) {
       const now = new Date();
       const startDate = new Date(trip.startDate);
       const endDate = new Date(trip.endDate);
-      
+
       let calculatedStatus = trip.status;
-      
+
       // Atualizar status automaticamente baseado nas datas
       if (now < startDate) {
         calculatedStatus = 'planned'; // Ainda não começou
@@ -159,7 +155,7 @@ export async function GET(request: NextRequest) {
     console.error('Erro ao buscar viagens:', error);
     return NextResponse.json(
       { success: false, error: 'Erro interno do servidor' },
-      { 
+      {
         status: 500,
         headers: {
           'Access-Control-Allow-Origin': '*',
@@ -185,22 +181,20 @@ export async function POST(request: NextRequest) {
     console.log('👤 [API Trips POST] UserId autenticado:', userId);
 
     const body = await request.json();
-    console.log('🔍 [API Trips POST] Dados recebidos:', body);
-    console.log('👤 [API Trips POST] Criando viagem para userId:', userId);
-    
+        console.log('👤 [API Trips POST] Criando viagem para userId:', userId);
+
     // Validação com Zod
     try {
       const validatedData = TripSchema.parse(body);
-      console.log('✅ [API Trips] Dados validados:', validatedData);
-    } catch (validationError) {
+          } catch (validationError) {
       console.error('❌ [API Trips] Erro de validação:', validationError);
       throw validationError;
     }
 
     const validatedData = TripSchema.parse(body);
-    
+
     console.log('💾 [API Trips POST] Criando viagem com userId:', userId);
-    
+
     const trip = await prisma.trip.create({
       data: {
         userId,
@@ -217,8 +211,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    console.log('✅ [API Trips POST] Viagem criada:', { id: trip.id, name: trip.name, userId: trip.userId });
-
+    
     return NextResponse.json({
       success: true,
       data: trip
@@ -232,7 +225,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Erro ao criar viagem:', error);
-    
+
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { success: false, error: 'Dados inválidos', details: error.errors },
@@ -242,7 +235,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       { success: false, error: 'Erro interno do servidor' },
-      { 
+      {
         status: 500,
         headers: {
           'Access-Control-Allow-Origin': '*',
@@ -332,7 +325,7 @@ export async function PUT(request: NextRequest) {
     });
   } catch (error) {
     console.error('Erro ao atualizar viagem:', error);
-    
+
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { success: false, error: 'Dados inválidos', details: error.errors },
@@ -342,7 +335,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json(
       { success: false, error: 'Erro interno do servidor' },
-      { 
+      {
         status: 500,
         headers: {
           'Access-Control-Allow-Origin': '*',
@@ -368,7 +361,7 @@ export async function DELETE(request: NextRequest) {
 
     // Verificar se existem transações associadas
     const transactionCount = await prisma.transaction.count({
-      where: { 
+      where: {
         tripId: id,
         deletedAt: null
       }
@@ -378,9 +371,9 @@ export async function DELETE(request: NextRequest) {
       // Soft delete - apenas marcar como inativo ou mover transações
       // Por enquanto, vamos impedir a exclusão se houver transações
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Não é possível excluir viagem com transações associadas. Exclua as transações primeiro.' 
+        {
+          success: false,
+          error: 'Não é possível excluir viagem com transações associadas. Exclua as transações primeiro.'
         },
         { status: 400 }
       );
@@ -392,9 +385,9 @@ export async function DELETE(request: NextRequest) {
     });
 
     return NextResponse.json(
-      { 
-        success: true, 
-        message: 'Viagem excluída com sucesso' 
+      {
+        success: true,
+        message: 'Viagem excluída com sucesso'
       },
       {
         headers: {
@@ -408,7 +401,7 @@ export async function DELETE(request: NextRequest) {
     console.error('Erro ao excluir viagem:', error);
     return NextResponse.json(
       { success: false, error: 'Erro interno do servidor' },
-      { 
+      {
         status: 500,
         headers: {
           'Access-Control-Allow-Origin': '*',

@@ -14,8 +14,8 @@ export async function POST(request: NextRequest) {
     // ✅ CORREÇÃO CRÍTICA: Verificar prazos apenas para o usuário autenticado
     await GoalNotificationService.checkGoalDeadlines(auth.userId);
 
-    return NextResponse.json({ 
-      message: 'Verificação de prazos das metas concluída com sucesso' 
+    return NextResponse.json({
+      message: 'Verificação de prazos das metas concluída com sucesso'
     });
   } catch (error) {
     console.error('Erro ao verificar prazos das metas:', error);

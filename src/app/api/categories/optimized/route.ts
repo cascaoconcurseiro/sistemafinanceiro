@@ -70,9 +70,9 @@ async function createCategory(userId: string, data: z.infer<typeof createCategor
   // Validate parent category if provided
   if (data.parentId) {
     const parentCategory = await prisma.category.findFirst({
-      where: { 
+      where: {
         id: data.parentId,
-        userId 
+        userId
       }
     });
 
@@ -125,9 +125,9 @@ async function updateCategory(userId: string, id: string, data: z.infer<typeof u
   // Validate parent category if provided
   if (data.parentId) {
     const parentCategory = await prisma.category.findFirst({
-      where: { 
+      where: {
         id: data.parentId,
-        userId 
+        userId
       }
     });
 
@@ -141,9 +141,9 @@ async function updateCategory(userId: string, id: string, data: z.infer<typeof u
   }
 
   const updatedCategory = await prisma.category.update({
-    where: { 
+    where: {
       id,
-      userId 
+      userId
     },
     data,
     include: {
@@ -180,9 +180,9 @@ async function updateCategory(userId: string, id: string, data: z.infer<typeof u
 async function deleteCategory(userId: string, id: string) {
   // Check if category has transactions
   const transactionCount = await prisma.transaction.count({
-    where: { 
+    where: {
       categoryId: id,
-      userId 
+      userId
     }
   });
 
@@ -192,9 +192,9 @@ async function deleteCategory(userId: string, id: string) {
 
   // Check if category has children
   const childrenCount = await prisma.category.count({
-    where: { 
+    where: {
       parentId: id,
-      userId 
+      userId
     }
   });
 
@@ -203,9 +203,9 @@ async function deleteCategory(userId: string, id: string) {
   }
 
   await prisma.category.delete({
-    where: { 
+    where: {
       id,
-      userId 
+      userId
     }
   });
 }
@@ -223,7 +223,7 @@ export async function PUT(request: NextRequest) {
   const url = new URL(request.url);
   const pathParts = url.pathname.split('/');
   const id = pathParts[pathParts.length - 1];
-  
+
   if (id && id !== 'optimized') {
     const handler = api.createPutHandler(
       updateCategorySchema,
@@ -232,7 +232,7 @@ export async function PUT(request: NextRequest) {
     );
     return handler(request, { params: { id } });
   }
-  
+
   return api.errorResponse('Invalid request', 400);
 }
 
@@ -240,7 +240,7 @@ export async function DELETE(request: NextRequest) {
   const url = new URL(request.url);
   const pathParts = url.pathname.split('/');
   const id = pathParts[pathParts.length - 1];
-  
+
   if (id && id !== 'optimized') {
     const handler = api.createDeleteHandler(
       deleteCategory,
@@ -248,6 +248,6 @@ export async function DELETE(request: NextRequest) {
     );
     return handler(request, { params: { id } });
   }
-  
+
   return api.errorResponse('Invalid request', 400);
 }

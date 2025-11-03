@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ModernAppLayout } from '@/components/modern-app-layout';
+import { ModernAppLayout } from '@/components/layout/modern-app-layout';
 import {
   Card,
   CardContent,
@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-// import { storage, type NotificationPreferences } from '@/lib/storage'; // Removido - usar API
+// import { storage, type NotificationPreferences } from '@/lib/config/storage'; // Removido - usar API
 
 // Definição temporária do tipo
 interface NotificationPreferences {
@@ -21,13 +21,11 @@ interface NotificationPreferences {
   inApp: boolean;
 }
 import { toast } from 'sonner';
-import { BackButton } from '@/components/back-button';
+import { BackButton } from '@/components/shared/back-button';
 import { useUnifiedFinancial } from '@/contexts/unified-financial-context';
 
 export default function NotificationSettingsPage() {
-  const { data } = useUnifiedFinancial();
-  const accounts = data?.accounts || [];
-  const transactions = data?.transactions || [];
+  const [isLoading, setIsLoading] = useState(true);
   const [preferences, setPreferences] = useState<NotificationPreferences>({
     billing: true,
     goal: true,
@@ -35,31 +33,70 @@ export default function NotificationSettingsPage() {
     general: true,
   });
 
+  // Carregar preferências do banco
   useEffect(() => {
-    try {
-      // TODO: Implementar carregamento de preferências via API
-      // const savedPreferences = storage.getNotificationPreferences();
-      // setPreferences(savedPreferences);
-    } catch (error) {
-      console.error('Error loading notification preferences:', error);
-    }
+    const loadPreferences = async () => {
+      try {
+        const response = await fetch('/api/user/notifications', {
+          credentials: 'include',
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setPreferences(data.preferences);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar preferências:', error);
+        toast.error('Erro ao carregar preferências');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadPreferences();
   }, []);
 
-  const handlePreferenceChange = (
+  const handlePreferenceChange = async (
     key: keyof NotificationPreferences,
     value: boolean
   ) => {
     const newPreferences = { ...preferences, [key]: value };
     setPreferences(newPreferences);
+
     try {
-      // TODO: Implementar salvamento de preferências via API
-      // storage.setNotificationPreferences(newPreferences);
-      toast.success('Preferências de notificação atualizadas!');
+      const response = await fetch('/api/user/notifications', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(newPreferences),
+      });
+
+      if (response.ok) {
+        toast.success('Preferências atualizadas!');
+      } else {
+        toast.error('Erro ao salvar preferências');
+        // Reverter mudança em caso de erro
+        setPreferences(preferences);
+      }
     } catch (error) {
-      console.error('Error saving notification preferences:', error);
-      toast.error('Erro ao salvar as preferências.');
+      console.error('Erro ao salvar preferências:', error);
+      toast.error('Erro ao salvar preferências');
+      // Reverter mudança em caso de erro
+      setPreferences(preferences);
     }
   };
+
+  if (isLoading) {
+    return (
+      <ModernAppLayout title="Configurações de Notificações">
+        <div className="p-4 md:p-6">
+          <div className="flex items-center justify-center h-64">
+            <p className="text-gray-500">Carregando preferências...</p>
+          </div>
+        </div>
+      </ModernAppLayout>
+    );
+  }
 
   return (
     <ModernAppLayout
@@ -179,5 +216,4 @@ export default function NotificationSettingsPage() {
     </ModernAppLayout>
   );
 }
-
 

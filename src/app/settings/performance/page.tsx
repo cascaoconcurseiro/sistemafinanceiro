@@ -4,7 +4,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import { ModernAppLayout } from '@/components/modern-app-layout';
+import { ModernAppLayout } from '@/components/layout/modern-app-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Activity } from 'lucide-react';
 

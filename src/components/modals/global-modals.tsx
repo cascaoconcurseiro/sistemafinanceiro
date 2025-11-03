@@ -2,16 +2,21 @@
 
 import { useGlobalModal } from '@/contexts/ui/global-modal-context';
 import { SharedExpenseModal } from '../features/shared-expenses/shared-expense-modal';
+import { GlobalSearchModal } from './global-search-modal';
 
 export function GlobalModals() {
   const {
     closeAllModals,
     transactionModalOpen,
     sharedExpenseModalOpen,
+    globalSearchModalOpen,
   } = useGlobalModal();
 
   return (
     <>
+      {/* Modal de Busca Global */}
+      <GlobalSearchModal />
+
       {/* Modal de Despesas Compartilhadas */}
       {sharedExpenseModalOpen && (
         <SharedExpenseModal

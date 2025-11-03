@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/prisma';
 
 export async function PUT(
@@ -45,8 +45,7 @@ export async function PUT(
       },
     });
 
-    console.log('✅ Usuário atualizado:', user.id);
-
+    
     return NextResponse.json({
       success: true,
       user: {

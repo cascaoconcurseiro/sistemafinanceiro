@@ -27,7 +27,7 @@ export default function NotFound() {
           <div className="text-center">
             <div className="text-6xl font-bold text-gray-300 mb-2">404</div>
           </div>
-          
+
           <div className="flex flex-col gap-2">
             <Button onClick={() => router.back()} variant="outline" className="w-full">
               <ArrowLeft className="h-4 w-4 mr-2" />

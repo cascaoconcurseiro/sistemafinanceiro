@@ -1,6 +1,6 @@
 /**
  * AccountService - Serviço de gerenciamento de contas
- * 
+ *
  * Responsável por gerenciar contas bancárias, calcular saldos,
  * reconciliação e exclusão com opções.
  */

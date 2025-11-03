@@ -51,7 +51,7 @@ const reportApi = {
     if (filters?.period) params.append('period', filters.period);
 
     const response = await fetch(`/api/reports/cash-flow?${params.toString()}`);
-    
+
     if (!response.ok) {
       throw new Error(`Erro ao buscar fluxo de caixa: ${response.statusText}`);
     }
@@ -71,7 +71,7 @@ const reportApi = {
     if (filters?.period) params.append('period', filters.period);
 
     const response = await fetch(`/api/reports/category-spending?${params.toString()}`);
-    
+
     if (!response.ok) {
       throw new Error(`Erro ao buscar gastos por categoria: ${response.statusText}`);
     }

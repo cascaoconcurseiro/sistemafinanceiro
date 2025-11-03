@@ -1,6 +1,6 @@
 /**
  * 💰 FINANCIAL CALCULATIONS - Cálculos Financeiros Centralizados
- * 
+ *
  * Todas as fórmulas de cálculo financeiro em um único lugar
  */
 
@@ -37,14 +37,14 @@ export function calculateAccountBalance(
       // O myShare é apenas para relatórios de despesas compartilhadas,
       // NÃO para cálculo de saldo de conta
       const amount = Number(t.amount);
-      
+
       console.log(`💰 [calculateAccountBalance] Transação:`, {
         description: (t as any).description,
         amount: amount,
         type: t.type,
         accountId: t.accountId
       });
-      
+
       // Income/RECEITA: adiciona o valor
       if (t.type === 'income' || t.type === 'RECEITA') return sum + Math.abs(amount);
       // Expense/DESPESA: subtrai o valor
@@ -62,15 +62,15 @@ export async function calculateAccountBalanceWithDebts(
   transactions: Transaction[]
 ): Promise<number> {
   const baseBalance = calculateAccountBalance(accountId, transactions);
-  
+
   try {
     // Buscar valores a receber (débitos de outros para mim)
     const { getDebts } = await import('@/lib/utils/debt-helpers');
     const debts = await getDebts();
-    
+
     // Somar valores que me devem (créditos)
     const amountToReceive = debts.summary.totalOweMe;
-    
+
     return baseBalance + amountToReceive;
   } catch (error) {
     console.error('Erro ao calcular débitos:', error);
@@ -86,21 +86,21 @@ export function calculateAllBalances(
   transactions: Transaction[]
 ): Record<string, number> {
   const balances: Record<string, number> = {};
-  
+
   try {
     // Validar entrada
     if (!Array.isArray(accounts) || !Array.isArray(transactions)) {
       console.error('❌ calculateAllBalances: Entrada inválida');
       return {};
     }
-    
+
     // Normalizar transações
     const normalizedTransactions = transactions.map(t => ({
       ...t,
       amount: Number(t.amount),
       date: t.date instanceof Date ? t.date : new Date(t.date)
     })).filter(t => !isNaN(t.amount) && isFinite(t.amount));
-    
+
     for (const account of accounts) {
       try {
         balances[account.id] = calculateAccountBalance(account.id, normalizedTransactions);
@@ -112,7 +112,7 @@ export function calculateAllBalances(
   } catch (error) {
     console.error('❌ calculateAllBalances: Erro geral:', error);
   }
-  
+
   return balances;
 }
 
@@ -185,7 +185,7 @@ export function calculateGoalProgress(
  */
 export function calculateExpensesByCategory(transactions: Transaction[]): Record<string, number> {
   const expensesByCategory: Record<string, number> = {};
-  
+
   transactions
     // ✅ CORREÇÃO: Aceitar ambos os formatos (expense/DESPESA)
     .filter(t => (t.type === 'expense' || t.type === 'DESPESA') && isCurrentMonth(t.date))
@@ -194,7 +194,7 @@ export function calculateExpensesByCategory(transactions: Transaction[]): Record
       const amount = Math.abs(Number(t.amount));
       expensesByCategory[category] = (expensesByCategory[category] || 0) + amount;
     });
-  
+
   return expensesByCategory;
 }
 

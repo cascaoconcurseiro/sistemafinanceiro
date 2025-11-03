@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   try {
     const { authenticateRequest } = await import('@/lib/utils/auth-helpers');
     const auth = await authenticateRequest(request);
-    
+
     if (!auth.success || !auth.userId) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
     }
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
 
 async function generateFinancialNotifications(userId: string) {
   const notifications: any[] = [];
-  
+
   try {
     const now = new Date();
     const tomorrow = new Date(now);
@@ -112,7 +112,7 @@ async function generateFinancialNotifications(userId: string) {
     const today = now.getDate();
     const dueDay = card.dueDay;
     let daysUntilDue = dueDay - today;
-    
+
     if (daysUntilDue < 0) {
       daysUntilDue += 30; // Próximo mês
     }
@@ -147,7 +147,7 @@ async function generateFinancialNotifications(userId: string) {
   upcomingGoals.forEach(goal => {
     const daysUntil = goal.deadline ? Math.ceil((new Date(goal.deadline).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : 0;
     const progress = (Number(goal.currentAmount) / Number(goal.targetAmount)) * 100;
-    
+
     notifications.push({
       id: `goal-${goal.id}`,
       type: progress < 80 ? 'warning' : 'info',
@@ -199,7 +199,7 @@ async function generateFinancialNotifications(userId: string) {
       isActive: true,
     },
     include: {
-      category: true,
+      categoryRef: true, // ✅ CORREÇÃO: Campo correto é categoryRef, não category
     },
   });
 
@@ -263,7 +263,7 @@ async function generateFinancialNotifications(userId: string) {
 
     reminders.forEach(reminder => {
       const daysUntil = Math.ceil((new Date(reminder.dueDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-      
+
       let title, type;
       if (daysUntil < 0) {
         // Vencido
@@ -335,6 +335,6 @@ async function generateFinancialNotifications(userId: string) {
 
   // Se não houver notificações, retornar array vazio (não mostrar boas-vindas sempre)
   console.log(`📊 [Notifications] Total de ${notifications.length} notificações geradas`);
-  
+
   return notifications;
 }

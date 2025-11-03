@@ -130,7 +130,7 @@ export function RecurringBillsManager({
     try {
       const amount = parseFloat(billForm.amount);
       const dueDay = parseInt(billForm.dueDay);
-      
+
       // Create recurring transaction config
       const recurringConfig = {
         enabled: true,
@@ -144,8 +144,8 @@ export function RecurringBillsManager({
       if (editingBill) {
         // Find the corresponding transaction and update it
         const recurringTransactions = transactionManager.getRecurringTransactions();
-        const existingTransaction = recurringTransactions.find(t => 
-          t.description === editingBill.name && 
+        const existingTransaction = recurringTransactions.find(t =>
+          t.description === editingBill.name &&
           Math.abs(t.amount - editingBill.amount) < 0.01
         );
 
@@ -192,7 +192,7 @@ export function RecurringBillsManager({
     try {
       const recurringTransactions = transactionManager.getRecurringTransactions();
       const transaction = recurringTransactions.find(t => t.id === billId);
-      
+
       if (transaction && transaction.recurring) {
         if (transaction.recurring.enabled) {
           transactionManager.stopRecurringTransaction(transaction.id);
@@ -218,7 +218,7 @@ export function RecurringBillsManager({
     try {
       const recurringTransactions = transactionManager.getRecurringTransactions();
       const transaction = recurringTransactions.find(t => t.id === billId);
-      
+
       if (transaction) {
         // Create a new transaction for this bill payment
         const newTransaction = {
@@ -247,7 +247,7 @@ export function RecurringBillsManager({
     try {
       const recurringTransactions = transactionManager.getRecurringTransactions();
       const transaction = recurringTransactions.find(t => t.id === billId);
-      
+
       if (transaction) {
         transactionManager.stopRecurringTransaction(transaction.id);
         // Optionally delete the transaction entirely
@@ -264,7 +264,7 @@ export function RecurringBillsManager({
   const handleEditBill = (transactionId: string) => {
     const recurringTransactions = transactionManager.getRecurringTransactions();
     const transaction = recurringTransactions.find(t => t.id === transactionId);
-    
+
     if (transaction && transaction.recurring) {
       // Create a RecurringBill from transaction data
       const bill: RecurringBill = {
@@ -323,7 +323,7 @@ export function RecurringBillsManager({
 
   const getFilteredBills = (): RecurringBill[] => {
     const recurringTransactions = transactionManager.getRecurringTransactions();
-    
+
     // Convert transactions to RecurringBill format for UI
     const bills: RecurringBill[] = recurringTransactions.map(transaction => ({
       id: transaction.id,

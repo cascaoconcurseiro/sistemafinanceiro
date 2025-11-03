@@ -1,6 +1,6 @@
 /**
  * PAINEL ADMINISTRATIVO - ROTAÇÃO DE LOGS
- * 
+ *
  * Interface para gerenciar o sistema de rotação automática de logs
  * Permite configurar, monitorar e controlar a rotação de logs
  */
@@ -18,14 +18,14 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
-import { 
-  Settings, 
-  RotateCcw, 
-  Trash2, 
-  RefreshCw, 
-  HardDrive, 
-  FileText, 
-  Clock, 
+import {
+  Settings,
+  RotateCcw,
+  Trash2,
+  RefreshCw,
+  HardDrive,
+  FileText,
+  Clock,
   AlertTriangle,
   CheckCircle,
   Info
@@ -83,7 +83,7 @@ export function LogRotationPanel() {
   const handleManualRotation = async () => {
     try {
       const result = await performRotation();
-      
+
       if (result.success) {
         toast.success(`Rotação concluída: ${result.rotatedFiles.length} arquivos rotacionados`);
       } else {
@@ -330,8 +330,8 @@ export function LogRotationPanel() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Button 
-                  onClick={handleManualRotation} 
+                <Button
+                  onClick={handleManualRotation}
                   disabled={isLoading}
                   className="w-full"
                 >
@@ -361,10 +361,10 @@ export function LogRotationPanel() {
                     onChange={(e) => setCleanupDays(parseInt(e.target.value) || 0)}
                   />
                 </div>
-                
+
                 <div className="space-y-2">
-                  <Button 
-                    onClick={() => handleCleanup(false)} 
+                  <Button
+                    onClick={() => handleCleanup(false)}
                     disabled={isLoading}
                     variant="outline"
                     className="w-full"
@@ -372,9 +372,9 @@ export function LogRotationPanel() {
                     <Trash2 className="h-4 w-4 mr-2" />
                     Limpeza Seletiva
                   </Button>
-                  
-                  <Button 
-                    onClick={() => handleCleanup(true)} 
+
+                  <Button
+                    onClick={() => handleCleanup(true)}
                     disabled={isLoading}
                     variant="destructive"
                     className="w-full"

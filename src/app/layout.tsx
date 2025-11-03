@@ -1,22 +1,22 @@
 /**
  * LAYOUT PRINCIPAL DA APLICAÇÃO
- * 
+ *
  * Layout completo com todos os contextos e componentes
  */
 
 import { Inter } from 'next/font/google';
 import './globals.css';
-import { ReactQueryProvider } from '@/providers/react-query-provider';
+import { ReactQueryProvider } from '@/components/providers/react-query-provider';
 import { UnifiedProvider } from '@/contexts/unified-financial-context';
 import { NotificationProvider } from '@/contexts/notification-context';
 import { PeriodProvider } from '@/contexts/period-context';
 import { GlobalModalProvider } from '@/contexts/ui/global-modal-context';
-import { GlobalModals } from '@/components/global-modals';
-import { PWAManager } from '@/components/pwa-manager';
+import { GlobalModals } from '@/components/modals/global-modals';
+import { PWAManager } from '@/components/features/pwa/pwa-manager';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { ConditionalHeader } from '@/components/layout/conditional-header';
-import { AuthProvider } from '@/providers/auth-provider';
-import { ReminderChecker } from '@/components/reminder-checker';
+import { AuthProvider } from '@/components/providers/auth-provider';
+import { ReminderChecker } from '@/components/features/notifications/reminder-checker';
 import { AuthInterceptor } from '@/components/auth-interceptor';
 
 const inter = Inter({ subsets: ['latin'] });

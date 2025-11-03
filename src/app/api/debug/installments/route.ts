@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
 
     // Agrupar por installmentGroupId
     const groups = new Map<string, any[]>();
-    
+
     allInstallments.forEach(t => {
       const groupKey = t.installmentGroupId || t.parentTransactionId || t.description;
       if (!groups.has(groupKey)) {
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
     const groupedData = Array.from(groups.entries()).map(([groupKey, transactions]) => {
       const activeCount = transactions.filter(t => !t.deletedAt).length;
       const deletedCount = transactions.filter(t => t.deletedAt).length;
-      
+
       return {
         groupKey,
         totalTransactions: transactions.length,
@@ -108,7 +108,6 @@ export async function POST(request: NextRequest) {
 
     if (action === 'force-delete-group' && groupKey) {
       // Forçar soft delete de um grupo específico
-      console.log('🔄 [Debug] Forçando soft delete do grupo:', groupKey);
       
       const result = await prisma.transaction.updateMany({
         where: {
@@ -136,7 +135,6 @@ export async function POST(request: NextRequest) {
 
     if (action === 'cleanup-orphans') {
       // Limpar transações órfãs (parcelas sem grupo completo)
-      console.log('🔄 [Debug] Limpando transações órfãs...');
       
       // Buscar todos os grupos
       const allInstallments = await prisma.transaction.findMany({

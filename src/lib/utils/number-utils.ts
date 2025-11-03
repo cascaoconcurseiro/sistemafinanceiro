@@ -1,34 +1,34 @@
 export function parseNumber(value: string | number): number {
   if (typeof value === 'number') return value;
-  
+
   if (!value || typeof value !== 'string') return 0;
-  
+
   // Remove espaços e caracteres não numéricos, exceto vírgula, ponto e sinal negativo
   const cleanValue = value.replace(/[^\d,.-]/g, '');
-  
+
   // Se está vazio após limpeza, retorna 0
   if (!cleanValue) return 0;
-  
+
   // Converte vírgula para ponto (formato brasileiro para americano)
   const normalizedValue = cleanValue.replace(',', '.');
-  
+
   const parsed = parseFloat(normalizedValue);
-  
+
   return isNaN(parsed) ? 0 : parsed;
 }
 
 export function isValidNumber(value: string | number): boolean {
   if (typeof value === 'number') return !isNaN(value) && isFinite(value);
-  
+
   if (!value || typeof value !== 'string') return false;
-  
+
   const parsed = parseNumber(value);
   return !isNaN(parsed) && isFinite(parsed);
 }
 
 export function formatCurrency(
-  value: number | string | null | undefined, 
-  currency: string = 'BRL', 
+  value: number | string | null | undefined,
+  currency: string = 'BRL',
   locale: string = 'pt-BR'
 ): string {
   // Tratamento de casos extremos
@@ -41,12 +41,12 @@ export function formatCurrency(
   if (typeof value === 'string') {
     // Remove caracteres não numéricos exceto vírgula, ponto e sinal negativo
     const cleanValue = value.replace(/[^\d.,-]/g, '');
-    
+
     // Converte vírgula para ponto se for formato brasileiro
     const normalizedValue = cleanValue.replace(',', '.');
-    
+
     numericValue = parseFloat(normalizedValue);
-    
+
     // Se não conseguir converter, retorna valor padrão
     if (isNaN(numericValue)) {
       return 'R$ 0,00';
@@ -66,7 +66,7 @@ export function formatCurrency(
   if (Math.abs(numericValue) < Number.MIN_VALUE && numericValue !== 0) {
     return 'R$ 0,00';
   }
-  
+
   try {
     return new Intl.NumberFormat(locale, {
       style: 'currency',
@@ -85,12 +85,12 @@ export function formatCurrency(
 }
 
 export function formatNumber(
-  value: number, 
-  decimals: number = 2, 
+  value: number,
+  decimals: number = 2,
   locale: string = 'pt-BR'
 ): string {
   if (!isValidNumber(value)) return '0';
-  
+
   try {
     return new Intl.NumberFormat(locale, {
       minimumFractionDigits: decimals,
@@ -103,12 +103,12 @@ export function formatNumber(
 }
 
 export function formatPercentage(
-  value: number, 
-  decimals: number = 1, 
+  value: number,
+  decimals: number = 1,
   locale: string = 'pt-BR'
 ): string {
   if (!isValidNumber(value)) return '0%';
-  
+
   try {
     return new Intl.NumberFormat(locale, {
       style: 'percent',
@@ -123,7 +123,7 @@ export function formatPercentage(
 
 export function roundToDecimals(value: number, decimals: number = 2): number {
   if (!isValidNumber(value)) return 0;
-  
+
   const factor = Math.pow(10, decimals);
   return Math.round(value * factor) / factor;
 }
@@ -150,10 +150,10 @@ export function sum(values: number[]): number {
 
 export function average(values: number[]): number {
   if (!values.length) return 0;
-  
+
   const validValues = values.filter(isValidNumber);
   if (!validValues.length) return 0;
-  
+
   return sum(validValues) / validValues.length;
 }
 
@@ -170,15 +170,15 @@ export function min(values: number[]): number {
 export function formatInputCurrency(value: string): string {
   // Remove tudo exceto dígitos
   const digits = value.replace(/\D/g, '');
-  
+
   if (!digits) return '';
-  
+
   // Converte para centavos
   const cents = parseInt(digits, 10);
-  
+
   // Converte de volta para reais
   const reais = cents / 100;
-  
+
   // Formata como moeda brasileira
   return formatCurrency(reais);
 }

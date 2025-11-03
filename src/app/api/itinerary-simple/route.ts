@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 export async function PUT(request: NextRequest) {
   console.log('🧪 [Simple API] PUT iniciado');
-  
+
   try {
     // ✅ CORREÇÃO CRÍTICA: Adicionar autenticação
     const auth = await authenticateRequest(request);
@@ -23,8 +23,7 @@ export async function PUT(request: NextRequest) {
 
     // 3. Conectar
     await prisma.$connect();
-    console.log('✅ [Simple API] Conectado ao banco');
-
+    
     // 4. Buscar item e verificar se pertence ao usuário
     const item = await prisma.itinerary.findFirst({
       where: { id: body.id },
@@ -42,8 +41,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Item não encontrado ou não pertence ao usuário' }, { status: 403 });
     }
 
-    console.log('📋 [Simple API] Item encontrado:', item.title);
-
+    
     // 5. Atualizar
     const updated = await prisma.itinerary.update({
       where: { id: body.id },
@@ -53,8 +51,7 @@ export async function PUT(request: NextRequest) {
       }
     });
 
-    console.log('✅ [Simple API] Atualizado:', updated.completed);
-
+    
     // 6. Desconectar
     await prisma.$disconnect();
 

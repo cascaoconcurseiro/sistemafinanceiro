@@ -153,7 +153,7 @@ export class AuditLogger {
     
     switch (entry.level) {
       case LogLevel.DEBUG:
-        console.debug(`${prefix} ${entry.message}${duration}`, entry.data);
+        
         break;
       case LogLevel.INFO:
         console.info(`${prefix} ${entry.message}${duration}`, entry.data);

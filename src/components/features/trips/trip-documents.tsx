@@ -1,5 +1,5 @@
 'use client';
-import type { Trip } from '@/lib/storage';
+import type { Trip } from '@/lib/config/storage';
 import DocumentChecklist from './document-checklist';
 
 interface TripDocumentsProps {

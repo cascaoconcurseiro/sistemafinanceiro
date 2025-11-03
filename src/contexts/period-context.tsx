@@ -17,8 +17,9 @@ const PeriodContext = createContext<PeriodContextType | undefined>(undefined);
 
 export function PeriodProvider({ children }: { children: ReactNode }) {
   const now = new Date();
-  const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
-  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  // ✅ CORREÇÃO: Usar mês e ano atuais
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth()); // Mês atual (0-11)
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear()); // Ano atual
 
   const setMonthYear = (month: number, year: number) => {
     setSelectedMonth(month);
@@ -38,10 +39,10 @@ export function PeriodProvider({ children }: { children: ReactNode }) {
   const getPeriodDates = () => {
     const startDate = new Date(selectedYear, selectedMonth, 1);
     startDate.setHours(0, 0, 0, 0);
-    
+
     const endDate = new Date(selectedYear, selectedMonth + 1, 0);
     endDate.setHours(23, 59, 59, 999);
-    
+
     return { startDate, endDate };
   };
 

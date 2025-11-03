@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 /**
  * Script de migração para preencher sharedWith em transações antigas
- * 
+ *
  * Este script identifica transações que deveriam ser compartilhadas
  * mas não têm o campo sharedWith preenchido
  */
@@ -17,8 +17,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
-    console.log('🔧 [Migration] Iniciando migração de transações compartilhadas...');
-
+    
     // Buscar membros da família do usuário
     const familyMembers = await prisma.familyMember.findMany({
       where: { userId: auth.userId },
@@ -103,7 +102,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('❌ [Migration] Erro:', error);
     return NextResponse.json(
-      { 
+      {
         error: 'Erro ao executar migração',
         details: error instanceof Error ? error.message : 'Erro desconhecido'
       },

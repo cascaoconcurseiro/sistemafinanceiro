@@ -49,7 +49,7 @@ export function useBackup(): BackupState & BackupActions {
   // Buscar dados da API
   const fetchAllData = useCallback(async (): Promise<BackupData['data']> => {
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
-    
+
     try {
       const [transactions, accounts, goals] = await Promise.all([
         fetch(`${baseUrl}/transactions`).then(res => res.json()),
@@ -60,7 +60,7 @@ export function useBackup(): BackupState & BackupActions {
       // Buscar categorias e configurações se disponíveis
       let categories = [];
       let settings = {};
-      
+
       try {
         categories = await fetch(`${baseUrl}/categories`).then(res => res.json()).catch(() => []);
         settings = await fetch(`${baseUrl}/settings`).then(res => res.json()).catch(() => ({}));
@@ -84,10 +84,10 @@ export function useBackup(): BackupState & BackupActions {
   // Exportar dados
   const exportData = useCallback(async (format: 'json' | 'csv'): Promise<void> => {
     setState(prev => ({ ...prev, isExporting: true }));
-    
+
     try {
       const data = await fetchAllData();
-      
+
       const backupData: BackupData = {
         version: BACKUP_VERSION,
         timestamp: new Date().toISOString(),
@@ -102,7 +102,7 @@ export function useBackup(): BackupState & BackupActions {
       };
 
       downloadBackup(backupData, format);
-      
+
       // Timestamp do último backup agora seria salvo no banco de dados
       const now = new Date().toISOString();
       console.warn('⚠️ localStorage removido - timestamp do backup deveria ser salvo no banco de dados');
@@ -129,7 +129,7 @@ export function useBackup(): BackupState & BackupActions {
   // Importar dados
   const importData = useCallback(async (file: File): Promise<void> => {
     setState(prev => ({ ...prev, isImporting: true }));
-    
+
     try {
       const text = await file.text();
       let importedData: BackupData;
@@ -204,7 +204,7 @@ export function useBackup(): BackupState & BackupActions {
 
       // Verificar a cada hora se precisa fazer backup
       const interval = setInterval(scheduleBackup, 60 * 60 * 1000);
-      
+
       // Salvar referência do interval para limpeza
       (window as any).autoBackupInterval = interval;
 
@@ -248,14 +248,14 @@ export function useBackup(): BackupState & BackupActions {
 
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
-    
+
     const link = document.createElement('a');
     link.href = url;
     link.download = filename;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     URL.revokeObjectURL(url);
   }, []);
 
@@ -282,7 +282,7 @@ function validateBackupData(data: BackupData): void {
 function parseCSV(csvText: string): any[] {
   const lines = csvText.split('\n');
   const headers = lines[0].split(',').map(h => h.trim());
-  
+
   return lines.slice(1)
     .filter(line => line.trim())
     .map(line => {
@@ -303,7 +303,7 @@ function convertToCSV(transactions: any[]): string {
   const headers = Object.keys(transactions[0]);
   const csvContent = [
     headers.join(','),
-    ...transactions.map(transaction => 
+    ...transactions.map(transaction =>
       headers.map(header => {
         const value = transaction[header];
         // Escapar vírgulas e aspas
@@ -320,15 +320,15 @@ function convertToCSV(transactions: any[]): string {
 
 async function importDataToAPI(data: BackupData['data']): Promise<void> {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
-  
+
   // Importar em lotes para evitar sobrecarga
   const batchSize = 50;
-  
+
   // Importar transações
   for (let i = 0; i < data.transactions.length; i += batchSize) {
     const batch = data.transactions.slice(i, i + batchSize);
     await Promise.all(
-      batch.map(transaction => 
+      batch.map(transaction =>
         fetch(`${baseUrl}/transactions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

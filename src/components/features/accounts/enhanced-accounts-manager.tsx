@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { BankLogo, BankSelector } from '@/components/ui/bank-logo';
 import {
   Building2,
   ArrowRightLeft,
@@ -48,6 +49,8 @@ interface Account {
   currency: string;
   isActive: boolean;
   transactionCount: number;
+  bankCode?: string;
+  bankName?: string;
 }
 
 // Usar o tipo Transaction do contexto unificado
@@ -59,6 +62,7 @@ interface LocalTransaction {
   date: string | Date;
   accountId: string;
   category: string;
+  categoryRef?: { id: string; name: string; type: string }; // ✅ NOVO: Objeto da categoria
   status?: string;
   sharedWith?: string[];
   tripId?: string;
@@ -75,11 +79,11 @@ export function EnhancedAccountsManager() {
   // ✅ CORREÇÃO: Usar contexto unificado
   const { data } = useUnifiedFinancial();
   const { accounts: contextAccounts = [], transactions: allTransactions = [] } = data || {};
-  
+
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [accountTransactions, setAccountTransactions] = useState<LocalTransaction[]>([]);
   const loading = false; // Usando contexto unificado, não precisa de loading local
-  
+
   // Converter contas do contexto para o formato esperado
   const accounts = contextAccounts.map(acc => ({
     id: acc.id,
@@ -88,9 +92,11 @@ export function EnhancedAccountsManager() {
     balance: acc.balance || 0,
     currency: acc.currency || 'BRL',
     isActive: acc.isActive !== false,
-    transactionCount: allTransactions.filter(t => t.accountId === acc.id).length
+    transactionCount: allTransactions.filter(t => t.accountId === acc.id).length,
+    bankCode: (acc as any).bankCode,
+    bankName: (acc as any).bankName,
   }));
-  
+
   // Estados para transferência
   const [showTransferDialog, setShowTransferDialog] = useState(false);
   const [fromAccountId, setFromAccountId] = useState('');
@@ -116,6 +122,8 @@ export function EnhancedAccountsManager() {
   const [newAccountName, setNewAccountName] = useState('');
   const [newAccountType, setNewAccountType] = useState('checking');
   const [newAccountBalance, setNewAccountBalance] = useState('');
+  const [newAccountBankCode, setNewAccountBankCode] = useState('');
+  const [newAccountBankName, setNewAccountBankName] = useState('');
 
   // Estados para edição de conta
   const [showEditAccountDialog, setShowEditAccountDialog] = useState(false);
@@ -128,17 +136,17 @@ export function EnhancedAccountsManager() {
     if (selectedAccount) {
       const filtered = allTransactions.filter(t => {
         if (t.accountId !== selectedAccount.id) return false;
-        
+
         const transDate = new Date(t.date);
-        return transDate.getMonth() === selectedMonth && 
+        return transDate.getMonth() === selectedMonth &&
                transDate.getFullYear() === selectedYear;
       });
-      
+
       // ✅ CORREÇÃO: Ordenar SEMPRE por createdAt (ordem cronológica de criação)
       const sorted = filtered.sort((a, b) => {
         const aCreatedAt = (a as any).createdAt;
         const bCreatedAt = (b as any).createdAt;
-        
+
         // Se ambos têm createdAt, ordenar por ele
         if (aCreatedAt && bCreatedAt) {
           const createdA = new Date(aCreatedAt).getTime();
@@ -147,22 +155,22 @@ export function EnhancedAccountsManager() {
             return createdA - createdB;
           }
         }
-        
+
         // Fallback 1: Se só um tem createdAt, priorizar o que tem
         if (aCreatedAt && !bCreatedAt) return -1;
         if (!aCreatedAt && bCreatedAt) return 1;
-        
+
         // Fallback 2: Ordenar por data da transação
         const dateA = new Date(a.date).getTime();
         const dateB = new Date(b.date).getTime();
         if (dateA !== dateB) {
           return dateA - dateB;
         }
-        
+
         // Fallback 3: ordenar por ID (IDs mais antigos primeiro)
         return a.id.localeCompare(b.id);
       });
-      
+
       setAccountTransactions(sorted as LocalTransaction[]);
     }
   }, [selectedAccount, selectedMonth, selectedYear, allTransactions]);
@@ -283,16 +291,20 @@ export function EnhancedAccountsManager() {
         body: JSON.stringify({
           name: newAccountName.trim(),
           type: newAccountType,
+          bankCode: newAccountBankCode || undefined,
+          bankName: newAccountBankName || undefined,
           initialBalance: balance
         })
       });
-      
+
       if (response.ok) {
         toast.success('Conta criada com sucesso!');
         setShowCreateAccountDialog(false);
         setNewAccountName('');
         setNewAccountType('checking');
         setNewAccountBalance('');
+        setNewAccountBankCode('');
+        setNewAccountBankName('');
         setTimeout(() => window.location.reload(), 500);
       } else {
         const error = await response.json();
@@ -331,7 +343,7 @@ export function EnhancedAccountsManager() {
           type: editAccountType
         })
       });
-      
+
       if (response.ok) {
         toast.success('Conta atualizada com sucesso!');
         setShowEditAccountDialog(false);
@@ -379,7 +391,7 @@ export function EnhancedAccountsManager() {
     if (isTransfer) {
       return <ArrowRightLeft className="w-4 h-4 text-blue-600" />;
     }
-    
+
     switch (type) {
       case 'income':
         return <TrendingUp className="w-4 h-4 text-green-600" />;
@@ -392,7 +404,7 @@ export function EnhancedAccountsManager() {
 
   const getTransactionColor = (type: string, isTransfer: boolean) => {
     if (isTransfer) return 'text-blue-600';
-    
+
     switch (type) {
       case 'income':
         return 'text-green-600';
@@ -463,12 +475,19 @@ export function EnhancedAccountsManager() {
               >
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between mb-4">
-                    <Building2 className="w-8 h-8 text-primary" />
+                    {account.bankCode ? (
+                      <BankLogo bankCode={account.bankCode} size="lg" />
+                    ) : (
+                      <Building2 className="w-8 h-8 text-primary" />
+                    )}
                     <Badge variant="outline">
                       {translateAccountType(account.type)}
                     </Badge>
                   </div>
                   <h3 className="font-semibold text-lg mb-2">{account.name}</h3>
+                  {account.bankName && (
+                    <p className="text-sm text-gray-500 mb-2">{account.bankName}</p>
+                  )}
                   <div className="space-y-1 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Saldo:</span>
@@ -515,7 +534,7 @@ export function EnhancedAccountsManager() {
                               method: 'DELETE',
                               credentials: 'include'
                             });
-                            
+
                             if (response.ok) {
                               toast.success('Conta excluída!');
                               setTimeout(() => window.location.reload(), 500);
@@ -547,7 +566,7 @@ export function EnhancedAccountsManager() {
                 Transfira dinheiro entre suas contas bancárias.
               </DialogDescription>
             </DialogHeader>
-            
+
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="from-account">Conta Origem</Label>
@@ -614,7 +633,7 @@ export function EnhancedAccountsManager() {
                   onChange={(e) => setTransferDescription(e.target.value)}
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="transfer-date">Data</Label>
                 <Input
@@ -625,12 +644,12 @@ export function EnhancedAccountsManager() {
                 />
               </div>
             </div>
-            
+
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowTransferDialog(false)}>
                 Cancelar
               </Button>
-              <Button 
+              <Button
                 onClick={handleTransfer}
                 disabled={!fromAccountId || !toAccountId || !transferAmount || !transferDescription}
               >
@@ -649,7 +668,7 @@ export function EnhancedAccountsManager() {
                 Crie uma nova conta bancária para gerenciar suas finanças.
               </DialogDescription>
             </DialogHeader>
-            
+
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="account-name">Nome da Conta</Label>
@@ -677,6 +696,20 @@ export function EnhancedAccountsManager() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="account-bank">Banco</Label>
+                <BankSelector
+                  value={newAccountBankCode}
+                  onChange={(code, name) => {
+                    setNewAccountBankCode(code);
+                    setNewAccountBankName(name);
+                  }}
+                />
+                <p className="text-xs text-gray-500">
+                  Selecione o banco da sua conta
+                </p>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="account-balance">Saldo Inicial (opcional)</Label>
                 <Input
                   id="account-balance"
@@ -688,12 +721,12 @@ export function EnhancedAccountsManager() {
                 />
               </div>
             </div>
-            
+
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowCreateAccountDialog(false)}>
                 Cancelar
               </Button>
-              <Button 
+              <Button
                 onClick={handleCreateAccount}
                 disabled={!newAccountName.trim()}
               >
@@ -712,7 +745,7 @@ export function EnhancedAccountsManager() {
                 Edite as informações da sua conta bancária.
               </DialogDescription>
             </DialogHeader>
-            
+
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-account-name">Nome da Conta</Label>
@@ -739,12 +772,12 @@ export function EnhancedAccountsManager() {
                 </Select>
               </div>
             </div>
-            
+
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowEditAccountDialog(false)}>
                 Cancelar
               </Button>
-              <Button 
+              <Button
                 onClick={handleEditAccount}
                 disabled={!editAccountName.trim()}
               >
@@ -878,14 +911,24 @@ export function EnhancedAccountsManager() {
             <div className="text-center py-8">
               <Calendar className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
               <p className="text-muted-foreground">
-                {searchTerm || filterType !== 'all' 
+                {searchTerm || filterType !== 'all'
                   ? 'Nenhuma transação encontrada com os filtros aplicados'
                   : 'Nenhuma transação neste período'}
               </p>
             </div>
           ) : (
             <div className="space-y-2">
-              {filteredTransactions.map((transaction) => (
+              {filteredTransactions.map((transaction) => {
+                // ✅ DEBUG: Log para ver o que está vindo
+                if (transaction.description.includes('Recebimento') || transaction.description.includes('Pagamento') || transaction.description.includes('maria') || transaction.description.includes('Depósito')) {
+                  console.log('🔍 [Account] Transação:', transaction.description);
+                  console.log('   category:', transaction.category);
+                  console.log('   categoryRef:', transaction.categoryRef);
+                  console.log('   categoryRef?.name:', transaction.categoryRef?.name);
+                  console.log('   Objeto completo:', JSON.stringify(transaction, null, 2));
+                }
+                
+                return (
                 <div
                   key={transaction.id}
                   className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
@@ -895,7 +938,7 @@ export function EnhancedAccountsManager() {
                     <div>
                       <p className="font-medium">{transaction.description}</p>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <span>{transaction.category || 'Sem categoria'}</span>
+                        <span>{transaction.categoryRef?.name || transaction.category || 'Sem categoria'}</span>
                         <span>•</span>
                         <span>{formatDate(transaction.date.toString())}</span>
                         {transaction.isTransfer && (
@@ -915,15 +958,16 @@ export function EnhancedAccountsManager() {
                         // ✅ CORREÇÃO: SEMPRE mostrar o valor TOTAL quando vinculado a uma conta
                         // Motivo: Se você pagou R$ 100 por outra pessoa, R$ 100 saiu da sua conta
                         const displayAmount = Math.abs(transaction.amount);
-                        
-                        return (transaction.type === 'RECEITA' || transaction.type === 'income') 
-                          ? `+${formatCurrency(displayAmount)}` 
+
+                        return (transaction.type === 'RECEITA' || transaction.type === 'income')
+                          ? `+${formatCurrency(displayAmount)}`
                           : `-${formatCurrency(displayAmount)}`;
                       })()}
                     </p>
                   </div>
                 </div>
-              ))}
+              );
+              })}
             </div>
           )}
         </CardContent>
@@ -938,7 +982,7 @@ export function EnhancedAccountsManager() {
               Transfira dinheiro entre suas contas bancárias.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="from-account">Conta Origem</Label>
@@ -1005,7 +1049,7 @@ export function EnhancedAccountsManager() {
                 onChange={(e) => setTransferDescription(e.target.value)}
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="transfer-date">Data</Label>
               <Input
@@ -1016,12 +1060,12 @@ export function EnhancedAccountsManager() {
               />
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowTransferDialog(false)}>
               Cancelar
             </Button>
-            <Button 
+            <Button
               onClick={handleTransfer}
               disabled={!fromAccountId || !toAccountId || !transferAmount || !transferDescription}
             >
@@ -1039,13 +1083,13 @@ export function EnhancedAccountsManager() {
               {operationType === 'add' ? 'Adicionar Dinheiro' : 'Retirar Dinheiro'}
             </DialogTitle>
             <DialogDescription>
-              {operationType === 'add' 
+              {operationType === 'add'
                 ? 'Adicione dinheiro à sua conta (depósito, transferência recebida, etc.)'
                 : 'Retire dinheiro da sua conta (saque, pagamento em dinheiro, etc.)'
               }
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="operation-account">Conta</Label>
@@ -1089,7 +1133,7 @@ export function EnhancedAccountsManager() {
                 onChange={(e) => setOperationDescription(e.target.value)}
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="operation-date">Data</Label>
               <Input
@@ -1100,12 +1144,12 @@ export function EnhancedAccountsManager() {
               />
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowOperationDialog(false)}>
               Cancelar
             </Button>
-            <Button 
+            <Button
               onClick={handleAccountOperation}
               disabled={!operationAccountId || !operationAmount || !operationDescription}
             >

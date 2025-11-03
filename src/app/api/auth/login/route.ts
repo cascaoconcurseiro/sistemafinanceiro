@@ -5,14 +5,21 @@ import { rateLimit } from '@/lib/rate-limiter';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'sua-grana-secret-key';
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'sua-grana-refresh-secret-key';
+// 🔒 SEGURANÇA: JWT_SECRET obrigatório em produção
+if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
+  throw new Error('🔴 ERRO CRÍTICO: JWT_SECRET não configurado em produção!');
+}
+
+const JWT_SECRET = process.env.JWT_SECRET || 'sua-grana-secret-key-dev-only';
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'sua-grana-refresh-secret-key-dev-only';
 
 export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json();
+    console.log('🔐 [LOGIN] Tentativa de login:', email);
 
     if (!email || !password) {
+      console.log('❌ [LOGIN] Email ou senha faltando');
       return NextResponse.json(
         { error: 'Email e senha são obrigatórios' },
         { status: 400 }
@@ -28,6 +35,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Buscar usuário no banco
+    console.log('🔍 [LOGIN] Buscando usuário no banco...');
     const user = await prisma.user.findUnique({
       where: { email: email.toLowerCase() },
       select: {
@@ -40,6 +48,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user) {
+      console.log('❌ [LOGIN] Usuário não encontrado:', email);
       await BasicAuditService.logAuth(
         'FAILED_LOGIN',
         email,
@@ -51,6 +60,8 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    console.log('✅ [LOGIN] Usuário encontrado:', user.email);
 
     if (!user.isActive) {
       return NextResponse.json(
@@ -60,8 +71,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar senha
+    console.log('🔑 [LOGIN] Verificando senha...');
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
+      console.log('❌ [LOGIN] Senha inválida');
       await BasicAuditService.logAuth(
         'FAILED_LOGIN',
         email,
@@ -74,9 +87,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log('✅ [LOGIN] Senha válida');
+
     // Gerar tokens JWT
+    console.log('🎫 [LOGIN] Gerando tokens JWT...');
     const accessToken = jwt.sign(
-      { 
+      {
         userId: user.id,
         email: user.email,
         name: user.name
@@ -90,6 +106,7 @@ export async function POST(request: NextRequest) {
       JWT_REFRESH_SECRET,
       { expiresIn: '7d' }
     );
+    console.log('✅ [LOGIN] Tokens gerados');
 
     // Atualizar último login
     await prisma.user.update({
@@ -117,37 +134,38 @@ export async function POST(request: NextRequest) {
     // Configurar cookies seguros
     const response = NextResponse.json({
       success: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name
+      data: {
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name
+        }
       }
     });
 
-    // Configurar cookies HTTPOnly com path para funcionar em qualquer porta
+    // 🔒 SEGURANÇA: Cookies com todas as flags de segurança
     response.cookies.set('access_token', accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      httpOnly: true, // Previne acesso via JavaScript (XSS)
+      secure: process.env.NODE_ENV === 'production', // HTTPS apenas em produção
+      sameSite: 'lax', // Permite redirecionamentos (strict bloqueia)
       path: '/',
       maxAge: 24 * 60 * 60 // 24 horas
     });
 
     response.cookies.set('refresh_token', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      httpOnly: true, // Previne acesso via JavaScript (XSS)
+      secure: process.env.NODE_ENV === 'production', // HTTPS apenas em produção
+      sameSite: 'lax', // Permite redirecionamentos (strict bloqueia)
       path: '/',
       maxAge: 7 * 24 * 60 * 60 // 7 dias
     });
 
-    console.log('✅ Cookies configurados com sucesso');
-
+    console.log('✅ [LOGIN] Login bem-sucedido! Cookies configurados.');
     return response;
   } catch (error) {
     console.error('❌ Erro no login:', error);
     return NextResponse.json(
-      { 
+      {
         error: 'Erro interno do servidor',
         details: error instanceof Error ? error.message : 'Erro desconhecido'
       },

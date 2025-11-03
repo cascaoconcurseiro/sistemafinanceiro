@@ -9,17 +9,19 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  Save, 
-  X, 
-  AlertTriangle, 
-  CreditCard, 
-  Building2, 
+import { BankSelector } from '@/components/ui/bank-logo';
+import {
+  Save,
+  X,
+  AlertTriangle,
+  CreditCard,
+  Building2,
   Wallet,
   TrendingUp,
   Eye,
   EyeOff,
-  Edit
+  Edit,
+  Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Account } from '@/types';
@@ -41,6 +43,8 @@ export function EditAccountModal({
     name: '',
     type: '',
     bank: '',
+    bankCode: '',
+    bankName: '',
     description: '',
     balance: '',
     creditLimit: '',
@@ -53,6 +57,8 @@ export function EditAccountModal({
         name: account.name || '',
         type: account.type || '',
         bank: account.bank || '',
+        bankCode: account.bankCode || '',
+        bankName: account.bankName || '',
         description: account.description || '',
         balance: account.balance?.toString() || '0',
         creditLimit: account.creditLimit?.toString() || '',
@@ -87,6 +93,8 @@ export function EditAccountModal({
         body: JSON.stringify({
           name: formData.name,
           type: formData.type,
+          bankCode: formData.bankCode || undefined,
+          bankName: formData.bankName || undefined,
           description: formData.description,
           creditLimit: formData.type === 'credit' ? parseFloat(formData.creditLimit) || undefined : undefined,
         }),
@@ -171,12 +179,19 @@ export function EditAccountModal({
 
               <div className="space-y-2">
                 <Label htmlFor="bank">Banco</Label>
-                <Input
-                  id="bank"
-                  placeholder="Ex: Banco do Brasil"
-                  value={formData.bank}
-                  onChange={(e) => handleInputChange('bank', e.target.value)}
+                <BankSelector
+                  value={formData.bankCode}
+                  onChange={(code, name) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      bankCode: code,
+                      bankName: name,
+                    }));
+                  }}
                 />
+                <p className="text-xs text-gray-500">
+                  Selecione o banco da sua conta
+                </p>
               </div>
             </div>
 

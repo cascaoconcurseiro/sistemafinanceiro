@@ -1,13 +1,21 @@
 /**
  * TransactionService - Serviço de gerenciamento de transações
- * 
+ *
  * Responsável por criar, atualizar, excluir e gerenciar transações financeiras
  * com todas as regras de negócio aplicadas.
  */
 
 import { prisma } from '@/lib/prisma';
-import { validationService, ValidationError, TransactionInput, InstallmentInput, SharedExpenseInput, TransferInput } from './validation-service';
+import { validationService, TransactionInput, InstallmentInput, SharedExpenseInput, TransferInput } from './validation-service';
 import { Decimal } from '@prisma/client/runtime/library';
+
+// ValidationError não é exportado, criar classe local
+class ValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ValidationError';
+  }
+}
 
 // Interfaces
 export interface CreateTransactionResult {

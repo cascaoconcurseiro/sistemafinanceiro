@@ -107,7 +107,7 @@ export default function RegisterPage() {
             Cadastre-se no SuaGrana
           </p>
         </div>
-        
+
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
@@ -139,7 +139,7 @@ export default function RegisterPage() {
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               />
             </div>
-            
+
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                 Senha

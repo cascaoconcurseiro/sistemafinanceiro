@@ -29,7 +29,7 @@ class OptimisticUpdateManager {
   private subscribers = new Map<string, Set<(data: any) => void>>();
   private entityData = new Map<string, any>();
   private callbacks = new Map<string, OperationCallbacks>();
-  
+
   // Statistics
   private stats = {
     totalOperations: 0,
@@ -50,7 +50,7 @@ class OptimisticUpdateManager {
     maxRetries: number = 3
   ): string {
     const operationId = uuidv4();
-    
+
     const operation: OptimisticOperation = {
       id: operationId,
       type,
@@ -71,17 +71,17 @@ class OptimisticUpdateManager {
 
     // Apply update to local data immediately
     this.applyUpdateToLocalData(entity, type, data, originalData);
-    
+
     // Notify subscribers
     this.notifySubscribers(entity);
-    
+
     // Call pending callback
     callbacks?.onPending?.(operation);
-    
+
     this.stats.totalOperations++;
-    
+
     console.log(`🚀 Optimistic update applied: ${type} ${entity}`, { operationId, data });
-    
+
     return operationId;
   }
 
@@ -96,7 +96,7 @@ class OptimisticUpdateManager {
     }
 
     operation.status = 'CONFIRMED';
-    
+
     // Update with server data if provided
     if (serverData) {
       this.applyUpdateToLocalData(operation.entity, operation.type, serverData, operation.originalData);
@@ -106,11 +106,11 @@ class OptimisticUpdateManager {
     // Call confirmed callback
     const callbacks = this.callbacks.get(operationId);
     callbacks?.onConfirmed?.(operation);
-    
+
     this.stats.confirmedOperations++;
-    
+
     console.log(`✅ Operation confirmed: ${operationId}`);
-    
+
     // Clean up after delay
     setTimeout(() => {
       this.operations.delete(operationId);
@@ -129,17 +129,17 @@ class OptimisticUpdateManager {
     }
 
     operation.retryCount++;
-    
+
     // Try to retry if under limit
     if (operation.retryCount <= operation.maxRetries) {
       console.log(`🔄 Retrying operation ${operationId} (${operation.retryCount}/${operation.maxRetries})`);
-      
+
       // Exponential backoff
       const delay = Math.pow(2, operation.retryCount) * 1000;
       setTimeout(() => {
         this.retryOperation(operationId);
       }, delay);
-      
+
       return;
     }
 
@@ -159,23 +159,23 @@ class OptimisticUpdateManager {
     }
 
     operation.status = 'ROLLED_BACK';
-    
+
     // Revert the optimistic update
     this.revertUpdateFromLocalData(operation);
-    
+
     // Notify subscribers
     this.notifySubscribers(operation.entity);
-    
+
     // Call callbacks
     const callbacks = this.callbacks.get(operationId);
     callbacks?.onFailed?.(operation, error);
     callbacks?.onRolledBack?.(operation);
-    
+
     this.stats.failedOperations++;
     this.stats.rolledBackOperations++;
-    
+
     console.log(`❌ Operation rolled back: ${operationId}`, error);
-    
+
     // Clean up
     setTimeout(() => {
       this.operations.delete(operationId);
@@ -193,7 +193,7 @@ class OptimisticUpdateManager {
     // This would typically trigger the original API call again
     // The actual retry logic should be implemented by the caller
     console.log(`🔄 Operation ${operationId} ready for retry`);
-    
+
     // Emit retry event for external handling
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('optimistic:retry', {
@@ -212,7 +212,7 @@ class OptimisticUpdateManager {
     originalData?: any
   ): void {
     const currentData = this.entityData.get(entity) || [];
-    
+
     switch (type) {
       case 'CREATE':
         if (Array.isArray(currentData)) {
@@ -221,10 +221,10 @@ class OptimisticUpdateManager {
           this.entityData.set(entity, data);
         }
         break;
-        
+
       case 'UPDATE':
         if (Array.isArray(currentData)) {
-          const updated = currentData.map(item => 
+          const updated = currentData.map(item =>
             item.id === data.id ? { ...item, ...data } : item
           );
           this.entityData.set(entity, updated);
@@ -232,7 +232,7 @@ class OptimisticUpdateManager {
           this.entityData.set(entity, { ...currentData, ...data });
         }
         break;
-        
+
       case 'DELETE':
         if (Array.isArray(currentData)) {
           const filtered = currentData.filter(item => item.id !== data.id);
@@ -250,7 +250,7 @@ class OptimisticUpdateManager {
   private revertUpdateFromLocalData(operation: OptimisticOperation): void {
     const { entity, type, data, originalData } = operation;
     const currentData = this.entityData.get(entity) || [];
-    
+
     switch (type) {
       case 'CREATE':
         if (Array.isArray(currentData)) {
@@ -260,11 +260,11 @@ class OptimisticUpdateManager {
           this.entityData.delete(entity);
         }
         break;
-        
+
       case 'UPDATE':
         if (originalData) {
           if (Array.isArray(currentData)) {
-            const reverted = currentData.map(item => 
+            const reverted = currentData.map(item =>
               item.id === data.id ? originalData : item
             );
             this.entityData.set(entity, reverted);
@@ -273,7 +273,7 @@ class OptimisticUpdateManager {
           }
         }
         break;
-        
+
       case 'DELETE':
         if (originalData) {
           if (Array.isArray(currentData)) {
@@ -293,9 +293,9 @@ class OptimisticUpdateManager {
     if (!this.subscribers.has(entity)) {
       this.subscribers.set(entity, new Set());
     }
-    
+
     this.subscribers.get(entity)!.add(callback);
-    
+
     // Return unsubscribe function
     return () => {
       const entitySubscribers = this.subscribers.get(entity);
@@ -345,11 +345,11 @@ class OptimisticUpdateManager {
    */
   getPendingOperations(entity?: string): OptimisticOperation[] {
     const operations = Array.from(this.operations.values());
-    
+
     if (entity) {
       return operations.filter(op => op.entity === entity && op.status === 'PENDING');
     }
-    
+
     return operations.filter(op => op.status === 'PENDING');
   }
 
@@ -364,10 +364,10 @@ class OptimisticUpdateManager {
    * Get statistics
    */
   getStats(): typeof this.stats & { successRate: number } {
-    const successRate = this.stats.totalOperations > 0 
-      ? (this.stats.confirmedOperations / this.stats.totalOperations) * 100 
+    const successRate = this.stats.totalOperations > 0
+      ? (this.stats.confirmedOperations / this.stats.totalOperations) * 100
       : 0;
-    
+
     return {
       ...this.stats,
       successRate: Math.round(successRate * 100) / 100
@@ -395,8 +395,7 @@ class OptimisticUpdateManager {
    */
   printStats(): void {
     const stats = this.getStats();
-    console.log('📊 Optimistic Updates Statistics:');
-    console.log(`   Total Operations: ${stats.totalOperations}`);
+        console.log(`   Total Operations: ${stats.totalOperations}`);
     console.log(`   Confirmed: ${stats.confirmedOperations}`);
     console.log(`   Failed: ${stats.failedOperations}`);
     console.log(`   Rolled Back: ${stats.rolledBackOperations}`);

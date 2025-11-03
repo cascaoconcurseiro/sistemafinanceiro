@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ModernAppLayout } from '@/components/modern-app-layout';
+import { ModernAppLayout } from '@/components/layout/modern-app-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,17 +13,10 @@ import {
   Calendar,
   DollarSign,
   Plus,
-  TrendingUp,
-  TrendingDown,
-  Clock,
-  CheckCircle,
-  AlertCircle,
   BarChart3,
-  PieChart,
   Target,
 } from 'lucide-react';
 import { TripModal } from '@/components/modals/trip-modal';
-import { TravelExpenses } from '@/components/travel-expenses';
 import { useTrips, useUnifiedFinancial } from '@/contexts/unified-financial-context';
 
 interface Trip {
@@ -56,55 +49,48 @@ interface TravelStats {
 
 export default function TripsPage() {
   const router = useRouter();
-  const { trips } = useTrips(); // ✅ CORREÇÃO: Desestruturar o objeto retornado
-  const { loading, transactions } = useUnifiedFinancial();
+  const { trips } = useTrips();
+  const { transactions } = useUnifiedFinancial();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null);
 
-  // ✅ CORREÇÃO: Função para determinar status baseado nas datas
   const getTripStatus = useCallback((startDate: string, endDate: string): 'planejamento' | 'andamento' | 'concluida' => {
     const now = new Date();
-    now.setHours(0, 0, 0, 0); // Normalizar para início do dia
+    now.setHours(0, 0, 0, 0);
     
     const start = new Date(startDate);
     start.setHours(0, 0, 0, 0);
     
     const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999); // Fim do dia
+    end.setHours(23, 59, 59, 999);
     
     if (now < start) return 'planejamento';
     if (now >= start && now <= end) return 'andamento';
     return 'concluida';
   }, []);
 
-  // ✅ CORREÇÃO: Calcular gastos reais da viagem a partir das transações
-  const calculateTripSpent = useCallback((tripId: string): number => {
-    return transactions
-      .filter(t => t.tripId === tripId && t.type === 'expense')
-      .reduce((sum, t) => sum + Math.abs(Number(t.amount) || 0), 0);
-  }, [transactions]);
+  // ✅ CORREÇÃO: Não precisa mais calcular spent - vem do contexto
 
-  // ✅ CORREÇÃO: Atualizar trips com status e gastos calculados
   const tripsWithCalculatedData = useMemo(() => {
     return trips.map(trip => {
-      const calculatedSpent = calculateTripSpent(trip.id);
+      // ✅ CORREÇÃO: Usar spent do contexto (já calculado corretamente)
+      // Apenas recalcular o status
       const calculatedStatus = getTripStatus(trip.startDate, trip.endDate);
       
       return {
         ...trip,
-        spent: calculatedSpent,
         status: calculatedStatus
+        // spent já vem calculado do contexto!
       };
     });
-  }, [trips, calculateTripSpent, getTripStatus]);
+  }, [trips, getTripStatus]);
 
-  // ✅ AUTO-VINCULAR: Vincular transações automaticamente ao carregar
   useEffect(() => {
     const autoLinkAllTrips = async () => {
       for (const trip of trips) {
-        const spent = calculateTripSpent(trip.id);
+        // ✅ CORREÇÃO: Usar spent do contexto
+        const spent = trip.spent || 0;
         
-        // Se a viagem não tem gastos, tentar vincular automaticamente
         if (spent === 0) {
           try {
             console.log(`🔗 [TripsPage] Auto-vinculando transações para viagem: ${trip.name}`);
@@ -135,7 +121,6 @@ export default function TripsPage() {
               if (response.ok) {
                 const result = await response.json();
                 console.log(`✅ [TripsPage] ${result.linkedCount} transações vinculadas para ${trip.name}`);
-                // Forçar atualização do contexto
                 window.dispatchEvent(new CustomEvent('trip-updated'));
               }
             }
@@ -149,15 +134,13 @@ export default function TripsPage() {
     if (trips.length > 0 && transactions.length > 0) {
       autoLinkAllTrips();
     }
-  }, [trips, transactions, calculateTripSpent]);
+  }, [trips, transactions]);
 
-  // Calcular stats localmente usando useMemo
   const stats = useMemo<TravelStats>(() => {
     const totalTrips = tripsWithCalculatedData.length;
     const totalSpent = tripsWithCalculatedData.reduce((sum, trip) => sum + (Number(trip.spent) || 0), 0);
     const totalBudget = tripsWithCalculatedData.reduce((sum, trip) => sum + (Number(trip.budget) || 0), 0);
     
-    // Normalizar status para comparação
     const normalizeStatus = (status: string) => {
       if (status === 'andamento' || status === 'active') return 'active';
       if (status === 'concluida' || status === 'completed') return 'completed';
@@ -189,11 +172,6 @@ export default function TripsPage() {
   const handleEditTrip = (trip: Trip) => {
     setSelectedTrip(trip);
     setIsModalOpen(true);
-  };
-
-  const handleTripSaved = () => {
-    setIsModalOpen(false);
-    // Não precisa de loadTrips() - contexto atualiza automaticamente!
   };
 
   const getStatusColor = (status: string) => {
@@ -239,7 +217,6 @@ export default function TripsPage() {
       subtitle="Planeje e acompanhe suas viagens e gastos"
     >
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex justify-between items-center">
           <div>
             <Button onClick={handleCreateTrip} className="flex items-center gap-2">
@@ -249,7 +226,6 @@ export default function TripsPage() {
           </div>
         </div>
 
-        {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card>
             <CardContent className="p-6">
@@ -314,7 +290,6 @@ export default function TripsPage() {
           </Card>
         </div>
 
-        {/* Trips List */}
         <Tabs defaultValue="all" className="space-y-6">
           <TabsList>
             <TabsTrigger value="all">Todas as Viagens</TabsTrigger>
@@ -527,12 +502,10 @@ export default function TripsPage() {
         </Tabs>
       </div>
 
-      {/* Trip Modal */}
       <TripModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        trip={selectedTrip}
-        onSave={handleTripSaved}
+        initialData={selectedTrip}
       />
     </ModernAppLayout>
   );

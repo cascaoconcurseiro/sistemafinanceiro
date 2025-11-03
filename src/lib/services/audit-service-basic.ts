@@ -23,7 +23,7 @@ export class BasicAuditService {
     try {
       // Verificar se a tabela de auditoria existe
       const auditLogExists = await prisma.$queryRaw`
-        SELECT name FROM sqlite_master 
+        SELECT name FROM sqlite_master
         WHERE type='table' AND name='audit_logs'
       `;
 
@@ -62,7 +62,7 @@ export class BasicAuditService {
     try {
       const fs = require('fs');
       const path = require('path');
-      
+
       const logDir = './logs';
       if (!fs.existsSync(logDir)) {
         fs.mkdirSync(logDir, { recursive: true });
@@ -237,7 +237,7 @@ export function withAudit<T extends (...args: any[]) => any>(
 ): T {
   return (async (...args: any[]) => {
     const result = await fn(...args);
-    
+
     // Tentar extrair userId do contexto ou argumentos
     const userId = args.find(arg => arg?.userId) || 'system';
     const entityId = result?.id || args.find(arg => arg?.id);

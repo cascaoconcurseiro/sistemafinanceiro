@@ -47,13 +47,13 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
     try {
       // Verificar se já mostrou a notificação de boas-vindas
       const hasShownWelcome = localStorage.getItem('hasShownWelcomeNotification');
-      
+
       // TODO: Implementar chamada para API de notificações
       const response = await fetch('/api/notifications', { credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
         const apiNotifications = data.notifications || [];
-        
+
         // Adicionar notificação de boas-vindas apenas na primeira vez
         if (!hasShownWelcome) {
           const welcomeNotification: Notification = {
@@ -88,7 +88,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
       console.error('Erro ao carregar notificações:', error);
       // Verificar se já mostrou a notificação de boas-vindas
       const hasShownWelcome = localStorage.getItem('hasShownWelcomeNotification');
-      
+
       // Fallback: criar notificação de boas-vindas apenas na primeira vez
       if (!hasShownWelcome) {
         const welcomeNotification: Notification = {
@@ -143,7 +143,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
 
   const removeNotification = async (id: string) => {
     setNotifications(prev => prev.filter(notification => notification.id !== id));
-    
+
     // Remover do banco de dados
     try {
       await fetch(`/api/notifications/${id}`, {
@@ -156,9 +156,9 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
   };
 
   const markAsRead = async (id: string) => {
-    setNotifications(prev => 
-      prev.map(notification => 
-        notification.id === id 
+    setNotifications(prev =>
+      prev.map(notification =>
+        notification.id === id
           ? { ...notification, isRead: true }
           : notification
       )
@@ -180,7 +180,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
   };
 
   const markAllAsRead = async () => {
-    setNotifications(prev => 
+    setNotifications(prev =>
       prev.map(notification => ({ ...notification, isRead: true }))
     );
 
@@ -197,7 +197,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
 
   const clearNotifications = async () => {
     setNotifications([]);
-    
+
     // Limpar do banco de dados
     try {
       await fetch('/api/notifications', {

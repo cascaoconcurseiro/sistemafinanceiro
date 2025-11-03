@@ -1,8 +1,8 @@
 /**
  * 🧮 SIMPLIFICAÇÃO DE DÍVIDAS
- * 
+ *
  * Compensa automaticamente dívidas entre as mesmas pessoas.
- * 
+ *
  * Exemplo:
  * - Wesley me deve: R$ 50,00
  * - Eu devo para Wesley: R$ 5,00
@@ -67,13 +67,13 @@ export function simplifyDebts(
       }
 
       const personDebts = debtsByPerson.get(personId)!;
-      
+
       if (isCredit) {
         personDebts.owed += debt.amount;
       } else {
         personDebts.owes += debt.amount;
       }
-      
+
       personDebts.debts.push(debt);
     }
   });

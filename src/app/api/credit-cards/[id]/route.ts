@@ -16,7 +16,7 @@ export async function GET(
     const { id } = params;
 
     const creditCard = await prisma.creditCard.findFirst({
-      where: { 
+      where: {
         id,
         userId: auth.userId
       }
@@ -113,40 +113,40 @@ export async function DELETE(
 
     // ✅ CORREÇÃO: Deletar PERMANENTEMENTE do banco de dados
     console.log('🗑️ Deletando cartão permanentemente:', id);
-    
+
     // 1. Deletar faturas
     const deletedInvoices = await prisma.invoice.deleteMany({
       where: { creditCardId: id, userId: auth.userId }
     });
     console.log(`   ✅ Deletadas ${deletedInvoices.count} faturas`);
-    
+
     // 2. Deletar lançamentos contábeis das transações
     const transactions = await prisma.transaction.findMany({
       where: { creditCardId: id, userId: auth.userId },
       select: { id: true }
     });
-    
+
     for (const transaction of transactions) {
       await prisma.journalEntry.deleteMany({
         where: { transactionId: transaction.id }
       });
     }
     console.log(`   ✅ Deletados lançamentos de ${transactions.length} transações`);
-    
+
     // 3. Deletar transações
     const deletedTransactions = await prisma.transaction.deleteMany({
       where: { creditCardId: id, userId: auth.userId }
     });
     console.log(`   ✅ Deletadas ${deletedTransactions.count} transações`);
-    
+
     // 4. Deletar cartão
     await prisma.creditCard.delete({
       where: { id }
     });
     console.log(`   ✅ Cartão deletado permanentemente`);
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: 'Cartão deletado permanentemente do banco de dados',
       deletedTransactions: deletedTransactions.count,
       deletedInvoices: deletedInvoices.count

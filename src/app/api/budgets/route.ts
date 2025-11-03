@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     // ✅ CORREÇÃO CRÍTICA: Adicionar autenticação
     const { authenticateRequest } = await import('@/lib/utils/auth-helpers');
     const auth = await authenticateRequest(request);
-    
+
     if (!auth.success || !auth.userId) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
     }
@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
         });
 
         // Calcular total gasto (valores já são negativos para despesas)
-        const totalSpent = transactions.reduce((sum, transaction) => 
+        const totalSpent = transactions.reduce((sum, transaction) =>
           sum + Math.abs(Number(transaction.amount)), 0
         );
 
@@ -128,9 +128,9 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Erro ao buscar orçamentos:', error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Erro interno do servidor' 
+      {
+        success: false,
+        error: 'Erro interno do servidor'
       },
       { status: 500 }
     );
@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
     // ✅ CORREÇÃO CRÍTICA: Adicionar autenticação
     const { authenticateRequest } = await import('@/lib/utils/auth-helpers');
     const auth = await authenticateRequest(request);
-    
+
     if (!auth.success || !auth.userId) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
     }
@@ -220,7 +220,7 @@ export async function PUT(request: NextRequest) {
     // ✅ CORREÇÃO CRÍTICA: Adicionar autenticação
     const { authenticateRequest } = await import('@/lib/utils/auth-helpers');
     const auth = await authenticateRequest(request);
-    
+
     if (!auth.success || !auth.userId) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
     }
@@ -240,7 +240,7 @@ export async function PUT(request: NextRequest) {
 
     // ✅ CORREÇÃO CRÍTICA: Verificar se orçamento existe e pertence ao usuário
     const existingBudget = await prisma.budget.findFirst({
-      where: { 
+      where: {
         id,
         userId: auth.userId // ✅ Isolamento de dados
       }
@@ -258,7 +258,7 @@ export async function PUT(request: NextRequest) {
 
     // Atualizar orçamento
     const updatedBudget = await prisma.budget.update({
-      where: { 
+      where: {
         id,
         userId: auth.userId // ✅ Isolamento de dados
       },
@@ -293,7 +293,7 @@ export async function DELETE(request: NextRequest) {
     // ✅ CORREÇÃO CRÍTICA: Adicionar autenticação
     const { authenticateRequest } = await import('@/lib/utils/auth-helpers');
     const auth = await authenticateRequest(request);
-    
+
     if (!auth.success || !auth.userId) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
     }
@@ -313,7 +313,7 @@ export async function DELETE(request: NextRequest) {
 
     // ✅ CORREÇÃO CRÍTICA: Verificar se orçamento existe e pertence ao usuário
     const existingBudget = await prisma.budget.findFirst({
-      where: { 
+      where: {
         id,
         userId: auth.userId // ✅ Isolamento de dados
       }
@@ -331,7 +331,7 @@ export async function DELETE(request: NextRequest) {
 
     // ✅ CORREÇÃO CRÍTICA: Verificar se há transactions vinculadas (filtrado por usuário)
     const linkedTransactions = await prisma.transaction.count({
-      where: { 
+      where: {
         budgetId: id,
         userId: auth.userId // ✅ Isolamento de dados
       }
@@ -340,11 +340,11 @@ export async function DELETE(request: NextRequest) {
     if (linkedTransactions > 0) {
       // Soft delete - apenas desativar
       await prisma.budget.update({
-        where: { 
+        where: {
           id,
           userId: auth.userId // ✅ Isolamento de dados
         },
-        data: { 
+        data: {
           isActive: false,
           updatedAt: new Date()
         }
@@ -357,7 +357,7 @@ export async function DELETE(request: NextRequest) {
     } else {
       // Hard delete - remover completamente
       await prisma.budget.delete({
-        where: { 
+        where: {
           id,
           userId: auth.userId // ✅ Isolamento de dados
         }

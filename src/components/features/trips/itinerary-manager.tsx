@@ -25,7 +25,7 @@ import {
   Search,
   Filter,
 } from 'lucide-react';
-import type { Trip } from '@/lib/storage';
+import type { Trip } from '@/lib/config/storage';
 import { toast } from 'sonner';
 import { databaseService } from '@/lib/services/database-service';
 import {
@@ -92,7 +92,7 @@ export function ItineraryManager({
 
   const loadItinerary = async () => {
     if (typeof window === 'undefined') return;
-    
+
     try {
       const response = await fetch(`/api/itinerary?tripId=${trip.id}`, { credentials: 'include' });
       if (response.ok) {
@@ -210,7 +210,7 @@ export function ItineraryManager({
       const selectedDateObj = new Date(isoDate);
       const startDateObj = new Date(trip.startDate);
       const endDateObj = new Date(trip.endDate);
-      
+
       if (selectedDateObj < startDateObj || selectedDateObj > endDateObj) {
         toast.error('A data deve estar dentro do período da viagem');
         return;
@@ -263,7 +263,7 @@ export function ItineraryManager({
       if (response.ok) {
         // Recarregar itinerário da API
         await loadItinerary();
-        
+
         setFormData({
           date: '',
           time: '',

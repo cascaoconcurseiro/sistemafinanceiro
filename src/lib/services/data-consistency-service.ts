@@ -85,15 +85,14 @@ export class DataConsistencyService {
     try {
       // Criar tabelas de consistência se não existirem
       await this.createConsistencyTables();
-      
+
       // Configurar testes automáticos
       await this.scheduleAutomaticTests();
-      
+
       // Criar snapshot inicial
       await this.createDataSnapshot('full');
-      
-      console.log('✅ DataConsistencyService inicializado com sucesso');
-    } catch (error) {
+
+          } catch (error) {
       console.error('❌ Erro ao inicializar DataConsistencyService:', error);
       throw error;
     }
@@ -113,8 +112,7 @@ export class DataConsistencyService {
     const reportId = this.generateUUID();
 
     try {
-      console.log('🔍 Iniciando testes de consistência...');
-
+      
       const testResults: ConsistencyTestResult[] = [];
 
       // 1. Teste de Integridade Referencial
@@ -248,7 +246,7 @@ export class DataConsistencyService {
         test_type: 'referential_integrity',
         status: totalIssues === 0 ? 'passed' : 'failed',
         severity: totalIssues === 0 ? 'low' : totalIssues > 10 ? 'critical' : 'medium',
-        description: totalIssues === 0 
+        description: totalIssues === 0
           ? 'Todas as referências estão íntegras'
           : `Encontradas ${totalIssues} violações de integridade referencial`,
         affected_records: totalIssues,
@@ -277,12 +275,12 @@ export class DataConsistencyService {
 
       // Calcular saldos baseados em transações
       const calculatedBalances = await db.query(`
-        SELECT 
+        SELECT
           a.id as account_id,
           a.name as account_name,
           a.initial_balance,
           COALESCE(SUM(
-            CASE 
+            CASE
               WHEN t.type = 'income' THEN t.amount
               WHEN t.type = 'expense' THEN -t.amount
               WHEN t.type = 'transfer' AND t.account_id = a.id THEN -t.amount
@@ -291,7 +289,7 @@ export class DataConsistencyService {
             END
           ), 0) as transaction_total,
           (a.initial_balance + COALESCE(SUM(
-            CASE 
+            CASE
               WHEN t.type = 'income' THEN t.amount
               WHEN t.type = 'expense' THEN -t.amount
               WHEN t.type = 'transfer' AND t.account_id = a.id THEN -t.amount
@@ -328,7 +326,7 @@ export class DataConsistencyService {
         test_type: 'balance_verification',
         status: balanceIssues.length === 0 ? 'passed' : 'failed',
         severity: balanceIssues.length === 0 ? 'low' : 'high',
-        description: balanceIssues.length === 0 
+        description: balanceIssues.length === 0
           ? 'Todos os saldos estão corretos'
           : `Encontradas ${balanceIssues.length} inconsistências de saldo`,
         affected_records: balanceIssues.length,
@@ -359,11 +357,11 @@ export class DataConsistencyService {
       const orphanTransfers = await db.query(`
         SELECT t1.id, t1.transfer_group_id
         FROM transactions t1
-        WHERE t1.type = 'transfer' 
+        WHERE t1.type = 'transfer'
           AND t1.transfer_group_id IS NOT NULL
           AND NOT EXISTS (
-            SELECT 1 FROM transactions t2 
-            WHERE t2.transfer_group_id = t1.transfer_group_id 
+            SELECT 1 FROM transactions t2
+            WHERE t2.transfer_group_id = t1.transfer_group_id
               AND t2.id != t1.id
           )
       `);
@@ -383,7 +381,7 @@ export class DataConsistencyService {
         WHERE t1.installment_group_id IS NOT NULL
           AND t1.total_installments > 1
           AND (
-            SELECT COUNT(*) FROM transactions t2 
+            SELECT COUNT(*) FROM transactions t2
             WHERE t2.installment_group_id = t1.installment_group_id
           ) != t1.total_installments
       `);
@@ -405,7 +403,7 @@ export class DataConsistencyService {
         test_type: 'orphan_records',
         status: totalOrphans === 0 ? 'passed' : 'failed',
         severity: totalOrphans === 0 ? 'low' : 'medium',
-        description: totalOrphans === 0 
+        description: totalOrphans === 0
           ? 'Nenhum registro órfão encontrado'
           : `Encontrados ${totalOrphans} registros órfãos`,
         affected_records: totalOrphans,
@@ -434,8 +432,8 @@ export class DataConsistencyService {
 
       // Verificar transações sem descrição
       const emptyDescriptions = await db.query(`
-        SELECT COUNT(*) as count FROM transactions 
-        WHERE (description IS NULL OR TRIM(description) = '') 
+        SELECT COUNT(*) as count FROM transactions
+        WHERE (description IS NULL OR TRIM(description) = '')
           AND is_deleted = false
       `);
 
@@ -449,8 +447,8 @@ export class DataConsistencyService {
 
       // Verificar contas sem nome
       const emptyAccountNames = await db.query(`
-        SELECT COUNT(*) as count FROM accounts 
-        WHERE (name IS NULL OR TRIM(name) = '') 
+        SELECT COUNT(*) as count FROM accounts
+        WHERE (name IS NULL OR TRIM(name) = '')
           AND is_deleted = false
       `);
 
@@ -464,8 +462,8 @@ export class DataConsistencyService {
 
       // Verificar usuários sem email
       const emptyEmails = await db.query(`
-        SELECT COUNT(*) as count FROM users 
-        WHERE (email IS NULL OR TRIM(email) = '') 
+        SELECT COUNT(*) as count FROM users
+        WHERE (email IS NULL OR TRIM(email) = '')
           AND is_deleted = false
       `);
 
@@ -486,7 +484,7 @@ export class DataConsistencyService {
         test_type: 'data_completeness',
         status: totalIssues === 0 ? 'passed' : 'warning',
         severity: totalIssues === 0 ? 'low' : 'medium',
-        description: totalIssues === 0 
+        description: totalIssues === 0
           ? 'Todos os campos obrigatórios estão preenchidos'
           : `Encontrados ${totalIssues} campos obrigatórios vazios`,
         affected_records: totalIssues,
@@ -515,7 +513,7 @@ export class DataConsistencyService {
 
       // Verificar transações com valores negativos (exceto transferências)
       const negativeAmounts = await db.query(`
-        SELECT COUNT(*) as count FROM transactions 
+        SELECT COUNT(*) as count FROM transactions
         WHERE amount < 0 AND type != 'transfer' AND is_deleted = false
       `);
 
@@ -529,7 +527,7 @@ export class DataConsistencyService {
 
       // Verificar transferências sem conta de destino
       const invalidTransfers = await db.query(`
-        SELECT COUNT(*) as count FROM transactions 
+        SELECT COUNT(*) as count FROM transactions
         WHERE type = 'transfer' AND transfer_to_account_id IS NULL AND is_deleted = false
       `);
 
@@ -543,7 +541,7 @@ export class DataConsistencyService {
 
       // Verificar datas futuras em transações
       const futureDates = await db.query(`
-        SELECT COUNT(*) as count FROM transactions 
+        SELECT COUNT(*) as count FROM transactions
         WHERE transaction_date > CURRENT_DATE + INTERVAL '1 day' AND is_deleted = false
       `);
 
@@ -564,7 +562,7 @@ export class DataConsistencyService {
         test_type: 'business_rules',
         status: totalViolations === 0 ? 'passed' : 'warning',
         severity: totalViolations === 0 ? 'low' : 'medium',
-        description: totalViolations === 0 
+        description: totalViolations === 0
           ? 'Todas as regras de negócio estão sendo respeitadas'
           : `Encontradas ${totalViolations} violações de regras de negócio`,
         affected_records: totalViolations,
@@ -593,9 +591,9 @@ export class DataConsistencyService {
 
       // Verificar transações duplicadas (mesmo valor, data, conta e descrição)
       const duplicateTransactions = await db.query(`
-        SELECT 
+        SELECT
           amount, transaction_date, account_id, description, COUNT(*) as count
-        FROM transactions 
+        FROM transactions
         WHERE is_deleted = false
         GROUP BY amount, transaction_date, account_id, description
         HAVING COUNT(*) > 1
@@ -611,9 +609,9 @@ export class DataConsistencyService {
 
       // Verificar contas duplicadas (mesmo nome e usuário)
       const duplicateAccounts = await db.query(`
-        SELECT 
+        SELECT
           name, user_id, COUNT(*) as count
-        FROM accounts 
+        FROM accounts
         WHERE is_deleted = false
         GROUP BY name, user_id
         HAVING COUNT(*) > 1
@@ -636,7 +634,7 @@ export class DataConsistencyService {
         test_type: 'business_rules',
         status: totalDuplicates === 0 ? 'passed' : 'warning',
         severity: totalDuplicates === 0 ? 'low' : 'medium',
-        description: totalDuplicates === 0 
+        description: totalDuplicates === 0
           ? 'Nenhum registro duplicado encontrado'
           : `Encontrados ${totalDuplicates} possíveis registros duplicados`,
         affected_records: totalDuplicates,
@@ -666,15 +664,15 @@ export class DataConsistencyService {
       // Verificar registros com created_at posterior a updated_at
       const invalidTimestamps = await db.query(`
         SELECT 'transactions' as table_name, COUNT(*) as count
-        FROM transactions 
+        FROM transactions
         WHERE created_at > updated_at AND is_deleted = false
         UNION ALL
         SELECT 'accounts' as table_name, COUNT(*) as count
-        FROM accounts 
+        FROM accounts
         WHERE created_at > updated_at AND is_deleted = false
         UNION ALL
         SELECT 'users' as table_name, COUNT(*) as count
-        FROM users 
+        FROM users
         WHERE created_at > updated_at AND is_deleted = false
       `);
 
@@ -697,7 +695,7 @@ export class DataConsistencyService {
         test_type: 'data_completeness',
         status: totalIssues === 0 ? 'passed' : 'warning',
         severity: totalIssues === 0 ? 'low' : 'medium',
-        description: totalIssues === 0 
+        description: totalIssues === 0
           ? 'Todas as datas estão consistentes'
           : `Encontradas ${totalIssues} inconsistências temporais`,
         affected_records: totalIssues,
@@ -831,14 +829,14 @@ export class DataConsistencyService {
         test_type: 'data_completeness',
         status: differences.length === 0 ? 'passed' : 'warning',
         severity: 'low',
-        description: differences.length === 0 
+        description: differences.length === 0
           ? 'Nenhuma alteração detectada desde o último snapshot'
           : `Detectadas ${differences.length} alterações desde o último snapshot`,
         affected_records: differences.length,
         table_names: Object.keys(this.lastSnapshot.tables),
         execution_time_ms: executionTime,
         timestamp: new Date().toISOString(),
-        details: { 
+        details: {
           differences,
           last_snapshot_time: this.lastSnapshot.timestamp,
           current_snapshot_time: currentSnapshot.timestamp
@@ -956,10 +954,10 @@ export class DataConsistencyService {
   }
 
   private createErrorResult(
-    id: UUID, 
-    testName: string, 
-    testType: ConsistencyTestResult['test_type'], 
-    error: any, 
+    id: UUID,
+    testName: string,
+    testType: ConsistencyTestResult['test_type'],
+    error: any,
     executionTime: number
   ): ConsistencyTestResult {
     return {
@@ -1031,8 +1029,8 @@ export class DataConsistencyService {
 
   public async getConsistencyReports(limit: number = 10): Promise<ConsistencyReport[]> {
     const result = await db.query(`
-      SELECT * FROM consistency_reports 
-      ORDER BY timestamp DESC 
+      SELECT * FROM consistency_reports
+      ORDER BY timestamp DESC
       LIMIT $1
     `, [limit]);
 
@@ -1051,8 +1049,8 @@ export class DataConsistencyService {
     critical_issues: number;
   }> {
     const result = await db.query(`
-      SELECT * FROM consistency_reports 
-      ORDER BY timestamp DESC 
+      SELECT * FROM consistency_reports
+      ORDER BY timestamp DESC
       LIMIT 1
     `);
 

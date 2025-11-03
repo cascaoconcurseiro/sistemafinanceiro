@@ -16,11 +16,11 @@ interface DateRangePickerProps {
   className?: string;
 }
 
-export function DateRangePicker({ 
-  startDate, 
-  endDate, 
-  onDateChange, 
-  className 
+export function DateRangePicker({
+  startDate,
+  endDate,
+  onDateChange,
+  className
 }: DateRangePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [tempStartDate, setTempStartDate] = useState<Date | undefined>(startDate);
@@ -42,7 +42,7 @@ export function DateRangePicker({
       } else {
         setTempEndDate(date);
       }
-      
+
       // Aplicar as datas selecionadas
       if (tempStartDate) {
         const finalStartDate = date < tempStartDate ? date : tempStartDate;
@@ -100,9 +100,9 @@ export function DateRangePicker({
               Limpar
             </Button>
             {tempStartDate && !selectingStart && (
-              <Button 
-                size="sm" 
-                variant="outline" 
+              <Button
+                size="sm"
+                variant="outline"
                 onClick={() => setSelectingStart(true)}
               >
                 Alterar início

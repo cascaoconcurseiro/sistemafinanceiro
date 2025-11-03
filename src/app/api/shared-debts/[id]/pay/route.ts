@@ -17,8 +17,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    console.log('💰 [API Shared Debt Pay] Pagando dívida:', params.id);
-
+    
     // Validar dados
     if (!body.accountId) {
       return NextResponse.json(
@@ -44,8 +43,7 @@ export async function POST(
       body.date ? new Date(body.date) : undefined
     );
 
-    console.log('✅ [API Shared Debt Pay] Dívida paga:', result.paymentTransaction.id);
-
+    
     // ✅ EMITIR EVENTOS
     const { broadcastEvent } = await import('../../../events/route');
     broadcastEvent('SHARED_DEBT_PAID', {

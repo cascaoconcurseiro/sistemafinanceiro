@@ -18,10 +18,10 @@ export class SecureBackup {
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const filename = `backup-${timestamp}.json`;
       const sanitizedFilename = InputSanitizer.sanitizePath(filename);
-      
+
       // Caminho seguro
       const backupPath = path.join(this.backupDir, sanitizedFilename);
-      
+
       // Verificar se o caminho está dentro do diretório de backup
       if (!backupPath.startsWith(this.backupDir)) {
         throw new Error('Invalid backup path');
@@ -32,10 +32,10 @@ export class SecureBackup {
 
       // Sanitizar dados antes de salvar
       const sanitizedData = this.sanitizeBackupData(data);
-      
+
       // Salvar backup
       await fs.writeFile(backupPath, JSON.stringify(sanitizedData, null, 2));
-      
+
       SecureLogger.info('Backup created successfully', { filename: sanitizedFilename });
       return backupPath;
     } catch (error) {
@@ -56,7 +56,7 @@ export class SecureBackup {
     const sanitized: any = {};
     for (const [key, value] of Object.entries(data)) {
       const sanitizedKey = InputSanitizer.sanitizeString(key);
-      
+
       if (typeof value === 'string') {
         sanitized[sanitizedKey] = InputSanitizer.sanitizeString(value);
       } else if (typeof value === 'object') {
@@ -85,7 +85,7 @@ export class SecureBackup {
     try {
       const sanitizedFilename = InputSanitizer.sanitizePath(filename);
       const backupPath = path.join(this.backupDir, sanitizedFilename);
-      
+
       // Verificar se o caminho está dentro do diretório de backup
       if (!backupPath.startsWith(this.backupDir)) {
         throw new Error('Invalid backup path');

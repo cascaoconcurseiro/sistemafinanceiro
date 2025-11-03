@@ -71,14 +71,16 @@ export default function SecurityPage() {
     },
   ]);
 
-  const handleChangePassword = () => {
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  const handleChangePassword = async () => {
     if (!passwords.current || !passwords.new || !passwords.confirm) {
       toast.error('Preencha todos os campos');
       return;
     }
 
     if (passwords.new !== passwords.confirm) {
-      toast.error('As senhas nao coincidem');
+      toast.error('As senhas não coincidem');
       return;
     }
 
@@ -87,8 +89,33 @@ export default function SecurityPage() {
       return;
     }
 
-    toast.success('Senha alterada com sucesso!');
-    setPasswords({ current: '', new: '', confirm: '' });
+    setIsChangingPassword(true);
+
+    try {
+      const response = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          currentPassword: passwords.current,
+          newPassword: passwords.new,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success('Senha alterada com sucesso!');
+        setPasswords({ current: '', new: '', confirm: '' });
+      } else {
+        toast.error(data.error || 'Erro ao alterar senha');
+      }
+    } catch (error) {
+      console.error('Erro ao alterar senha:', error);
+      toast.error('Erro ao alterar senha. Tente novamente.');
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   const handleSaveSecurity = () => {
@@ -240,10 +267,11 @@ export default function SecurityPage() {
 
             <Button
               onClick={handleChangePassword}
+              disabled={isChangingPassword}
               className="flex items-center gap-2"
             >
               <Save className="w-4 h-4" />
-              Alterar Senha
+              {isChangingPassword ? 'Alterando...' : 'Alterar Senha'}
             </Button>
           </CardContent>
         </Card>

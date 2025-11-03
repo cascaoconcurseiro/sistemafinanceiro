@@ -1,6 +1,6 @@
 /**
  * Inicializador de Cron Jobs
- * 
+ *
  * Este arquivo configura e inicializa todos os background jobs
  * usando node-cron para agendamento.
  */

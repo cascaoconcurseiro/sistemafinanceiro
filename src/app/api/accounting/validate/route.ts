@@ -1,6 +1,6 @@
 /**
  * 🏦 API DE VALIDAÇÃO CONTÁBIL
- * 
+ *
  * Endpoints para validar integridade contábil:
  * - Balanceamento geral do sistema
  * - Reconciliação de contas
@@ -21,11 +21,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
     }
 
-    console.log('🔍 [API Accounting] Validando balanceamento do sistema...');
-
+    
     // Validar balanceamento geral
     const systemBalance = await doubleEntryService.validateSystemBalance();
-    
+
     // Gerar balancete do usuário
     const trialBalance = await doubleEntryService.generateTrialBalance(auth.userId);
 
@@ -95,8 +94,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('🔍 [API Accounting] Reconciliando conta:', accountId);
-
+    
     const reconciliation = await doubleEntryService.reconcileAccount(accountId);
 
     console.log('✅ [API Accounting] Reconciliação concluída:', {

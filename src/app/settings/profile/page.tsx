@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import {
   Card,
   CardContent,
@@ -27,23 +28,93 @@ import {
 import { toast } from 'sonner';
 
 export default function ProfilePage() {
+  const { data: session } = useSession();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [profile, setProfile] = useState({
-    name: 'João Silva',
-    email: 'joao.silva@email.com',
-    phone: '(11) 99999-9999',
-    address: 'São Paulo, SP',
-    birthDate: '1990-01-01',
-    bio: 'Desenvolvedor apaixonado por tecnologia e finanças pessoais.',
+    name: '',
+    email: '',
     avatar: '',
+    createdAt: '',
   });
 
-  const handleSave = () => {
-    toast.success('Perfil atualizado com sucesso!');
+  // Carregar perfil do usuário
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const response = await fetch('/api/user/profile', {
+          credentials: 'include',
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setProfile({
+            name: data.profile.name || '',
+            email: data.profile.email || '',
+            avatar: data.profile.image || '',
+            createdAt: data.profile.createdAt || '',
+          });
+        }
+      } catch (error) {
+        console.error('Erro ao carregar perfil:', error);
+        toast.error('Erro ao carregar perfil');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (session) {
+      loadProfile();
+    }
+  }, [session]);
+
+  const handleSave = async () => {
+    if (!profile.name.trim()) {
+      toast.error('Nome é obrigatório');
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      const response = await fetch('/api/user/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: profile.name,
+          image: profile.avatar,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success('Perfil atualizado com sucesso!');
+      } else {
+        toast.error(data.error || 'Erro ao atualizar perfil');
+      }
+    } catch (error) {
+      console.error('Erro ao salvar perfil:', error);
+      toast.error('Erro ao salvar perfil. Tente novamente.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleAvatarUpload = () => {
-    toast.success('Avatar atualizado com sucesso!');
+    toast.info('Upload de avatar será implementado em breve');
   };
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto p-6 max-w-4xl">
+        <div className="flex items-center justify-center h-64">
+          <p className="text-gray-500">Carregando perfil...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-6 max-w-4xl">
@@ -110,6 +181,7 @@ export default function ProfilePage() {
                   onChange={(e) =>
                     setProfile((prev) => ({ ...prev, name: e.target.value }))
                   }
+                  placeholder="Seu nome completo"
                 />
               </div>
               <div>
@@ -118,60 +190,13 @@ export default function ProfilePage() {
                   id="email"
                   type="email"
                   value={profile.email}
-                  onChange={(e) =>
-                    setProfile((prev) => ({ ...prev, email: e.target.value }))
-                  }
+                  disabled
+                  className="bg-gray-100 cursor-not-allowed"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  O email não pode ser alterado
+                </p>
               </div>
-              <div>
-                <Label htmlFor="phone">Telefone</Label>
-                <Input
-                  id="phone"
-                  value={profile.phone}
-                  onChange={(e) =>
-                    setProfile((prev) => ({ ...prev, phone: e.target.value }))
-                  }
-                />
-              </div>
-              <div>
-                <Label htmlFor="birthDate">Data de Nascimento</Label>
-                <Input
-                  id="birthDate"
-                  type="date"
-                  value={profile.birthDate}
-                  onChange={(e) =>
-                    setProfile((prev) => ({
-                      ...prev,
-                      birthDate: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="address">Endereço</Label>
-              <Input
-                id="address"
-                value={profile.address}
-                onChange={(e) =>
-                  setProfile((prev) => ({ ...prev, address: e.target.value }))
-                }
-                placeholder="Cidade, Estado"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="bio">Biografia</Label>
-              <Textarea
-                id="bio"
-                value={profile.bio}
-                onChange={(e) =>
-                  setProfile((prev) => ({ ...prev, bio: e.target.value }))
-                }
-                placeholder="Conte um pouco sobre você..."
-                rows={3}
-              />
             </div>
           </CardContent>
         </Card>
@@ -199,7 +224,12 @@ export default function ProfilePage() {
                   <div>
                     <p className="font-medium">Membro desde</p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Janeiro 2024
+                      {profile.createdAt
+                        ? new Date(profile.createdAt).toLocaleDateString('pt-BR', {
+                            month: 'long',
+                            year: 'numeric',
+                          })
+                        : 'N/A'}
                     </p>
                   </div>
                 </div>
@@ -208,18 +238,9 @@ export default function ProfilePage() {
                 <div className="flex items-center gap-3">
                   <User className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                   <div>
-                    <p className="font-medium">Plano Atual</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Premium
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <MapPin className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-                  <div>
-                    <p className="font-medium">Localização</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {profile.address}
+                    <p className="font-medium">Status da Conta</p>
+                    <p className="text-sm text-green-600 dark:text-green-400">
+                      Ativa
                     </p>
                   </div>
                 </div>
@@ -230,9 +251,13 @@ export default function ProfilePage() {
 
         {/* Botão Salvar */}
         <div className="flex justify-end">
-          <Button onClick={handleSave} className="flex items-center gap-2">
+          <Button
+            onClick={handleSave}
+            disabled={isSaving}
+            className="flex items-center gap-2"
+          >
             <Save className="w-4 h-4" />
-            Salvar Alterações
+            {isSaving ? 'Salvando...' : 'Salvar Alterações'}
           </Button>
         </div>
       </div>

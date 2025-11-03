@@ -13,14 +13,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
     }
 
-    console.log('🔄 [API Maintenance] Recalculando saldos para usuário:', auth.userId);
-
+    
     // ✅ USAR SERVIÇO FINANCEIRO
     const service = new FinancialOperationsService();
     const results = await service.recalculateBalances(auth.userId);
 
-    console.log('✅ [API Maintenance] Saldos recalculados:', results.length, 'contas');
-
+    
     return NextResponse.json({
       success: true,
       message: `Saldos de ${results.length} contas recalculados com sucesso`,

@@ -31,10 +31,10 @@ export function FinancialNotifications() {
 
   useEffect(() => {
     loadNotifications();
-    
+
     // Recarregar a cada 5 minutos
     const interval = setInterval(loadNotifications, 5 * 60 * 1000);
-    
+
     return () => clearInterval(interval);
   }, []);
 
@@ -43,7 +43,7 @@ export function FinancialNotifications() {
       const response = await fetch('/api/notifications', {
         credentials: 'include',
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setNotifications(data.notifications || []);
@@ -62,7 +62,7 @@ export function FinancialNotifications() {
         method: 'PATCH',
         credentials: 'include',
       });
-      
+
       setNotifications(prev =>
         prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n)
       );
@@ -78,7 +78,7 @@ export function FinancialNotifications() {
         method: 'PATCH',
         credentials: 'include',
       });
-      
+
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
       setUnreadCount(0);
     } catch (error) {
@@ -92,7 +92,7 @@ export function FinancialNotifications() {
         method: 'DELETE',
         credentials: 'include',
       });
-      
+
       setNotifications(prev => prev.filter(n => n.id !== notificationId));
       setUnreadCount(prev => {
         const notification = notifications.find(n => n.id === notificationId);
@@ -141,7 +141,7 @@ export function FinancialNotifications() {
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
-            <Badge 
+            <Badge
               className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
               variant="destructive"
             >
@@ -150,7 +150,7 @@ export function FinancialNotifications() {
           )}
         </Button>
       </DropdownMenuTrigger>
-      
+
       <DropdownMenuContent align="end" className="w-96">
         <div className="flex items-center justify-between p-4 border-b">
           <div>
@@ -200,7 +200,7 @@ export function FinancialNotifications() {
                     )}>
                       {getIcon(notification.category)}
                     </div>
-                    
+
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1">
@@ -219,7 +219,7 @@ export function FinancialNotifications() {
                             })}
                           </p>
                         </div>
-                        
+
                         <div className="flex gap-1">
                           {!notification.isRead && (
                             <Button
@@ -241,7 +241,7 @@ export function FinancialNotifications() {
                           </Button>
                         </div>
                       </div>
-                      
+
                       {notification.actionUrl && (
                         <Button
                           variant="link"

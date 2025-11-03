@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import type { Trip } from '@/lib/storage';
+import type { Trip } from '@/lib/config/storage';
 import { TripExpenseReport } from './trip-expense-report';
 import { TripSharedExpenses } from './trip-shared-expenses';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -29,15 +29,12 @@ export function TripExpenses({ trip }: TripExpensesProps) {
   const loadExpenses = async () => {
     try {
       setLoading(true);
-      console.log('🔍 [TripExpenses] Carregando despesas para viagem:', trip.id);
-      const response = await fetch(`/api/transactions?tripId=${trip.id}`, {
+            const response = await fetch(`/api/transactions?tripId=${trip.id}`, {
         credentials: 'include',
       });
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ [TripExpenses] Despesas carregadas:', data.transactions?.length || 0);
-        console.log('📊 [TripExpenses] Dados:', data.transactions);
-        setExpenses(data.transactions || []);
+                        setExpenses(data.transactions || []);
       } else {
         console.error('❌ [TripExpenses] Erro na resposta:', response.status);
       }
@@ -57,8 +54,7 @@ export function TripExpenses({ trip }: TripExpensesProps) {
   // ✅ Listener para atualizar quando transação for criada, editada ou deletada
   useEffect(() => {
     const handleTransactionUpdate = (event?: CustomEvent) => {
-      console.log('🔄 [TripExpenses] Evento de transação recebido:', event?.type);
-      setRefreshKey(prev => prev + 1);
+            setRefreshKey(prev => prev + 1);
     };
 
     // Escutar todos os eventos de transação
@@ -67,7 +63,7 @@ export function TripExpenses({ trip }: TripExpensesProps) {
     window.addEventListener('transactionDeleted', handleTransactionUpdate);
     window.addEventListener('TRANSACTION_UPDATED', handleTransactionUpdate);
     window.addEventListener('TRANSACTION_DELETED', handleTransactionUpdate);
-    
+
     return () => {
       window.removeEventListener('transactionCreated', handleTransactionUpdate);
       window.removeEventListener('transactionUpdated', handleTransactionUpdate);
@@ -89,11 +85,11 @@ export function TripExpenses({ trip }: TripExpensesProps) {
     const value = e.isShared && e.myShare !== null && e.myShare !== undefined
       ? Math.abs(Number(e.myShare))
       : Math.abs(Number(e.amount));
-    
+
     // ✅ RECEITA subtrai (reembolso), DESPESA soma
     const isIncome = e.type === 'RECEITA' || e.type === 'income';
     const adjustment = isIncome ? -value : value;
-    
+
     console.log('💰 [TripExpenses] Calculando total:', {
       description: e.description,
       type: e.type,
@@ -104,13 +100,12 @@ export function TripExpenses({ trip }: TripExpensesProps) {
       adjustment,
       runningTotal: sum + adjustment
     });
-    
+
     return sum + adjustment;
   }, 0);
   const individualCount = individualExpenses.length;
-  
-  console.log('📊 [TripExpenses] Total Individual Final:', individualTotal);
 
+  
   return (
     <div className="space-y-6">
       <Tabs defaultValue="all" className="w-full">
@@ -147,7 +142,7 @@ export function TripExpenses({ trip }: TripExpensesProps) {
                     // ✅ Determinar cor e tipo baseado no tipo da transação
                     const isIncome = expense.type === 'RECEITA' || expense.type === 'income';
                     const colorClass = isIncome ? 'text-green-600' : 'text-red-600';
-                    
+
                     return (
                       <div key={expense.id} className="flex justify-between items-center p-3 border rounded">
                         <div>
@@ -280,7 +275,7 @@ export function TripExpenses({ trip }: TripExpensesProps) {
                     let displayAmount = Math.abs(Number(expense.amount));
                     const isIncome = expense.type === 'RECEITA' || expense.type === 'income';
                     const colorClass = isIncome ? 'text-green-600' : 'text-red-600';
-                    
+
                     if (expense.isShared) {
                       if (expense.myShare !== null && expense.myShare !== undefined) {
                         displayAmount = Math.abs(Number(expense.myShare));
@@ -289,7 +284,7 @@ export function TripExpenses({ trip }: TripExpensesProps) {
                         displayAmount = Math.abs(Number(expense.amount)) / 2;
                       }
                     }
-                    
+
                     return (
                       <div key={expense.id} className="flex justify-between items-center p-3 border rounded">
                         <div>
@@ -334,9 +329,9 @@ export function TripExpenses({ trip }: TripExpensesProps) {
         </TabsContent>
 
         <TabsContent value="shared" className="space-y-4 mt-4">
-          <TripSharedExpenses 
-            tripId={trip.id} 
-            sharedExpenses={sharedExpenses} 
+          <TripSharedExpenses
+            tripId={trip.id}
+            sharedExpenses={sharedExpenses}
             loading={loading}
           />
         </TabsContent>

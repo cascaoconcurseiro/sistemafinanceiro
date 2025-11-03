@@ -31,7 +31,7 @@ class AuthCacheService {
   private readonly VALIDATION_INTERVAL = 5 * 60 * 1000; // 5 minutes
   private readonly REFRESH_THRESHOLD = 10 * 60 * 1000; // 10 minutes before expiry
   private readonly JWT_SECRET = process.env.JWT_SECRET || 'sua-grana-secret-key';
-  
+
   // Statistics
   private stats = {
     hits: 0,
@@ -69,7 +69,7 @@ class AuthCacheService {
 
       this.cache.set(this.CACHE_KEY, authData);
       this.saveToStorage();
-      
+
       console.log('🔐 Auth cache updated for user:', decoded.email);
     } catch (error) {
       console.error('Failed to cache auth data:', error);
@@ -81,7 +81,7 @@ class AuthCacheService {
    */
   getValidToken(): string | null {
     const authData = this.cache.get(this.CACHE_KEY);
-    
+
     if (!authData) {
       this.stats.misses++;
       return null;
@@ -103,7 +103,7 @@ class AuthCacheService {
    */
   isAuthenticated(): boolean {
     const authData = this.cache.get(this.CACHE_KEY);
-    
+
     if (!authData) {
       return false;
     }
@@ -116,7 +116,7 @@ class AuthCacheService {
 
     // Check if we need to validate with server (every 5 minutes)
     const needsValidation = Date.now() - authData.lastValidated > this.VALIDATION_INTERVAL;
-    
+
     if (needsValidation) {
       // Validate in background without blocking
       this.validateSessionBackground();
@@ -130,7 +130,7 @@ class AuthCacheService {
    */
   async validateAuth(): Promise<AuthValidationResult> {
     const authData = this.cache.get(this.CACHE_KEY);
-    
+
     if (!authData) {
       return { isValid: false, needsRefresh: false };
     }
@@ -147,14 +147,14 @@ class AuthCacheService {
     // Verify token signature
     try {
       const decoded = jwt.verify(authData.token, this.JWT_SECRET) as any;
-      
+
       // Update last validated time
       authData.lastValidated = Date.now();
       this.cache.set(this.CACHE_KEY, authData);
       this.saveToStorage();
-      
+
       this.stats.validations++;
-      
+
       return {
         isValid: true,
         needsRefresh,
@@ -176,7 +176,7 @@ class AuthCacheService {
    */
   async refreshTokenSilently(): Promise<boolean> {
     const authData = this.cache.get(this.CACHE_KEY);
-    
+
     if (!authData || !authData.refreshToken) {
       return false;
     }
@@ -197,12 +197,11 @@ class AuthCacheService {
       }
 
       const data = await response.json();
-      
+
       if (data.success && data.accessToken) {
         this.setToken(data.accessToken, data.refreshToken || authData.refreshToken, data.expiresIn || 3600);
         this.stats.refreshes++;
-        console.log('🔄 Token refreshed silently');
-        return true;
+                return true;
       }
 
       return false;
@@ -221,11 +220,11 @@ class AuthCacheService {
     setTimeout(async () => {
       try {
         const result = await this.validateAuth();
-        
+
         if (!result.isValid) {
           // Try to refresh token
           const refreshed = await this.refreshTokenSilently();
-          
+
           if (!refreshed) {
             // Emit event for components to handle logout
             if (typeof window !== 'undefined') {
@@ -247,7 +246,7 @@ class AuthCacheService {
    */
   getUserInfo(): { userId: string; email: string; permissions: string[] } | null {
     const authData = this.cache.get(this.CACHE_KEY);
-    
+
     if (!authData || Date.now() >= authData.expiresAt) {
       return null;
     }
@@ -277,7 +276,7 @@ class AuthCacheService {
   getStats(): typeof this.stats & { hitRate: number } {
     const total = this.stats.hits + this.stats.misses;
     const hitRate = total > 0 ? (this.stats.hits / total) * 100 : 0;
-    
+
     return {
       ...this.stats,
       hitRate: Math.round(hitRate * 100) / 100
@@ -290,10 +289,10 @@ class AuthCacheService {
   private loadFromStorage(): void {
     try {
       const stored = localStorage.getItem('auth_cache') || sessionStorage.getItem('auth_cache');
-      
+
       if (stored) {
         const authData: AuthCacheData = JSON.parse(stored);
-        
+
         // Check if stored data is still valid
         if (Date.now() < authData.expiresAt) {
           this.cache.set(this.CACHE_KEY, authData);
@@ -317,13 +316,13 @@ class AuthCacheService {
    */
   private saveToStorage(): void {
     if (typeof window === 'undefined') return;
-    
+
     try {
       const authData = this.cache.get(this.CACHE_KEY);
-      
+
       if (authData) {
         const serialized = JSON.stringify(authData);
-        
+
         // Use localStorage for persistent sessions, sessionStorage for temporary
         if (authData.refreshToken) {
           localStorage.setItem('auth_cache', serialized);
@@ -341,7 +340,7 @@ class AuthCacheService {
    */
   needsRefresh(): boolean {
     const authData = this.cache.get(this.CACHE_KEY);
-    
+
     if (!authData) {
       return false;
     }
@@ -354,7 +353,7 @@ class AuthCacheService {
    */
   getTimeUntilExpiry(): number {
     const authData = this.cache.get(this.CACHE_KEY);
-    
+
     if (!authData) {
       return 0;
     }
@@ -367,8 +366,7 @@ class AuthCacheService {
    */
   printStats(): void {
     const stats = this.getStats();
-    console.log('📊 Auth Cache Statistics:');
-    console.log(`   Hits: ${stats.hits}`);
+        console.log(`   Hits: ${stats.hits}`);
     console.log(`   Misses: ${stats.misses}`);
     console.log(`   Hit Rate: ${stats.hitRate}%`);
     console.log(`   Refreshes: ${stats.refreshes}`);

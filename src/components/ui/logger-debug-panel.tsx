@@ -91,8 +91,8 @@ export function LoggerDebugPanel({ isOpen, onClose }: LoggerDebugPanelProps) {
             <button
               onClick={() => setAutoRefresh(!autoRefresh)}
               className={`px-3 py-1 rounded text-sm ${
-                autoRefresh 
-                  ? 'bg-green-100 text-green-700' 
+                autoRefresh
+                  ? 'bg-green-100 text-green-700'
                   : 'bg-gray-100 text-gray-700'
               }`}
             >

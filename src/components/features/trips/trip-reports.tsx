@@ -96,16 +96,13 @@ export function TripReports({ trip, onUpdate }: TripReportsProps) {
   const loadExpenses = async () => {
     try {
       setLoading(true);
-      console.log('🔍 [TripReports] Carregando transações para viagem:', trip.id);
-      const response = await fetch(`/api/transactions?tripId=${trip.id}`, {
+            const response = await fetch(`/api/transactions?tripId=${trip.id}`, {
         credentials: 'include',
       });
       if (response.ok) {
         const data = await response.json();
         const transactions = data.transactions || [];
-        console.log('✅ [TripReports] Transações carregadas:', transactions.length);
-        console.log('📊 [TripReports] Primeira transação:', transactions[0]);
-        // Usar todas as transações da viagem (não filtrar por sinal)
+                        // Usar todas as transações da viagem (não filtrar por sinal)
         setExpenses(transactions);
       } else {
         console.error('❌ [TripReports] Erro na resposta:', response.status);
@@ -185,43 +182,43 @@ export function TripReports({ trip, onUpdate }: TripReportsProps) {
   const getExpenseStats = () => {
     // ✅ CORRIGIDO: Calcular apenas DESPESAS (type === 'DESPESA' ou amount < 0)
     // e considerar myShare para despesas compartilhadas
-    
+
     let despesasCount = 0;
     let receitasCount = 0;
-    
+
     const totalExpenses = expenses.reduce((sum, expense) => {
       // Ignorar receitas (type pode ser 'RECEITA', 'income' ou amount > 0)
-      const isIncome = expense.type === 'RECEITA' || 
-                       expense.type === 'income' || 
+      const isIncome = expense.type === 'RECEITA' ||
+                       expense.type === 'income' ||
                        expense.amount > 0;
-      
+
       if (isIncome) {
         receitasCount++;
         return sum;
       }
-      
+
       despesasCount++;
-      
+
       // Se for compartilhada, usar myShare, senão usar amount total
-      const expenseAmount = expense.isShared && expense.myShare 
+      const expenseAmount = expense.isShared && expense.myShare
         ? Math.abs(Number(expense.myShare))
         : Math.abs(Number(expense.amount));
-      
+
       return sum + expenseAmount;
     }, 0);
-    
+
     const totalIncome = expenses.reduce((sum, expense) => {
       // Apenas receitas (type pode ser 'RECEITA', 'income' ou amount > 0)
-      const isIncome = expense.type === 'RECEITA' || 
-                       expense.type === 'income' || 
+      const isIncome = expense.type === 'RECEITA' ||
+                       expense.type === 'income' ||
                        expense.amount > 0;
-      
+
       if (isIncome) {
         return sum + Math.abs(Number(expense.amount));
       }
       return sum;
     }, 0);
-    
+
     console.log('📊 [TripReports] Stats:', {
       totalTransactions: expenses.length,
       despesas: despesasCount,
@@ -229,11 +226,11 @@ export function TripReports({ trip, onUpdate }: TripReportsProps) {
       totalExpenses,
       totalIncome
     });
-    
+
     const averageDaily =
       expenses.length > 0 ? totalExpenses / getDailyExpenses().length : 0;
-    const budgetUsed = trip.budget && trip.budget > 0 
-      ? (totalExpenses / trip.budget) * 100 
+    const budgetUsed = trip.budget && trip.budget > 0
+      ? (totalExpenses / trip.budget) * 100
       : 0;
     const remainingBudget = trip.budget - totalExpenses;
 
@@ -301,8 +298,7 @@ export function TripReports({ trip, onUpdate }: TripReportsProps) {
   const categories = getExpensesByCategory();
   const dailyExpenses = getDailyExpenses();
 
-  console.log('📊 [TripReports] Renderizando relatório');
-  console.log('  - Expenses:', expenses.length);
+    console.log('  - Expenses:', expenses.length);
   console.log('  - Stats:', stats);
   console.log('  - Categories:', categories.length);
 

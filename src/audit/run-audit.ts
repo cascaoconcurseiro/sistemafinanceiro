@@ -14,7 +14,7 @@ import { AuditConfig } from './types/audit-types';
 import * as path from 'path';
 
 async function main() {
-  console.log('🔍 SuaGrana System Audit v1.0');
+  
   console.log('=====================================\n');
 
   try {
@@ -32,7 +32,7 @@ async function main() {
     // Criar controlador de auditoria
     const auditController = new AuditController(config);
 
-    console.log('🚀 Iniciando auditoria completa do sistema...\n');
+    
 
     // Executar auditoria
     const startTime = Date.now();
@@ -75,7 +75,7 @@ async function main() {
 
     // Exibir problemas de qualidade
     if (result.codeQualityReport.schemaIssues.length > 0) {
-      console.log('📋 PROBLEMAS NO SCHEMA');
+      
       console.log('-------------------------------------');
       result.codeQualityReport.schemaIssues.forEach((issue, index) => {
         console.log(`${index + 1}. [${issue.type}] ${issue.description}`);
@@ -86,7 +86,7 @@ async function main() {
     }
 
     if (result.codeQualityReport.duplicatedCode.length > 0) {
-      console.log('🔄 CÓDIGO DUPLICADO');
+      
       console.log('-------------------------------------');
       result.codeQualityReport.duplicatedCode.forEach((dup, index) => {
         console.log(`${index + 1}. [${dup.type}] ${dup.name}`);
@@ -107,7 +107,7 @@ async function main() {
     }
 
     // Exibir sumário executivo
-    console.log('📋 SUMÁRIO EXECUTIVO');
+    
     console.log('-------------------------------------');
     console.log(`Saúde Geral: ${result.executiveSummary.overallHealth}`);
     console.log(`Pronto para Produção: ${result.executiveSummary.readyForProduction ? '✅ Sim' : '❌ Não'}`);
@@ -115,7 +115,7 @@ async function main() {
     console.log('');
 
     if (result.executiveSummary.keyFindings.length > 0) {
-      console.log('🔍 PRINCIPAIS DESCOBERTAS:');
+      
       result.executiveSummary.keyFindings.forEach((finding, index) => {
         console.log(`${index + 1}. ${finding}`);
       });

@@ -48,13 +48,13 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
                 </details>
               )}
               <div className="flex gap-2">
-                <Button 
+                <Button
                   onClick={() => window.location.reload()}
                   className="flex-1"
                 >
                   Recarregar Página
                 </Button>
-                <Button 
+                <Button
                   variant="outline"
                   onClick={() => this.setState({ hasError: false })}
                   className="flex-1"

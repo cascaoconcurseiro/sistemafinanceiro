@@ -8,7 +8,7 @@ export async function DELETE(
   try {
     const { authenticateRequest } = await import('@/lib/utils/auth-helpers');
     const auth = await authenticateRequest(request);
-    
+
     if (!auth.success || !auth.userId) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
     }

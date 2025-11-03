@@ -6,12 +6,12 @@
  */
 
 import React from 'react';
-import { ModernAppLayout } from '@/components/modern-app-layout';
+import { ModernAppLayout } from '@/components/layout/modern-app-layout';
 import PerformanceDashboard from '@/components/admin/performance-dashboard';
 
 export default function AdminPerformancePage() {
   return (
-    <ModernAppLayout 
+    <ModernAppLayout
       title="Performance Monitor"
     >
       <div className="container mx-auto p-6">

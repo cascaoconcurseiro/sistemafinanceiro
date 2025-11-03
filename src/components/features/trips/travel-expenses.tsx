@@ -20,7 +20,7 @@ import {
   Eye,
   Filter,
 } from 'lucide-react';
-import { type Trip } from '@/lib/storage';
+import { type Trip } from '@/lib/config/storage';
 import { useToast } from '@/hooks/use-toast';
 import { TripModal } from '@/components/features/travel/trip-modal';
 import { useClientOnly } from '@/hooks/use-client-only';
@@ -48,8 +48,6 @@ export function TravelExpenses() {
   // Financial context state
   const [financialContext, setFinancialContext] = useState<any>(null);
 
-
-
   useEffect(() => {
     loadTrips();
   }, []);
@@ -60,7 +58,7 @@ export function TravelExpenses() {
       totalTransactions: transactions?.length || 0,
       trips: trips.length
     });
-    
+
     if (trips.length > 0 && Array.isArray(transactions) && transactions.length > 0) {
       // Recalcular spent das viagens quando transações mudarem
       const updatedTrips = trips.map((trip: any) => {
@@ -68,19 +66,19 @@ export function TravelExpenses() {
         const realSpent = tripTransactions.reduce((sum: number, t: any) => {
           return sum + Math.abs(Number(t.amount));
         }, 0);
-        
+
         console.log(`💰 [TravelExpenses] Recalculando viagem ${trip.name}:`, {
           tripId: trip.id,
           transactionsCount: tripTransactions.length,
           spent: realSpent
         });
-        
+
         return {
           ...trip,
           spent: realSpent
         };
       });
-      
+
       setTrips(updatedTrips);
     }
   }, [transactions, trips.length]);
@@ -88,44 +86,40 @@ export function TravelExpenses() {
   const loadTrips = async () => {
     try {
       setLoading(true);
-      console.log('🔄 [TravelExpenses] Carregando viagens...');
       
       const response = await fetch('/api/trips', { credentials: 'include' });
-      
+
       if (!response.ok) {
         throw new Error('Erro ao carregar viagens');
       }
       const responseData = await response.json();
-      
+
       // Extrair o array de trips da resposta da API
       const tripsData = responseData.data?.trips || [];
-      console.log('📊 [TravelExpenses] Viagens recebidas:', tripsData.length);
-      console.log('📋 [TravelExpenses] Dados das viagens:', tripsData);
-      
+            
       // Processar participants e calcular spent real das transações
       const processedTrips = tripsData.map((trip: any) => {
         // ✅ CORREÇÃO: Verificar se transactions está disponível
-        const tripTransactions = Array.isArray(transactions) 
+        const tripTransactions = Array.isArray(transactions)
           ? transactions.filter((t: any) => t.tripId === trip.id)
           : [];
-        
+
         const realSpent = tripTransactions.reduce((sum: number, t: any) => {
           return sum + Math.abs(Number(t.amount));
         }, 0);
-        
+
         console.log(`💰 [TravelExpenses] Viagem ${trip.name}: ${tripTransactions.length} transações, gasto real: R$ ${realSpent}`);
-        
+
         return {
           ...trip,
-          participants: typeof trip.participants === 'string' 
-            ? JSON.parse(trip.participants) 
+          participants: typeof trip.participants === 'string'
+            ? JSON.parse(trip.participants)
             : (trip.participants || []),
           spent: realSpent // ✅ Usar gasto real calculado das transações
         };
       });
-      
-      console.log('✅ [TravelExpenses] Viagens processadas:', processedTrips.length);
-      setTrips(processedTrips);
+
+            setTrips(processedTrips);
     } catch (error) {
       console.error('Erro ao carregar viagens:', error);
       toast({
@@ -276,14 +270,14 @@ export function TravelExpenses() {
     try {
       const start = new Date(startDate);
       const end = new Date(endDate);
-      
+
       if (isNaN(start.getTime()) || isNaN(end.getTime())) {
         return 0;
       }
-      
+
       const diffTime = end.getTime() - start.getTime();
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
-      
+
       // Retornar pelo menos 1 dia se as datas são válidas e a data final é >= data inicial
       return diffDays > 0 ? diffDays : 0;
     } catch (error) {

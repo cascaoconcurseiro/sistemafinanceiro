@@ -51,7 +51,7 @@ export function CreditCardNotifications() {
       const response = await fetch('/api/credit-cards/notifications', {
         credentials: 'include',
       });
-      
+
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
@@ -218,11 +218,11 @@ export function CreditCardNotifications() {
             </Card>
           ))}
         </div>
-        
+
         {visibleNotifications.length > 0 && (
           <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
             <p className="text-sm text-blue-700 dark:text-blue-300">
-              💡 <strong>Dica:</strong> Mantenha suas faturas em dia para evitar juros e multas. 
+              💡 <strong>Dica:</strong> Mantenha suas faturas em dia para evitar juros e multas.
               Configure lembretes no seu celular para não esquecer dos vencimentos.
             </p>
           </div>

@@ -74,15 +74,14 @@ export class DatabaseAuditService {
     try {
       // Criar tabelas de auditoria se não existirem
       await this.createAuditTables();
-      
+
       // Configurar triggers de auditoria
       await this.setupAuditTriggers();
-      
+
       // Inicializar sistema de monitoramento
       await this.initializeMonitoring();
-      
+
       this.isInitialized = true;
-      console.log('✅ DatabaseAuditService inicializado com sucesso');
       
       await this.logAuditEntry({
         table_name: 'system',
@@ -90,7 +89,7 @@ export class DatabaseAuditService {
         source: 'system',
         metadata: { action: 'audit_service_initialized' }
       });
-      
+
     } catch (error) {
       console.error('❌ Erro ao inicializar DatabaseAuditService:', error);
       throw error;
@@ -118,7 +117,7 @@ export class DatabaseAuditService {
     try {
       // Verificar se a operação é autorizada
       await this.validateOperation(context);
-      
+
       // Capturar estado anterior (para UPDATE/DELETE)
       let oldValues: Record<string, any> | undefined;
       if (context.operation_type !== 'INSERT' && context.record_id) {
@@ -247,8 +246,8 @@ export class DatabaseAuditService {
     try {
       await db.query(`
         INSERT INTO audit_logs (
-          id, user_id, table_name, operation, record_id, 
-          old_values, new_values, timestamp, ip_address, 
+          id, user_id, table_name, operation, record_id,
+          old_values, new_values, timestamp, ip_address,
           user_agent, session_id, source, metadata
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
       `, [
@@ -283,7 +282,7 @@ export class DatabaseAuditService {
     try {
       await db.query(`
         INSERT INTO data_integrity_violations (
-          id, violation_type, severity, description, table_name, 
+          id, violation_type, severity, description, table_name,
           record_id, detected_at, resolved, resolution_notes
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       `, [
@@ -407,7 +406,7 @@ export class DatabaseAuditService {
   private async setupAuditTriggers(): Promise<void> {
     // Implementar triggers de auditoria automática para todas as tabelas principais
     const tables = ['users', 'accounts', 'transactions', 'categories', 'credit_cards'];
-    
+
     for (const table of tables) {
       await db.query(`
         CREATE OR REPLACE FUNCTION audit_${table}_changes()
@@ -609,13 +608,13 @@ export class DatabaseAuditService {
   }> {
     const operations = await this.getAuditLogs({ start_date: startDate, end_date: endDate });
     const violations = await this.getIntegrityViolations(false);
-    
+
     const checksResult = await db.query(`
-      SELECT * FROM consistency_checks 
-      WHERE timestamp >= $1 AND timestamp <= $2 
+      SELECT * FROM consistency_checks
+      WHERE timestamp >= $1 AND timestamp <= $2
       ORDER BY timestamp DESC
     `, [startDate, endDate]);
-    
+
     const consistency_checks = checksResult.rows;
 
     const summary = {

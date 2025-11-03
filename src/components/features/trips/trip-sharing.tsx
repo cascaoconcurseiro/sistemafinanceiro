@@ -37,7 +37,7 @@ import {
   Download,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import type { Trip } from '@/lib/storage';
+import type { Trip } from '@/lib/config/storage';
 
 interface TripSharingProps {
   trip: Trip;
@@ -260,7 +260,7 @@ ${customMessage ? `${customMessage}\n\n` : ''}Confira mais detalhes: ${generateS
           participants: trip.participants,
         },
         expenses: shareSettings.includeExpenses ? expensesData : [],
-        photos: shareSettings.includePhotos 
+        photos: shareSettings.includePhotos
           ? photosData.map((photo: any) => ({
               ...photo,
               data: null, // Remove Base64 data for smaller file size

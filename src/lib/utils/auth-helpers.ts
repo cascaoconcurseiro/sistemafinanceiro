@@ -19,24 +19,23 @@ export interface AuthResult {
 /**
  * Extrai e valida token JWT da requisição
  * Suporta tanto JWT (access_token) quanto NextAuth
- * 
+ *
  * IMPORTANTE: Esta função é ASYNC!
  * Use: const auth = await authenticateRequest(request);
  */
 export async function authenticateRequest(request: NextRequest): Promise<AuthResult> {
   console.log('🔐 [Auth] Tentando autenticar...');
-  
+
   // 1. Tentar JWT com cookies primeiro (mais rápido e confiável em API routes)
   const accessToken = request.cookies.get('access_token')?.value;
-  
+
   if (accessToken) {
     try {
       const decoded = jwt.verify(accessToken, JWT_SECRET) as any;
       const userId = decoded.userId;
-      
+
       if (userId) {
-        console.log('✅ [Auth] JWT OK - userId:', userId);
-        return {
+                return {
           success: true,
           userId
         };
@@ -50,8 +49,7 @@ export async function authenticateRequest(request: NextRequest): Promise<AuthRes
   try {
     const session = await getServerSession(authOptions);
     if (session?.user?.id) {
-      console.log('✅ [Auth] NextAuth OK - userId:', session.user.id);
-      return {
+            return {
         success: true,
         userId: session.user.id
       };
@@ -61,8 +59,7 @@ export async function authenticateRequest(request: NextRequest): Promise<AuthRes
     console.log('⚠️ [Auth] NextAuth falhou:', error);
   }
 
-  console.log('❌ [Auth] Nenhum método de autenticação funcionou');
-  return {
+    return {
     success: false,
     error: 'Token de acesso não encontrado'
   };
@@ -74,7 +71,7 @@ export async function authenticateRequest(request: NextRequest): Promise<AuthRes
  */
 export function authenticateRequestSync(request: NextRequest): AuthResult {
   const accessToken = request.cookies.get('access_token')?.value;
-  
+
   if (!accessToken) {
     return {
       success: false,
@@ -85,7 +82,7 @@ export function authenticateRequestSync(request: NextRequest): AuthResult {
   try {
     const decoded = jwt.verify(accessToken, JWT_SECRET) as any;
     const userId = decoded.userId;
-    
+
     if (!userId) {
       return {
         success: false,

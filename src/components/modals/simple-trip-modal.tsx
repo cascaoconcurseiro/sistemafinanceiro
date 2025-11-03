@@ -22,7 +22,7 @@ interface SimpleTripModalProps {
 export function SimpleTripModal({ isOpen, onClose }: SimpleTripModalProps) {
   const { actions } = useUnifiedFinancial();
   const [loading, setLoading] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     name: '',
     destination: '',
@@ -52,30 +52,24 @@ export function SimpleTripModal({ isOpen, onClose }: SimpleTripModalProps) {
   const days = calculateDays();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    console.log('🚀 [SimpleTripModal] handleSubmit iniciado');
-    e.preventDefault();
-    console.log('✅ [SimpleTripModal] preventDefault executado');
-    setLoading(true);
+        e.preventDefault();
+        setLoading(true);
 
     try {
-      console.log('📝 [SimpleTripModal] Validando dados:', formData);
       
       if (!formData.name.trim()) {
-        console.log('❌ [SimpleTripModal] Nome vazio');
-        toast.error('Nome da viagem é obrigatório');
+                toast.error('Nome da viagem é obrigatório');
         setLoading(false);
         return;
       }
 
       if (!formData.destination.trim()) {
-        console.log('❌ [SimpleTripModal] Destino vazio');
-        toast.error('Destino é obrigatório');
+                toast.error('Destino é obrigatório');
         setLoading(false);
         return;
       }
-      
-      console.log('✅ [SimpleTripModal] Validação passou');
 
+      
       // Usar datas padrão se não preenchidas
       const today = new Date();
       const tomorrow = new Date(today);
@@ -94,14 +88,12 @@ export function SimpleTripModal({ isOpen, onClose }: SimpleTripModalProps) {
         participants: [''],
       };
 
-      console.log('🔍 [SimpleTripModal] Criando viagem simples:', tripData);
-      console.log('📞 [SimpleTripModal] Chamando actions.createTrip...');
-      
+            console.log('📞 [SimpleTripModal] Chamando actions.createTrip...');
+
       await actions.createTrip(tripData);
-      
-      console.log('✅ [SimpleTripModal] Viagem criada com sucesso!');
-      toast.success('Viagem criada com sucesso!');
-      
+
+            toast.success('Viagem criada com sucesso!');
+
       // Limpar formulário
       setFormData({
         name: '',
@@ -110,7 +102,7 @@ export function SimpleTripModal({ isOpen, onClose }: SimpleTripModalProps) {
         endDate: '',
         budget: '',
       });
-      
+
       onClose();
       // Não precisa de refresh manual - contexto faz automaticamente!
     } catch (error) {

@@ -10,7 +10,7 @@ export function InvoiceCardSkeleton() {
         </div>
         <Skeleton className="h-6 w-[60px] rounded-full" />
       </div>
-      
+
       <div className="space-y-3">
         <div className="flex justify-between">
           <Skeleton className="h-4 w-[100px]" />

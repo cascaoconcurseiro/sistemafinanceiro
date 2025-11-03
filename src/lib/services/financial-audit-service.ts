@@ -118,8 +118,7 @@ export class FinancialAuditService {
     entityId?: string
   ): Promise<any[]> {
     // TODO: Implementar busca no banco quando tabela for criada
-    console.log('📊 [Audit] Buscando histórico:', { userId, entityType, entityId });
-    return [];
+        return [];
   }
 
   /**
@@ -174,7 +173,7 @@ export class FinancialAuditService {
         // Verificar se todas têm o mesmo valor
         const amounts = installments.map(i => Number(i.amount));
         const uniqueAmounts = [...new Set(amounts)];
-        
+
         if (uniqueAmounts.length > 1) {
           issues.push(`Parcelas inconsistentes no grupo ${group.installmentGroupId}`);
         }

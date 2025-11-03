@@ -181,9 +181,9 @@ export function InstallmentsManager({ onUpdate }: InstallmentsManagerProps) {
   const handlePayInstallment = async (installmentId: string) => {
     try {
       // Encontrar a transação de parcela específica
-      const installmentTransaction = transactions.find(t => 
-        t.installment && 
-        !t.installment.isParent && 
+      const installmentTransaction = transactions.find(t =>
+        t.installment &&
+        !t.installment.isParent &&
         t.id === installmentId
       );
 
@@ -205,8 +205,8 @@ export function InstallmentsManager({ onUpdate }: InstallmentsManagerProps) {
   const handleDeleteInstallment = async (installmentId: string) => {
     try {
       // Encontrar a transação pai do parcelamento
-      const parentTransaction = transactions.find(t => 
-        t.installment?.isParent && 
+      const parentTransaction = transactions.find(t =>
+        t.installment?.isParent &&
         t.id === installmentId
       );
 
@@ -223,8 +223,8 @@ export function InstallmentsManager({ onUpdate }: InstallmentsManagerProps) {
 
   const handleEditInstallment = (installment: Installment) => {
     // Encontrar a transação pai correspondente
-    const parentTransaction = transactions.find(t => 
-      t.installment?.isParent && 
+    const parentTransaction = transactions.find(t =>
+      t.installment?.isParent &&
       t.description === installment.description &&
       t.account === installment.cardId
     );
@@ -258,13 +258,13 @@ export function InstallmentsManager({ onUpdate }: InstallmentsManagerProps) {
   const getFilteredInstallments = () => {
     // Converter transações de parcelamento em objetos Installment para a UI
     const installmentTransactions = transactions.filter(t => t.installment?.isParent);
-    
+
     const installments: Installment[] = installmentTransactions.map(transaction => {
       const childTransactions = transactionManager.getInstallmentTransactions(transaction.id);
       const paidInstallments = childTransactions.filter(t => t.status === 'completed').length;
       const totalInstallments = transaction.installment?.totalInstallments || 1;
       const monthlyAmount = transaction.amount / totalInstallments;
-      
+
       // Calcular data de fim
       const startDate = new Date(transaction.date);
       const endDate = new Date(startDate);

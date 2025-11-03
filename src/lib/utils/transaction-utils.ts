@@ -1,78 +1,47 @@
 /**
- * Utilitários para trabalhar com transações
- * 
- * Centraliza a lógica de verificação de tipos de transação
- * para garantir consistência em todo o sistema.
+ * Utilitários para formatação de transações
  */
 
 /**
- * Verifica se uma transação é uma receita
- * Aceita ambos os formatos: 'income' e 'RECEITA'
+ * Limpa a descrição da transação removendo IDs técnicos e informações redundantes
+ * Mantém apenas o texto legível para o usuário
  */
-export function isIncome(type: string): boolean {
-  return type === 'income' || type === 'RECEITA';
+export function cleanTransactionDescription(description: string): string {
+  if (!description) return '';
+  
+  return description
+    // Remove IDs técnicos entre parênteses (cmhe46m4t003pxv7a1u88vf3e)
+    .replace(/\s*\(cmh[a-z0-9]+\)/gi, '')
+    // Remove informações de "para quem" que já aparecem em outro lugar
+    .replace(/\s*\(para\s+[^)]+\)/gi, '')
+    // Remove emojis duplicados no início
+    .replace(/^(💸|💰)\s*(Pagamento|Recebimento)\s*-\s*/gi, '$2 - ')
+    // Remove espaços extras
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /**
- * Verifica se uma transação é uma despesa
- * Aceita ambos os formatos: 'expense' e 'DESPESA'
+ * Formata o nome do participante de uma transação compartilhada
  */
-export function isExpense(type: string): boolean {
-  return type === 'expense' || type === 'DESPESA';
+export function formatParticipantName(name: string): string {
+  if (!name) return '';
+  
+  // Remove prefixos técnicos
+  return name
+    .replace(/^(para|de)\s+/gi, '')
+    .trim();
 }
 
 /**
- * Verifica se uma transação é uma transferência
+ * Obtém uma descrição curta da transação (máximo de caracteres)
  */
-export function isTransfer(type: string): boolean {
-  return type === 'transfer' || type === 'TRANSFERENCIA';
-}
-
-/**
- * Normaliza o tipo de transação para o formato da API (maiúsculo)
- */
-export function normalizeTransactionType(type: string): 'RECEITA' | 'DESPESA' | 'TRANSFERENCIA' {
-  if (isIncome(type)) return 'RECEITA';
-  if (isExpense(type)) return 'DESPESA';
-  if (isTransfer(type)) return 'TRANSFERENCIA';
-  return 'DESPESA'; // fallback
-}
-
-/**
- * Calcula o impacto de uma transação no saldo
- * Receitas aumentam o saldo (+)
- * Despesas diminuem o saldo (-)
- */
-export function getTransactionImpact(type: string, amount: number): number {
-  const absAmount = Math.abs(amount);
-  if (isIncome(type)) return absAmount;
-  if (isExpense(type)) return -absAmount;
-  return 0;
-}
-
-/**
- * Retorna o sinal correto para exibição (+/-)
- */
-export function getTransactionSign(type: string): '+' | '-' {
-  return isIncome(type) ? '+' : '-';
-}
-
-/**
- * Retorna a cor apropriada para o tipo de transação
- */
-export function getTransactionColor(type: string): string {
-  if (isIncome(type)) return 'text-green-600';
-  if (isExpense(type)) return 'text-red-600';
-  if (isTransfer(type)) return 'text-blue-600';
-  return 'text-gray-600';
-}
-
-/**
- * Retorna o label em português para o tipo
- */
-export function getTransactionTypeLabel(type: string): string {
-  if (isIncome(type)) return 'Receita';
-  if (isExpense(type)) return 'Despesa';
-  if (isTransfer(type)) return 'Transferência';
-  return 'Desconhecido';
+export function getShortDescription(description: string, maxLength: number = 50): string {
+  const cleaned = cleanTransactionDescription(description);
+  
+  if (cleaned.length <= maxLength) {
+    return cleaned;
+  }
+  
+  return cleaned.substring(0, maxLength - 3) + '...';
 }

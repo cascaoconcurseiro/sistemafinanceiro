@@ -72,7 +72,7 @@ export async function POST(
 
         if (trip) {
           const newSpent = Math.max(0, Number(trip.spent) - amount);
-          
+
           await tx.trip.update({
             where: { id: trip.id },
             data: { spent: newSpent }
@@ -109,7 +109,7 @@ export async function POST(
   } catch (error) {
     console.error('❌ [Shared Expense Payment] Erro:', error);
     return NextResponse.json(
-      { 
+      {
         error: 'Erro ao registrar pagamento',
         details: error instanceof Error ? error.message : String(error)
       },

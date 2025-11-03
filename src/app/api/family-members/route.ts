@@ -27,17 +27,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
     }
 
-    console.log('📊 [API FamilyMembers] Buscando membros da família...');
     
     const members = await prisma.familyMember.findMany({
-      where: { 
+      where: {
         userId: auth.userId,
-        isActive: true 
+        isActive: true
       },
       orderBy: { name: 'asc' }
     });
-    
-    console.log('✅ [API FamilyMembers] Encontrados:', members.length, 'membros');
+
     
     return NextResponse.json(members);
   } catch (error) {
@@ -58,16 +56,15 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     console.log('📦 [API FamilyMembers] Dados recebidos:', body);
-    
+
     // Validar dados
     try {
       createFamilyMemberSchema.parse(body);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        console.log('❌ [API FamilyMembers] Erro de validação:', error.errors);
-        return NextResponse.json(
-          { 
-            error: 'Dados inválidos', 
+                return NextResponse.json(
+          {
+            error: 'Dados inválidos',
             details: error.errors.map(e => `${e.path.join('.')}: ${e.message}`)
           },
           { status: 400 }
@@ -107,7 +104,6 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    console.log('✅ [API FamilyMembers] Membro criado:', member.id);
     
     return NextResponse.json(member, { status: 201 });
   } catch (error) {

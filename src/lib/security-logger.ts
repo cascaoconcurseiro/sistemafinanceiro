@@ -1,8 +1,8 @@
 import { prisma } from './prisma';
 
-export type SecurityEventType = 
-  | 'LOGIN_SUCCESS' 
-  | 'LOGIN_FAILED' 
+export type SecurityEventType =
+  | 'LOGIN_SUCCESS'
+  | 'LOGIN_FAILED'
   | 'LOGOUT'
   | 'PASSWORD_RESET_REQUEST'
   | 'PASSWORD_RESET_SUCCESS'
@@ -62,8 +62,8 @@ export async function logSecurityEvent({
 // Helper para obter IP e User Agent do request
 export function getRequestInfo(request: Request) {
   const forwarded = request.headers.get('x-forwarded-for');
-  const ipAddress = forwarded ? forwarded.split(',')[0] : 
-                    request.headers.get('x-real-ip') || 
+  const ipAddress = forwarded ? forwarded.split(',')[0] :
+                    request.headers.get('x-real-ip') ||
                     'unknown';
   const userAgent = request.headers.get('user-agent') || 'unknown';
 

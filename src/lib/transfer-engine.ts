@@ -178,8 +178,7 @@ class TransferEngine {
   }
 
   async reverseTransfer(transferId: string, userId: string): Promise<TransferResult> {
-    console.log('🔄 Revertendo transferência:', transferId);
-
+    
     try {
       const transfer = await this.getTransferById(transferId);
       if (!transfer) {
@@ -201,8 +200,7 @@ class TransferEngine {
       });
 
       if (reverseResult.success) {
-        console.log('✅ Transferência revertida com sucesso');
-      }
+              }
 
       return reverseResult;
 
@@ -218,7 +216,7 @@ class TransferEngine {
   private saveTransfer(transfer: Transfer): void {
     const transfers = this.getTransfers();
     transfers.push(transfer);
-    
+
     if (typeof window !== 'undefined') {
       localStorage.setItem('transfers', JSON.stringify(transfers));
     }
@@ -247,7 +245,7 @@ class TransferEngine {
     try {
       const transfers = await this.listTransfers(userId, 1000);
       const accounts = storage.getAccounts();
-      
+
       // Filtrar por período
       const now = new Date();
       const startDate = new Date();
@@ -257,7 +255,7 @@ class TransferEngine {
         startDate.setFullYear(now.getFullYear() - 1);
       }
 
-      const filteredTransfers = transfers.filter(t => 
+      const filteredTransfers = transfers.filter(t =>
         new Date(t.createdAt) >= startDate
       );
 

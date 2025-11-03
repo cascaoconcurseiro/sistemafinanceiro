@@ -335,12 +335,12 @@ class DatabaseService {
       console.warn('DatabaseService.getGoals() - Operação apenas no servidor')
       return []
     }
-    
+
     try {
       const goals = await this.prisma.goal.findMany({
         orderBy: { createdAt: 'desc' }
       })
-      
+
       return goals.map(goal => ({
         id: goal.id,
         name: goal.name,
@@ -364,7 +364,7 @@ class DatabaseService {
       console.warn('DatabaseService.saveGoal() - Operação apenas no servidor')
       return
     }
-    
+
     try {
       await this.prisma.goal.upsert({
         where: { id: goal.id },
@@ -398,7 +398,7 @@ class DatabaseService {
       console.warn('DatabaseService.updateGoal() - Operação apenas no servidor')
       return
     }
-    
+
     try {
       await this.prisma.goal.update({
         where: { id },
@@ -422,7 +422,7 @@ class DatabaseService {
       console.warn('DatabaseService.deleteGoal() - Operação apenas no servidor')
       return
     }
-    
+
     try {
       await this.prisma.goal.delete({
         where: { id }
@@ -501,13 +501,13 @@ class DatabaseService {
 
     try {
       const { type, search, page = 1, limit = 20 } = filters || {}
-      
+
       const where: any = {}
-      
+
       if (type) {
         where.type = type
       }
-      
+
       if (search) {
         where.OR = [
           { name: { contains: search, mode: 'insensitive' } },
@@ -615,7 +615,7 @@ class DatabaseService {
 
     try {
       const updateData: any = {}
-      
+
       if (updates.name) updateData.name = updates.name
       if (updates.symbol) updateData.symbol = updates.symbol
       if (updates.type) updateData.type = updates.type
@@ -683,12 +683,12 @@ class DatabaseService {
       console.warn('DatabaseService.getSharedDebts() - Operação apenas no servidor')
       return []
     }
-    
+
     try {
       const sharedDebts = await this.prisma.sharedDebt.findMany({
         orderBy: { createdAt: 'desc' }
       })
-      
+
       return sharedDebts.map(debt => ({
         id: debt.id,
         creditor: debt.creditor,
@@ -711,7 +711,7 @@ class DatabaseService {
     if (!this.isAvailable) {
       throw new Error('DatabaseService.saveSharedDebt() - Operação apenas no servidor')
     }
-    
+
     try {
       const savedDebt = await this.prisma.sharedDebt.create({
         data: {
@@ -724,7 +724,7 @@ class DatabaseService {
           status: debt.status
         }
       })
-      
+
       return {
         id: savedDebt.id,
         creditor: savedDebt.creditor,
@@ -748,10 +748,10 @@ class DatabaseService {
       console.warn('DatabaseService.updateSharedDebt() - Operação apenas no servidor')
       return
     }
-    
+
     try {
       const updateData: any = {}
-      
+
       if (updates.creditor !== undefined) updateData.creditor = updates.creditor
       if (updates.debtor !== undefined) updateData.debtor = updates.debtor
       if (updates.originalAmount !== undefined) updateData.originalAmount = updates.originalAmount
@@ -759,7 +759,7 @@ class DatabaseService {
       if (updates.description !== undefined) updateData.description = updates.description
       if (updates.transactionId !== undefined) updateData.transactionId = updates.transactionId || null
       if (updates.status !== undefined) updateData.status = updates.status
-      
+
       await this.prisma.sharedDebt.update({
         where: { id },
         data: updateData
@@ -775,7 +775,7 @@ class DatabaseService {
       console.warn('DatabaseService.deleteSharedDebt() - Operação apenas no servidor')
       return
     }
-    
+
     try {
       await this.prisma.sharedDebt.delete({
         where: { id }
@@ -791,19 +791,19 @@ class DatabaseService {
     if (!this.isAvailable) {
       throw new Error('DatabaseService.processDebtPayment() - Operação apenas no servidor')
     }
-    
+
     try {
       const debt = await this.prisma.sharedDebt.findUnique({
         where: { id }
       })
-      
+
       if (!debt) {
         throw new Error('Dívida não encontrada')
       }
-      
+
       const newCurrentAmount = Math.max(0, Number(debt.currentAmount) - paymentAmount)
       const newStatus = newCurrentAmount === 0 ? 'paid' : debt.status
-      
+
       const updatedDebt = await this.prisma.sharedDebt.update({
         where: { id },
         data: {
@@ -811,7 +811,7 @@ class DatabaseService {
           status: newStatus
         }
       })
-      
+
       return {
         id: updatedDebt.id,
         creditor: updatedDebt.creditor,
@@ -1107,15 +1107,15 @@ class DatabaseService {
     try {
       // Buscar todas as contas antes de limpar para recalcular saldos
       const accounts = await this.prisma.account.findMany({ select: { id: true } });
-      
+
       await this.prisma.transaction.deleteMany();
-      
+
       // Recalcular saldos de todas as contas (que devem ficar zerados)
       const { recalculateAccountBalance } = await import('@/lib/transaction-audit');
       for (const account of accounts) {
         await recalculateAccountBalance(account.id);
       }
-      
+
       await this.prisma.account.deleteMany();
       console.log('Todos os dados foram limpos do banco de dados')
     } catch (error) {

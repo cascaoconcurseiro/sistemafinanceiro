@@ -17,8 +17,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    console.log('💰 [API Installment Pay] Pagando parcela:', params.id);
-
+    
     // Validar dados
     if (!body.accountId) {
       return NextResponse.json(
@@ -35,8 +34,7 @@ export async function POST(
       auth.userId
     );
 
-    console.log('✅ [API Installment Pay] Parcela paga:', payment.id);
-
+    
     // ✅ EMITIR EVENTOS
     const { broadcastEvent } = await import('../../../events/route');
     broadcastEvent('INSTALLMENT_PAID', {

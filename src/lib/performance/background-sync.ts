@@ -33,13 +33,13 @@ class BackgroundSyncManager {
   private isSyncing: boolean = false;
   private syncInterval: NodeJS.Timeout | null = null;
   private networkStatus: NetworkStatus;
-  
+
   // Configuration
   private readonly SYNC_INTERVAL = 30000; // 30 seconds
   private readonly MAX_RETRIES = 5;
   private readonly RETRY_DELAYS = [1000, 2000, 5000, 10000, 30000]; // Exponential backoff
   private readonly MAX_QUEUE_SIZE = 1000;
-  
+
   // Statistics
   private stats = {
     totalOperations: 0,
@@ -89,10 +89,10 @@ class BackgroundSyncManager {
     this.syncQueue.push(operation);
     this.sortQueueByPriority();
     this.saveQueueToStorage();
-    
+
     this.stats.totalOperations++;
     this.stats.queuedOperations++;
-    
+
     console.log(`📤 Operation queued for sync: ${type} ${entity}`, { operationId: operation.id });
 
     // Try immediate sync if online
@@ -120,7 +120,7 @@ class BackgroundSyncManager {
     for (const operation of operationsToSync) {
       try {
         const success = await this.syncOperation(operation);
-        
+
         if (success) {
           this.removeOperationFromQueue(operation.id);
           syncResults.success++;
@@ -129,10 +129,10 @@ class BackgroundSyncManager {
           syncResults.failed++;
           this.stats.failedOperations++;
         }
-        
+
         // Small delay between operations to avoid overwhelming the server
         await this.delay(100);
-        
+
       } catch (error) {
         console.error(`Sync operation failed: ${operation.id}`, error);
         syncResults.failed++;
@@ -142,9 +142,9 @@ class BackgroundSyncManager {
 
     this.isSyncing = false;
     this.saveQueueToStorage();
-    
+
     console.log(`✅ Background sync completed: ${syncResults.success} success, ${syncResults.failed} failed`);
-    
+
     // Emit sync completion event
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('sync:completed', {
@@ -168,15 +168,15 @@ class BackgroundSyncManager {
 
       if (response.ok) {
         const result = await response.json();
-        
+
         // Update real-time store with server response
         if (result.data) {
           realTimeStore.updateData(operation.entity, result.data, true);
         }
-        
+
         console.log(`✅ Sync successful: ${operation.type} ${operation.entity}`);
         return true;
-        
+
       } else {
         // Handle different error types
         if (response.status >= 400 && response.status < 500) {
@@ -193,7 +193,7 @@ class BackgroundSyncManager {
           return false;
         }
       }
-      
+
     } catch (error) {
       // Network error - retry
       operation.retryCount++;
@@ -212,7 +212,7 @@ class BackgroundSyncManager {
    */
   private scheduleRetry(operation: SyncOperation): void {
     const delay = this.RETRY_DELAYS[Math.min(operation.retryCount - 1, this.RETRY_DELAYS.length - 1)];
-    
+
     setTimeout(() => {
       if (this.isOnline) {
         this.syncOperation(operation);
@@ -236,12 +236,12 @@ class BackgroundSyncManager {
    */
   private sortQueueByPriority(): void {
     const priorityOrder = { HIGH: 3, MEDIUM: 2, LOW: 1 };
-    
+
     this.syncQueue.sort((a, b) => {
       // First by priority
       const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
       if (priorityDiff !== 0) return priorityDiff;
-      
+
       // Then by timestamp (older first)
       return a.timestamp - b.timestamp;
     });
@@ -253,7 +253,7 @@ class BackgroundSyncManager {
   private evictLowPriorityOperations(): void {
     const lowPriorityOps = this.syncQueue.filter(op => op.priority === 'LOW');
     const toRemove = Math.min(lowPriorityOps.length, Math.ceil(this.MAX_QUEUE_SIZE * 0.1));
-    
+
     // Remove oldest low priority operations
     lowPriorityOps
       .sort((a, b) => a.timestamp - b.timestamp)
@@ -296,13 +296,12 @@ class BackgroundSyncManager {
     const wasOnline = this.isOnline;
     this.isOnline = isOnline;
     this.stats.networkChanges++;
-    
+
     console.log(`🌐 Network status changed: ${isOnline ? 'ONLINE' : 'OFFLINE'}`);
-    
+
     if (isOnline && !wasOnline) {
       // Just came back online - sync pending operations
-      console.log('🔄 Connection restored, syncing pending operations...');
-      setTimeout(() => this.syncPendingOperations(), 1000); // Small delay to ensure connection is stable
+            setTimeout(() => this.syncPendingOperations(), 1000); // Small delay to ensure connection is stable
     }
 
     // Emit network change event
@@ -372,7 +371,7 @@ class BackgroundSyncManager {
    */
   private saveQueueToStorage(): void {
     if (typeof window === 'undefined') return;
-    
+
     try {
       localStorage.setItem('sync_queue', JSON.stringify(this.syncQueue));
     } catch (error) {
@@ -385,7 +384,7 @@ class BackgroundSyncManager {
    */
   private loadQueueFromStorage(): void {
     if (typeof window === 'undefined') return;
-    
+
     try {
       const stored = localStorage.getItem('sync_queue');
       if (stored) {
@@ -409,14 +408,14 @@ class BackgroundSyncManager {
   /**
    * Get sync statistics
    */
-  getStats(): typeof this.stats & { 
-    successRate: number; 
-    isOnline: boolean; 
+  getStats(): typeof this.stats & {
+    successRate: number;
+    isOnline: boolean;
     queueSize: number;
     networkStatus: NetworkStatus;
   } {
-    const successRate = this.stats.totalOperations > 0 
-      ? (this.stats.syncedOperations / this.stats.totalOperations) * 100 
+    const successRate = this.stats.totalOperations > 0
+      ? (this.stats.syncedOperations / this.stats.totalOperations) * 100
       : 0;
 
     return {
@@ -464,8 +463,7 @@ class BackgroundSyncManager {
    */
   printStats(): void {
     const stats = this.getStats();
-    console.log('📊 Background Sync Statistics:');
-    console.log(`   Total Operations: ${stats.totalOperations}`);
+        console.log(`   Total Operations: ${stats.totalOperations}`);
     console.log(`   Synced: ${stats.syncedOperations}`);
     console.log(`   Failed: ${stats.failedOperations}`);
     console.log(`   Queued: ${stats.queuedOperations}`);

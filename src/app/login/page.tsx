@@ -8,14 +8,14 @@ export default function LoginRedirect() {
 
   useEffect(() => {
     // Limpar todos os cookies antes de redirecionar
-    document.cookie.split(";").forEach(function(c) { 
-      document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+    document.cookie.split(";").forEach(function(c) {
+      document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
     });
-    
+
     // Limpar storage
     localStorage.clear();
     sessionStorage.clear();
-    
+
     // Redirecionar para a rota correta de login
     router.replace('/auth/login');
   }, [router]);

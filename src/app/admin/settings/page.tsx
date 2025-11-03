@@ -8,11 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import { 
-  ArrowLeft, 
-  Settings, 
-  Database, 
-  Shield, 
+import {
+  ArrowLeft,
+  Settings,
+  Database,
+  Shield,
   Bell,
   Mail,
   Clock,
@@ -26,23 +26,23 @@ interface SystemSettings {
   systemName: string;
   systemUrl: string;
   maintenanceMode: boolean;
-  
+
   // Segurança
   sessionTimeout: number;
   maxLoginAttempts: number;
   passwordMinLength: number;
   requireStrongPassword: boolean;
-  
+
   // Notificações
   emailNotifications: boolean;
   pushNotifications: boolean;
   notificationEmail: string;
-  
+
   // Backup
   autoBackup: boolean;
   backupFrequency: string;
   backupRetentionDays: number;
-  
+
   // Performance
   cacheEnabled: boolean;
   cacheTTL: number;

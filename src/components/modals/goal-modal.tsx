@@ -64,9 +64,7 @@ export function GoalModal({ isOpen, onClose, initialData }: GoalModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('🎯 [GoalModal] handleSubmit chamado');
-    console.log('🎯 [GoalModal] formData:', formData);
-    
+        
     setLoading(true);
 
     try {
@@ -80,8 +78,7 @@ export function GoalModal({ isOpen, onClose, initialData }: GoalModalProps) {
         status: 'active',
       };
 
-      console.log('🎯 [GoalModal] Enviando dados:', goalData);
-
+      
       if (initialData?.id) {
         await actions.updateGoal(initialData.id, goalData);
         toast.success('Meta atualizada com sucesso!');
@@ -90,8 +87,7 @@ export function GoalModal({ isOpen, onClose, initialData }: GoalModalProps) {
         toast.success('Meta criada com sucesso!');
       }
 
-      console.log('✅ [GoalModal] Meta salva com sucesso');
-
+      
       onClose();
       setFormData({
         name: '',

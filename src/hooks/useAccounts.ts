@@ -1,23 +1,23 @@
 /**
  * @deprecated Este hook está DEPRECADO!
- * 
+ *
  * ⚠️ NÃO USE MAIS ESTE HOOK!
- * 
+ *
  * Use o contexto unificado em vez disso:
- * 
+ *
  * ```typescript
  * import { useUnifiedFinancial } from '@/contexts/unified-financial-context';
- * 
+ *
  * const { accounts, loading, error } = useUnifiedFinancial();
  * ```
- * 
+ *
  * O contexto unificado oferece:
  * - ✅ Dados centralizados
  * - ✅ Cache automático
  * - ✅ Sincronização entre componentes
  * - ✅ Menos requisições à API
  * - ✅ Melhor performance
- * 
+ *
  * Este hook será removido em versões futuras.
  */
 
@@ -43,7 +43,7 @@ export function useAccounts() {
     'Use useUnifiedFinancial() do contexto unificado em vez disso. ' +
     'Veja: src/contexts/unified-financial-context.tsx'
   );
-  
+
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,25 +51,24 @@ export function useAccounts() {
   useEffect(() => {
     async function fetchAccountsAndCards() {
       try {
-        console.log('🏦 [useAccounts] Iniciando busca de contas e cartões...');
-        setLoading(true);
-        
+                setLoading(true);
+
         // Buscar contas e cartões das APIs reais
         const [accountsResponse, cardsResponse] = await Promise.all([
           fetch('/api/accounts', { credentials: 'include' }),
           fetch('/api/credit-cards', { credentials: 'include' })
         ]);
-        
+
         const accountsData = accountsResponse.ok ? await accountsResponse.json() : [];
         const cardsData = cardsResponse.ok ? (await cardsResponse.json()).data || [] : [];
-        
+
         // ✅ CORREÇÃO: Filtrar apenas contas ATIVAS e tipos válidos (incluindo tipos legados)
         const validAccountTypes = ['ATIVO', 'PASSIVO', 'checking', 'savings', 'investment'];
         const allAccounts: Account[] = [
           // Contas bancárias (ATIVO, PASSIVO e tipos legados - excluir RECEITA e DESPESA)
           ...accountsData
-            .filter((account: any) => 
-              account.isActive && 
+            .filter((account: any) =>
+              account.isActive &&
               validAccountTypes.includes(account.type)
             )
             .map((account: any) => ({
@@ -93,16 +92,16 @@ export function useAccounts() {
               dueDay: card.dueDay
             }))
         ];
-        
+
         console.log('🏦 [useAccounts] Dados carregados:', {
           contas: accountsData.length,
           cartoes: cardsData.length,
           total: allAccounts.length
         });
-        
+
         setAccounts(allAccounts);
         setError(null);
-        
+
       } catch (err) {
         console.error('❌ [useAccounts] Erro:', err);
         setError(err instanceof Error ? err.message : 'Erro ao carregar contas');

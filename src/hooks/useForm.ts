@@ -19,11 +19,11 @@ interface UseFormResult<T> {
 
 /**
  * Hook customizado para gerenciar formulários
- * 
+ *
  * @template T - Tipo dos valores do formulário
  * @param options - Opções do formulário
  * @returns Objeto com valores, erros e handlers
- * 
+ *
  * @example
  * const { values, errors, handleChange, handleSubmit } = useForm({
  *   initialValues: { name: '', email: '' },
