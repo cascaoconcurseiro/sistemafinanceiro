@@ -5,6 +5,10 @@
 [build.environment]
   NODE_VERSION = "20"
 
+# Plugin do Next.js para Netlify
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
 [functions]
   node_bundler = "esbuild"
 
