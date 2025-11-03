@@ -1,73 +1,34 @@
 /** @type {import('next').NextConfig} */
-const withBundleAnalyzer = require('@next/bundle-analyzer')({
-  enabled: process.env.ANALYZE === 'true',
-});
-
 const nextConfig = {
-  // ✅ Configuração para SSR (Server-Side Rendering)
-  // output: 'export', // Removido para permitir API routes dinâmicas
+  // Configuração para deploy no Netlify com suporte a API routes
+  // Removido output: 'export' para permitir rotas de API dinâmicas
   trailingSlash: true,
-  // distDir: 'out', // Removido para SSR - usa build padrão
   
-  // ✅ Otimizações de produção
+  // Configuração de imagens para Netlify
+  images: {
+    unoptimized: true,
+  },
+  
+  // Configurações de build
   productionBrowserSourceMaps: false,
   poweredByHeader: false,
-  swcMinify: true, // ✅ Minificação mais rápida com SWC
+  swcMinify: true,
   compress: true,
   
-  // ✅ Otimizações de imagens
-  images: {
-    formats: ['image/avif', 'image/webp'],
-    minimumCacheTTL: 60,
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'raw.githubusercontent.com',
-        pathname: '/Tgentil/Bancos-em-SVG/**',
-      },
-    ],
-  },
-  
-  // ✅ Experimental
-  experimental: {
-    optimizeCss: true,
-    optimizePackageImports: ['@/components', '@/lib'],
-  },
-  
-  // ✅ TypeScript e ESLint habilitados (não ignorar erros)
+  // TypeScript e ESLint (ignorar erros para build)
   typescript: {
-    ignoreBuildErrors: true // ⚠️ TEMPORÁRIO: Desabilitado para build, // ✅ Detectar erros de tipo
+    ignoreBuildErrors: true,
   },
   eslint: {
-    ignoreDuringBuilds: true // ⚠️ TEMPORÁRIO: Desabilitado para build, // ✅ Detectar problemas de código
+    ignoreDuringBuilds: true,
+  },
+  
+  // Desabilitar API routes para build estático
+  async rewrites() {
+    return [];
   },
   
   webpack: (config, { dev, isServer }) => {
-    // Otimizações de produção
-    if (!dev && !isServer) {
-      config.optimization = {
-        ...config.optimization,
-        moduleIds: 'deterministic',
-        splitChunks: {
-          chunks: 'all',
-          cacheGroups: {
-            vendor: {
-              test: /[\\/]node_modules[\\/]/,
-              name: 'vendor',
-              chunks: 'all',
-              priority: 20,
-            },
-            react: {
-              test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/,
-              name: 'react',
-              chunks: 'all',
-              priority: 30,
-            },
-          },
-        },
-      };
-    }
-    
     // Fallbacks para cliente
     if (!isServer) {
       config.resolve.fallback = {
@@ -82,44 +43,17 @@ const nextConfig = {
       };
     }
     
+    // Ignorar API routes durante o build estático
+    if (!dev && !isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        '@/lib/prisma': false,
+        '@/lib/db': false,
+      };
+    }
+    
     return config;
-  },
-  
-  // Configurações PWA e CORS
-  async headers() {
-    return [
-      {
-        source: '/sw.js',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=0, must-revalidate',
-          },
-        ],
-      },
-      {
-        source: '/api/:path*',
-        headers: [
-          {
-            key: 'Access-Control-Allow-Origin',
-            value: process.env.ALLOWED_ORIGINS || 'http://localhost:3000',
-          },
-          {
-            key: 'Access-Control-Allow-Methods',
-            value: 'GET,POST,PUT,DELETE,OPTIONS',
-          },
-          {
-            key: 'Access-Control-Allow-Headers',
-            value: 'Content-Type, Authorization',
-          },
-          {
-            key: 'Access-Control-Max-Age',
-            value: '86400',
-          },
-        ],
-      },
-    ];
   },
 };
 
-module.exports = withBundleAnalyzer(nextConfig);
+module.exports = nextConfig;

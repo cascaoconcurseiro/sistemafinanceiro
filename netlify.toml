@@ -1,14 +1,9 @@
 [build]
   command = "cp next.config.netlify.js next.config.js && npm run build"
-  publish = "out"
+  publish = ".next"
 
 [build.environment]
   NODE_VERSION = "20"
-
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
 
 [functions]
   node_bundler = "esbuild"

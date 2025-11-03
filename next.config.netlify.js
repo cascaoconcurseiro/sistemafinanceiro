@@ -1,11 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Configuração para deploy estático no Netlify
-  output: 'export',
+  // Configuração para deploy no Netlify com suporte a API routes
+  // Removido output: 'export' para permitir rotas de API dinâmicas
   trailingSlash: true,
-  distDir: 'out',
   
-  // Desabilitar otimizações que requerem servidor
+  // Configuração de imagens para Netlify
   images: {
     unoptimized: true,
   },
