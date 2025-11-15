@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
-import { SharedExpensesBilling } from './shared-expenses-billing';
+import { SharedExpensesBillingV2 } from './shared-expenses-billing-v2';
 import { AddTransactionModal } from '@/components/modals/transactions/add-transaction-modal';
 import { Plane, Receipt, DollarSign, Users } from 'lucide-react';
 import { useUnifiedFinancial } from '@/contexts/unified-financial-context';
@@ -368,11 +368,11 @@ export function SharedExpenses() {
         </TabsList>
 
         <TabsContent value="regular" className="space-y-6 mt-6">
-          <SharedExpensesBilling mode="regular" />
+          <SharedExpensesBillingV2 mode="regular" />
         </TabsContent>
 
         <TabsContent value="trip" className="space-y-6 mt-6">
-          <SharedExpensesBilling mode="trip" />
+          <SharedExpensesBillingV2 mode="trip" />
         </TabsContent>
       </Tabs>
 
