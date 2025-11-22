@@ -1,180 +1,244 @@
-# Sistema Financeiro SuaGrana
+# 💰 SuaGrana - Sistema de Gestão Financeira Pessoal
 
-Um sistema completo de gestão financeira pessoal com funcionalidades avançadas para controle de despesas, viagens e compartilhamento de gastos.
+> Sistema completo de controle financeiro pessoal com recursos avançados de gestão, análise e planejamento.
 
-## 🚀 Funcionalidades Principais
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-14-black)](https://nextjs.org/)
+[![Prisma](https://img.shields.io/badge/Prisma-5.0-2D3748)](https://www.prisma.io/)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-### 💰 Gestão Financeira
-- **Controle de Contas**: Gerenciamento de múltiplas contas bancárias e cartões
-- **Transações**: Registro completo de receitas e despesas
-- **Categorização**: Sistema inteligente de categorização automática
-- **Parcelamento**: Controle de compras parceladas e prestações
-- **Cartão de Crédito**: Gestão de faturas e limites
+## 🚀 Início Rápido
 
-### 👥 Despesas Compartilhadas
-- **Divisão de Gastos**: Compartilhamento de despesas entre usuários
-- **Cálculo Automático**: Divisão proporcional ou igualitária
-- **Controle de Dívidas**: Acompanhamento de valores a pagar/receber
-- **Notificações**: Alertas de pagamentos pendentes
+```bash
+# Instalar dependências
+npm install
 
-### ✈️ Gestão de Viagens
-- **Planejamento**: Criação e organização de viagens
-- **Orçamento**: Controle de gastos por viagem
-- **Participantes**: Gestão de viajantes e divisão de custos
-- **Relatórios**: Análise detalhada dos gastos por viagem
+# Configurar banco de dados
+cp .env.example .env
+npx prisma migrate dev
 
-### 📊 Relatórios e Análises
-- **Dashboard**: Visão geral da situação financeira
-- **Gráficos**: Análises visuais de gastos e receitas
-- **Exportação**: Relatórios em diversos formatos
-- **Histórico**: Acompanhamento temporal das finanças
+# Iniciar desenvolvimento
+npm run dev
+```
 
-## 🛠️ Tecnologias Utilizadas
+Acesse: http://localhost:3000
+
+## ✨ Funcionalidades
+
+### 💳 Gestão Financeira
+- **Contas Bancárias** - Controle múltiplas contas
+- **Transações** - Receitas, despesas e transferências
+- **Cartões de Crédito** - Gestão de faturas e limites
+- **Parcelamentos** - Controle de compras parceladas
+
+### 📊 Análise e Relatórios
+- **Dashboard Interativo** - Visão geral das finanças
+- **Relatórios Detalhados** - Análises por período
+- **Gráficos e Métricas** - Visualização de dados
+- **Exportação** - PDF, Excel, CSV
+
+### 🎯 Planejamento
+- **Orçamentos** - Defina limites por categoria
+- **Metas Financeiras** - Acompanhe objetivos
+- **Investimentos** - Registre e monitore
+- **Viagens** - Planeje gastos de viagens
+
+### 👥 Recursos Colaborativos
+- **Despesas Compartilhadas** - Divida gastos
+- **Gestão de Dívidas** - Controle empréstimos
+- **Múltiplos Usuários** - Compartilhe contas
+
+### 🔔 Notificações Inteligentes
+- **Alertas de Vencimento** - Nunca perca um pagamento
+- **Limites de Orçamento** - Avisos de gastos
+- **Progresso de Metas** - Acompanhe objetivos
+
+### 🔒 Segurança
+- **Autenticação 2FA** - Segurança reforçada
+- **Criptografia** - Dados protegidos
+- **Auditoria** - Rastreamento completo
+- **Backup Automático** - Seus dados seguros
+
+## 🏗️ Tecnologias
 
 ### Frontend
-- **Next.js 14** - Framework React com App Router
+- **Next.js 14** - Framework React
 - **TypeScript** - Tipagem estática
-- **Tailwind CSS** - Estilização utilitária
-- **Shadcn/ui** - Componentes de interface
-- **React Query** - Gerenciamento de estado servidor
+- **Tailwind CSS** - Estilização
+- **Shadcn/ui** - Componentes UI
+- **React Query** - Gerenciamento de estado
 
 ### Backend
-- **Next.js API Routes** - API REST integrada
-- **Prisma** - ORM para banco de dados
-- **SQLite** - Banco de dados (desenvolvimento)
-- **NextAuth.js** - Autenticação e autorização
+- **Next.js API Routes** - API REST
+- **Prisma** - ORM
+- **PostgreSQL** - Banco de dados
+- **NextAuth** - Autenticação
+- **Zod** - Validação de schemas
 
-### Ferramentas de Desenvolvimento
-- **ESLint** - Linting de código
-- **Prettier** - Formatação de código
-- **Jest** - Testes unitários
-- **Playwright** - Testes end-to-end
-
-## 🚀 Como Executar
-
-### Pré-requisitos
-- Node.js 18+ 
-- npm ou yarn
-
-### Instalação
-
-1. **Clone o repositório**
-```bash
-git clone https://github.com/cascaoconcurseiro/sistemafinanceiro.git
-cd sistemafinanceiro
-```
-
-2. **Instale as dependências**
-```bash
-npm install
-```
-
-3. **Configure as variáveis de ambiente**
-```bash
-cp .env.example .env
-```
-
-4. **Configure o banco de dados**
-```bash
-npx prisma generate
-npx prisma db push
-```
-
-5. **Execute o projeto**
-```bash
-npm run dev
-```
-
-6. **Acesse a aplicação**
-```
-http://localhost:3000
-```
-
-### Scripts Disponíveis
-
-```bash
-# Desenvolvimento
-npm run dev
-
-# Build para produção
-npm run build
-
-# Executar em produção
-npm start
-
-# Testes
-npm test
-
-# Linting
-npm run lint
-
-# Formatação
-npm run format
-```
+### Infraestrutura
+- **Vercel/Netlify** - Deploy
+- **Neon** - Database hosting
+- **Upstash Redis** - Cache
+- **GitHub Actions** - CI/CD
 
 ## 📁 Estrutura do Projeto
 
 ```
 src/
-├── app/                    # App Router (Next.js 14)
+├── app/                    # Next.js App Router
 │   ├── api/               # API Routes
-│   ├── auth/              # Páginas de autenticação
-│   ├── dashboard/         # Dashboard principal
-│   └── ...
+│   ├── (auth)/            # Páginas de autenticação
+│   └── (dashboard)/       # Páginas do dashboard
 ├── components/            # Componentes React
-│   ├── ui/               # Componentes base (Shadcn)
-│   ├── features/         # Componentes de funcionalidades
-│   └── layout/           # Componentes de layout
-├── lib/                  # Utilitários e configurações
-│   ├── services/         # Serviços de negócio
-│   ├── utils/           # Funções utilitárias
-│   └── validation/      # Schemas de validação
-├── hooks/               # Custom hooks
-└── contexts/           # Contextos React
+│   ├── features/         # Componentes por feature
+│   ├── ui/               # Componentes reutilizáveis
+│   └── layout/           # Layouts
+├── lib/                   # Bibliotecas e utilitários
+│   ├── services/         # Lógica de negócio
+│   ├── utils/            # Funções utilitárias
+│   └── validation/       # Schemas Zod
+├── contexts/             # React Contexts
+├── hooks/                # Custom Hooks
+└── types/                # TypeScript Types
+
+docs/                      # Documentação
+├── audits/               # Relatórios de auditoria
+├── development/          # Guias de desenvolvimento
+├── architecture/         # Documentação de arquitetura
+└── deployment/           # Guias de deploy
+
+scripts/                   # Scripts utilitários
+prisma/                    # Schema e migrations
+public/                    # Arquivos estáticos
 ```
 
-## 🔧 Configuração
+## 🛠️ Desenvolvimento
 
-### Banco de Dados
-O projeto utiliza Prisma como ORM. Para configurar:
+### Pré-requisitos
+- Node.js 18+
+- PostgreSQL 14+
+- npm ou yarn
 
-1. Configure a `DATABASE_URL` no arquivo `.env`
-2. Execute as migrações: `npx prisma db push`
-3. (Opcional) Popule dados iniciais: `npm run seed`
+### Configuração
 
-### Autenticação
-Configure as variáveis de ambiente para NextAuth.js:
-- `NEXTAUTH_SECRET`
-- `NEXTAUTH_URL`
+1. **Clone o repositório**
+```bash
+git clone https://github.com/seu-usuario/suagrana.git
+cd suagrana
+```
 
-## 📖 Documentação
+2. **Instale dependências**
+```bash
+npm install
+```
 
-A documentação detalhada está disponível na pasta `docs/`:
+3. **Configure variáveis de ambiente**
+```bash
+cp .env.example .env
+```
 
-- [Guia de Funcionalidades](docs/GUIA-RAPIDO-NOVAS-FUNCIONALIDADES.md)
-- [Arquitetura do Sistema](docs/ARQUITETURA-SISTEMA-INTERLIGADO.md)
-- [Fluxo Contábil](docs/FLUXO-CONTABIL-PARCELAS.md)
+Edite `.env` com suas configurações:
+```env
+DATABASE_URL="postgresql://user:password@localhost:5432/suagrana"
+NEXTAUTH_SECRET="seu-secret-aqui"
+NEXTAUTH_URL="http://localhost:3000"
+```
 
-## 🤝 Contribuição
+4. **Execute migrations**
+```bash
+npx prisma migrate dev
+npx prisma db seed
+```
 
-1. Faça um fork do projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
+5. **Inicie o servidor**
+```bash
+npm run dev
+```
+
+### Scripts Disponíveis
+
+```bash
+npm run dev          # Desenvolvimento
+npm run build        # Build de produção
+npm run start        # Servidor de produção
+npm run lint         # Lint do código
+npm run type-check   # Verificação de tipos
+npm run test         # Executar testes
+npm run db:studio    # Prisma Studio
+npm run db:migrate   # Executar migrations
+npm run db:seed      # Popular banco de dados
+```
+
+## 📚 Documentação
+
+- [Guia de Desenvolvimento](docs/development/GUIA-DESENVOLVIMENTO.md)
+- [Arquitetura do Sistema](docs/architecture/IMPLEMENTACAO-COMPLETA.md)
+- [API Documentation](docs/api/README.md)
+- [Guia de Deploy](docs/deployment/NETLIFY-SETUP.md)
+- [Índice Completo](docs/README.md)
+
+## 🧪 Testes
+
+```bash
+# Unit tests
+npm run test
+
+# E2E tests
+npm run test:e2e
+
+# Coverage
+npm run test:coverage
+```
+
+## 🚀 Deploy
+
+### Vercel (Recomendado)
+```bash
+vercel
+```
+
+### Netlify
+```bash
+netlify deploy --prod
+```
+
+Veja o [Guia de Deploy](docs/deployment/) para mais detalhes.
+
+## 🤝 Contribuindo
+
+Contribuições são bem-vindas! Por favor, leia o [Guia de Contribuição](CONTRIBUTING.md).
+
+1. Fork o projeto
+2. Crie uma branch (`git checkout -b feature/nova-funcionalidade`)
+3. Commit suas mudanças (`git commit -m 'feat: adiciona nova funcionalidade'`)
+4. Push para a branch (`git push origin feature/nova-funcionalidade`)
 5. Abra um Pull Request
 
-## 📝 Licença
+## 📝 Changelog
 
-Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+Veja [CHANGELOG.md](CHANGELOG.md) para histórico de versões.
 
-## 👨‍💻 Autor
+## 📄 Licença
 
-**Wesley Cascão**
-- GitHub: [@cascaoconcurseiro](https://github.com/cascaoconcurseiro)
+Este projeto está sob a licença MIT. Veja [LICENSE](LICENSE) para mais detalhes.
+
+## 👥 Autores
+
+- **Equipe SuaGrana** - [GitHub](https://github.com/suagrana)
 
 ## 🙏 Agradecimentos
 
-- [Next.js](https://nextjs.org/) - Framework React
-- [Prisma](https://prisma.io/) - ORM TypeScript
-- [Tailwind CSS](https://tailwindcss.com/) - Framework CSS
-- [Shadcn/ui](https://ui.shadcn.com/) - Componentes de UI
+- Next.js Team
+- Prisma Team
+- Shadcn/ui
+- Comunidade Open Source
+
+## 📞 Suporte
+
+- 📧 Email: suporte@suagrana.com
+- 💬 Discord: [SuaGrana Community](https://discord.gg/suagrana)
+- 🐛 Issues: [GitHub Issues](https://github.com/suagrana/issues)
+
+---
+
+**Feito com ❤️ pela equipe SuaGrana**

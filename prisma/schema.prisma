@@ -5,7 +5,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -100,7 +100,7 @@ model Transaction {
   id                  String    @id @default(cuid())
   userId              String    @map("user_id")
   accountId           String?   @map("account_id")
-  categoryId          String?   @map("category_id")
+  categoryId          String    @map("category_id")
   amount              Decimal
   description         String
   type                String          // ✅ CORRIGIDO: 'RECEITA' | 'DESPESA' | 'TRANSFERENCIA'

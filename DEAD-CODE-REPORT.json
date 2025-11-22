@@ -1,0 +1,72 @@
+{
+  "timestamp": "2025-11-22T18:52:31.872Z",
+  "issues": [
+    {
+      "file": "\\src\\components\\features\\goals\\goal-money-manager.tsx",
+      "lines": [
+        147
+      ]
+    },
+    {
+      "file": "\\src\\components\\features\\notifications\\smart-notifications.tsx",
+      "lines": [
+        71,
+        89,
+        96
+      ]
+    },
+    {
+      "file": "\\src\\components\\modals\\transactions\\add-transaction-modal.tsx",
+      "lines": [
+        395,
+        413,
+        823,
+        843
+      ]
+    },
+    {
+      "file": "\\src\\contexts\\unified-financial-context.tsx",
+      "lines": [
+        187,
+        1262,
+        1285
+      ]
+    },
+    {
+      "file": "\\src\\hooks\\useAccounts.ts",
+      "lines": [
+        2,
+        38
+      ]
+    },
+    {
+      "file": "\\src\\lib\\config\\storage.ts",
+      "lines": [
+        35,
+        55
+      ]
+    },
+    {
+      "file": "\\src\\lib\\services\\financial-operations-orchestrator.ts",
+      "lines": [
+        39,
+        47,
+        55,
+        63,
+        71,
+        79
+      ]
+    },
+    {
+      "file": "\\src\\lib\\storage.ts",
+      "lines": [
+        35,
+        55
+      ]
+    }
+  ],
+  "summary": {
+    "deprecated": 8,
+    "commented": 0
+  }
+}
