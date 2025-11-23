@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('admin@suagrana.com');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [sessionExpired, setSessionExpired] = useState(false);
@@ -122,17 +122,13 @@ export default function LoginPage() {
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
 
-          <div className="text-center text-sm text-gray-500">
-            <p><strong>Credenciais padrão:</strong></p>
-            <p>admin@suagrana.com / admin123</p>
-            <div className="mt-4">
-              <a
-                href="/auth/register"
-                className="text-indigo-600 hover:text-indigo-500"
-              >
-                Não tem conta? Cadastre-se
-              </a>
-            </div>
+          <div className="text-center text-sm text-gray-500 mt-4">
+            <a
+              href="/auth/register"
+              className="text-indigo-600 hover:text-indigo-500"
+            >
+              Não tem conta? Cadastre-se
+            </a>
           </div>
         </form>
       </div>
