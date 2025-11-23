@@ -8,6 +8,7 @@
     "build:analyze": "ANALYZE=true next build",
     "build:prod": "NODE_ENV=production next build",
     "build:check": "tsc --noEmit && next build",
+    "postinstall": "prisma generate",
     "prebuild": "prisma generate",
     "start": "next start",
     "lint": "next lint",

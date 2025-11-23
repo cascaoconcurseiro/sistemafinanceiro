@@ -29,6 +29,8 @@ lerna-debug.log*
 .env.production.local
 .env.netlify
 test-db-connection.js
+# Allow .env.production (empty file for build)
+!.env.production
 
 # Vercel
 .vercel
