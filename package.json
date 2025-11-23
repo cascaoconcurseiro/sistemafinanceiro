@@ -10,7 +10,7 @@
     "build:check": "tsc --noEmit && next build",
     "postinstall": "prisma generate",
     "prebuild": "prisma generate",
-    "start": "next start",
+    "start": "node server.js",
     "lint": "next lint",
     "test": "jest",
     "test:watch": "jest --watch",
